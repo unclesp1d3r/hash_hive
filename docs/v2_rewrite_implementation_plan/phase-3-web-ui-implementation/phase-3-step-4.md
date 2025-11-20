@@ -47,7 +47,7 @@ With advanced features implemented, this step focuses on completing agent manage
 
 ### Agent Registration Enhancement
 
-**🔧 Technical Context**: Agent registration modal requires label (custom\*label) and project toggles. After creation, displays agent token once for copy/paste. Token format: `csa*<agent*id>*<random_string>`. Modal must use idiomatic Shadcn-Svelte dialog and form components.
+**🔧 Technical Context**: Agent registration modal requires label (custom_label) and project toggles. After creation, displays agent token once for copy/paste. Token format: `csa_<agent_id>_<random_string>`. Modal must use idiomatic Shadcn-Svelte dialog and form components.
 
 - [ ] **AGENT-REG-001**: Complete agent registration workflow
   - [ ] New agent registration form (modal interface with label and project toggles) (`AGT-002a`)
