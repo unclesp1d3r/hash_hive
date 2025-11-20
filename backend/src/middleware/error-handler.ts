@@ -45,6 +45,23 @@ export const errorHandler = (
 ): void => {
   const requestId = typeof req.id === 'string' && req.id !== '' ? req.id : 'unknown';
 
+  // Safely serialize req.body for logging
+  let safeBody: unknown;
+  if (req.body == null) {
+    safeBody = undefined;
+  } else if (typeof req.body === 'object') {
+    // Handle objects and arrays - check if JSON-serializable
+    try {
+      JSON.stringify(req.body);
+      safeBody = req.body;
+    } catch {
+      safeBody = '[unserializable body]';
+    }
+  } else {
+    // Handle primitives (string, number, boolean)
+    safeBody = String(req.body);
+  }
+
   // Log the error
   logger.error(
     {
@@ -57,7 +74,7 @@ export const errorHandler = (
       path: req.path,
       method: req.method,
       query: req.query,
-      body: req.body as Record<string, unknown>,
+      body: safeBody,
     },
     'Request error'
   );

@@ -177,5 +177,67 @@ describe('Middleware', () => {
       const timestamp = new Date(jsonCall.error.timestamp);
       expect(timestamp.toISOString()).toBe(jsonCall.error.timestamp);
     });
+
+    it('should safely handle undefined req.body', () => {
+      mockReq.body = undefined;
+      const error = new Error('Test error');
+
+      // Should not throw when logging
+      expect(() => {
+        errorHandler(error, mockReq as Request, mockRes as Response, mockNext);
+      }).not.toThrow();
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+    });
+
+    it('should safely handle null req.body', () => {
+      mockReq.body = null;
+      const error = new Error('Test error');
+
+      // Should not throw when logging
+      expect(() => {
+        errorHandler(error, mockReq as Request, mockRes as Response, mockNext);
+      }).not.toThrow();
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+    });
+
+    it('should safely handle primitive req.body', () => {
+      mockReq.body = 'string body';
+      const error = new Error('Test error');
+
+      // Should not throw when logging
+      expect(() => {
+        errorHandler(error, mockReq as Request, mockRes as Response, mockNext);
+      }).not.toThrow();
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+    });
+
+    it('should safely handle circular reference in req.body', () => {
+      const circularObj: Record<string, unknown> = { name: 'test' };
+      circularObj['self'] = circularObj;
+      mockReq.body = circularObj;
+      const error = new Error('Test error');
+
+      // Should not throw when logging circular reference
+      expect(() => {
+        errorHandler(error, mockReq as Request, mockRes as Response, mockNext);
+      }).not.toThrow();
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+    });
+
+    it('should safely handle array req.body', () => {
+      mockReq.body = [1, 2, 3];
+      const error = new Error('Test error');
+
+      // Should not throw when logging
+      expect(() => {
+        errorHandler(error, mockReq as Request, mockRes as Response, mockNext);
+      }).not.toThrow();
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+    });
   });
 });

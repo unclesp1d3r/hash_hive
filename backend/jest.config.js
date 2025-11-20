@@ -16,12 +16,22 @@ module.exports = {
   ],
   coverageThreshold: {
     global: {
-      branches: 50,
+      branches: 80,
       functions: 80,
       lines: 80,
       statements: 80,
     },
+    // Temporary overrides for files needing additional test coverage
+    // See docs/test-coverage-plan.md for improvement roadmap
+    './src/config/index.ts': {
+      branches: 33,
+    },
+    './src/middleware/error-handler.ts': {
+      branches: 40,
+    },
+    './src/routes/health.ts': {
+      branches: 50,
+    },
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-  forceExit: true,
 };

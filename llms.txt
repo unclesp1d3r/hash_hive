@@ -4,10 +4,10 @@
 
 ## Core Documentation
 
+- [AGENTS](AGENTS.md): AI assistant guidance for working with this codebase
+- [CONTRIBUTING](CONTRIBUTING.md): Contribution guidelines and development workflow
 - [README](README.md): Main project documentation and getting started guide
-- [Agents Guide](AGENTS.md): AI assistant guidance for working with this codebase
-- [Contributing](CONTRIBUTING.md): Contribution guidelines and development workflow
-- [Security](SECURITY.md): Security policies, vulnerability reporting, and deployment best practices
+- [SECURITY](SECURITY.md): Security policies, vulnerability reporting, and deployment best practices
 
 ## Specifications
 
@@ -19,8 +19,9 @@
 
 - [System Design](.kiro/specs/mern-migration/design.md): Architecture and data models
 - [Migration Requirements](.kiro/specs/mern-migration/requirements.md): Migration requirements from CipherSwarm
-- [Task Breakdown](.kiro/specs/mern-migration/tasks.md): Implementation task list
 - [Task 1 Summary](.kiro/specs/mern-migration/TASK_1_SUMMARY.md): Project foundation and infrastructure setup completion
+- [Task Breakdown](.kiro/specs/mern-migration/tasks.md): Implementation task list
+- [Test Coverage Plan](docs/test-coverage-plan.md): Path to 80% branch coverage with current status and action items
 
 ## Optional
 
