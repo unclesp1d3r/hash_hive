@@ -53,16 +53,32 @@ app.use(
   })
 );
 
-// CORS configuration
+// CORS configuration - Agent API has no restrictions, Web API is restricted
 app.use(
-  cors({
-    origin: config.server.isDevelopment
-      ? ['http://localhost:3000', 'http://localhost:3001']
-      : config.server.baseUrl,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-agent-api-version', 'x-request-id'],
-    exposedHeaders: ['x-request-id'],
+  cors((req, callback) => {
+    const isAgentApi = req.path.startsWith('/api/v1/agent');
+
+    if (isAgentApi) {
+      // No CORS restrictions for Agent API (distributed workers from any origin)
+      callback(null, {
+        origin: true,
+        credentials: false,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'x-agent-api-version', 'x-request-id'],
+        exposedHeaders: ['x-request-id'],
+      });
+    } else {
+      // Restricted CORS for Web API (browser-based UI only)
+      callback(null, {
+        origin: config.server.isDevelopment
+          ? ['http://localhost:3000', 'http://localhost:3001']
+          : config.server.baseUrl,
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'x-agent-api-version', 'x-request-id'],
+        exposedHeaders: ['x-request-id'],
+      });
+    }
   })
 );
 
