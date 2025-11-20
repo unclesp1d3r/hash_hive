@@ -111,7 +111,7 @@ describe('Middleware', () => {
 
     it('should handle ZodError with 400 status', () => {
       const schema = z.object({ name: z.string() });
-      let zodError: ZodError;
+      let zodError: ZodError | null = null;
 
       try {
         schema.parse({ name: 123 });
@@ -119,7 +119,11 @@ describe('Middleware', () => {
         zodError = err as ZodError;
       }
 
-      errorHandler(zodError!, mockReq as Request, mockRes as Response, mockNext);
+      if (zodError === null) {
+        throw new Error('Test setup failed: schema.parse did not throw a ZodError');
+      }
+
+      errorHandler(zodError, mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith(

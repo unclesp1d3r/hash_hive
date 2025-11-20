@@ -61,7 +61,7 @@ app.use(
       : config.server.baseUrl,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-agent-api-version'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-agent-api-version', 'x-request-id'],
     exposedHeaders: ['x-request-id'],
   })
 );
