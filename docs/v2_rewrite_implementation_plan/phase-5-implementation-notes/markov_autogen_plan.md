@@ -161,7 +161,6 @@ Captures common bigram transitions like `'s' → 's'`, `'a' → 's'`, etc.
 1. **Encoding**
 
 - Format into `.hcstat2` binary layout:
-
   - Header/version block
   - Char index map
   - Positional table (256 × N positions)

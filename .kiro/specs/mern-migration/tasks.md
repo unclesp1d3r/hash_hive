@@ -9,8 +9,8 @@
   - Configure environment variable management with dotenv and validation
   - _Requirements: 1.1, 1.2, 13.1, 13.2_
 
-- [ ] 2. Backend core infrastructure
-  - [ ] 2.1 Set up Express server with TypeScript
+- [-] 2. Backend core infrastructure
+  - [x] 2.1 Set up Express server with TypeScript
     - Create Express application with middleware pipeline
     - Implement request logging with Pino and request ID generation
     - Configure CORS and security headers

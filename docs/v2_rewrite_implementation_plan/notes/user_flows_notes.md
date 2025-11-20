@@ -232,10 +232,9 @@ journey
    - When DAG is enabled, campaign scheduling changes: no attack from a later DAG phase will be assigned to any agent until all attacks from the earlier phases are fully completed, even if other agents are idle.
    - Form uses standard text inputs, checkbox. Upon completion, the modal closes and the user is taken to the campaign editor to add attacks. A toast appears confirming the campaign has been created, and the editor screen scrolls or focuses to the attack configuration section. Smooth animation or fade-in is used to emphasize the transition without jarring the user.
 
-*(Transition to Campaign Editor page)*
+_(Transition to Campaign Editor page)_
 
 1. **Add Attacks Step:**
-
    - On first load of a new campaign with no attacks, the Add Attack modal opens automatically after a short delay with a fade-in animation. This gently encourages configuration without jarring the user.
    - `Add Attack` button → attack editor modal opens.
    - User chooses attack type via radio buttons in a wizard step (options: Dictionary / Mask / Brute / Hybrid). Tabs are not used to reduce cognitive load and better fit the guided flow pattern.

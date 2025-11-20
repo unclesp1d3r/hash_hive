@@ -77,7 +77,6 @@ This step addresses the critical blocker preventing full E2E testing: implementi
 **🔧 Technical Context**: SvelteKit hooks extract JWT cookies from requests and set `event.locals.user` for use in load functions. Must handle JWT validation and automatic login redirect.
 
 - [x] **AUTH-FE-001**: Create `hooks.server.js` for JWT cookie handling
-
   - [x] Implement JWT cookie extraction from requests
   - [x] Create user context setting for load functions (`event.locals.user`)
     - [x] Add JWT validation and refresh logic
