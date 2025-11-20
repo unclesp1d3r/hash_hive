@@ -1,33 +1,43 @@
 {
-    "name": "hashhive",
-    "version": "1.0.0",
-    "private": true,
-    "description": "HashHive - Distributed password cracking platform",
-    "workspaces": [
-        "backend",
-        "frontend",
-        "shared"
-    ],
-    "scripts": {
-        "dev": "concurrently \"npm run dev -w backend\" \"npm run dev -w frontend\"",
-        "build": "npm run build -w shared && npm run build -w backend && npm run build -w frontend",
-        "lint": "npm run lint --workspaces",
-        "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
-        "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
-        "type-check": "npm run type-check --workspaces",
-        "test": "npm run test --workspaces"
-    },
-    "devDependencies": {
-        "@typescript-eslint/eslint-plugin": "^6.21.0",
-        "@typescript-eslint/parser": "^8.47.0",
-        "concurrently": "^8.2.2",
-        "eslint": "^8.56.0",
-        "eslint-config-prettier": "^9.1.0",
-        "prettier": "^3.2.5",
-        "typescript": "^5.3.3"
-    },
-    "engines": {
-        "node": ">=20.0.0",
-        "npm": ">=10.0.0"
-    }
+  "name": "hashhive",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HashHive - Distributed password cracking platform",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "build": "npm run build -w shared && npm run build -w backend && npm run build -w frontend",
+    "lint": "npm run lint --workspaces",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "type-check": "npm run type-check --workspaces",
+    "test": "npm run test --workspaces",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "concurrently": "^8.2.2",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-standard-with-typescript": "^43.0.1",
+    "eslint-plugin-react": "^7.37.5",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.2.5",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,md,yaml,yml}": [
+      "prettier --write"
+    ]
+  }
 }

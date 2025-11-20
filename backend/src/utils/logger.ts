@@ -1,16 +1,19 @@
 import pino from 'pino';
 import { config } from '../config';
 
-export const logger = pino({
+const loggerOptions: pino.LoggerOptions = {
   level: config.logging.level,
-  transport: config.logging.pretty
-    ? {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          translateTime: 'HH:MM:ss Z',
-          ignore: 'pid,hostname',
-        },
-      }
-    : undefined,
-});
+};
+
+if (config.logging.pretty) {
+  loggerOptions.transport = {
+    target: 'pino-pretty',
+    options: {
+      colorize: true,
+      translateTime: 'HH:MM:ss Z',
+      ignore: 'pid,hostname',
+    },
+  };
+}
+
+export const logger = pino(loggerOptions);

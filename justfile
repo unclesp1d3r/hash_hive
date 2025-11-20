@@ -163,3 +163,5 @@ info:
 # Restart a specific service
 restart service:
     docker compose restart {{service}}
+
+ci-check: lint format-check type-check test coverage
