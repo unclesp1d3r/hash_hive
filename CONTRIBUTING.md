@@ -181,6 +181,32 @@ npm run build -w shared
 4. Commit with descriptive messages
 5. Push and create a pull request
 
+### Git Hooks
+
+The project uses Husky and lint-staged for automated quality checks:
+
+**Pre-commit Hook:**
+
+- Automatically runs on `git commit`
+- Formats only staged files with Prettier
+- Ensures consistent code style
+
+**Pre-push Hook:**
+
+- Automatically runs on `git push`
+- Runs TypeScript type checking across all workspaces
+- Runs all test suites
+- Prevents pushing broken code
+
+To skip hooks in emergencies (not recommended):
+
+```bash
+git commit --no-verify
+git push --no-verify
+```
+
+The hooks are automatically installed when you run `npm install` via the `prepare` script.
+
 ### Commit Messages
 
 Follow conventional commits:

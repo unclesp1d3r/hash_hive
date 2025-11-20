@@ -6,3 +6,6 @@ coverage
 *.log
 .env
 .env.*
+# Ignore markdown docs from Prettier checks (per project preference)
+*.md
+**/*.md

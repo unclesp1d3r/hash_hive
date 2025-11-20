@@ -109,7 +109,7 @@ npm run test             # Run all tests
 
 - **TypeScript**: Strict mode enabled with shared base config
 - **ESLint**: Consistent rules across all packages
-- **Prettier**: Automated code formatting
+- **Prettier**: Automated code formatting (TypeScript, JavaScript, JSON, Markdown, YAML)
 - **Jest**: Unit and integration testing
 - **Playwright**: E2E testing for frontend
 

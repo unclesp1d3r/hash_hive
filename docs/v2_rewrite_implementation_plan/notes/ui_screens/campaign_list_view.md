@@ -167,14 +167,14 @@ Each attack is rendered from:
 
 ```jsonc
 {
-    "id": 123,
-    "type": "brute_force",
-    "language": "english",
-    "length_min": 1,
-    "length_max": 4,
-    "settings_summary": "Lowercase, Uppercase, Numbers, Symbols",
-    "keyspace": 78914410,
-    "complexity_score": 4,
-    "position": 3
+  "id": 123,
+  "type": "brute_force",
+  "language": "english",
+  "length_min": 1,
+  "length_max": 4,
+  "settings_summary": "Lowercase, Uppercase, Numbers, Symbols",
+  "keyspace": 78914410,
+  "complexity_score": 4,
+  "position": 3,
 }
 ```

@@ -537,34 +537,34 @@ import { serverApi, convertCampaignData } from '$lib/server/api';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ cookies }) => {
- // Initialize form with Superforms
- const form = await superValidate(zod(campaignSchema));
- return { form };
+  // Initialize form with Superforms
+  const form = await superValidate(zod(campaignSchema));
+  return { form };
 };
 
 export const actions: Actions = {
- default: async ({ request, cookies }) => {
-  // Superforms handles validation
-  const form = await superValidate(request, zod(campaignSchema));
+  default: async ({ request, cookies }) => {
+    // Superforms handles validation
+    const form = await superValidate(request, zod(campaignSchema));
 
-  if (!form.valid) {
-   return fail(400, { form });
-  }
+    if (!form.valid) {
+      return fail(400, { form });
+    }
 
-  try {
-   // Convert Superforms data → CipherSwarm API format
-   const apiPayload = convertCampaignData(form.data);
+    try {
+      // Convert Superforms data → CipherSwarm API format
+      const apiPayload = convertCampaignData(form.data);
 
-   // Call backend API
-   const campaign = await serverApi.post('/api/v1/web/campaigns/', apiPayload, {
-    Cookie: cookies.get('sessionid') || ''
-   });
+      // Call backend API
+      const campaign = await serverApi.post('/api/v1/web/campaigns/', apiPayload, {
+        Cookie: cookies.get('sessionid') || '',
+      });
 
-   return redirect(303, `/campaigns/${campaign.id}`);
-  } catch (error) {
-   return fail(500, { form, message: 'Failed to create campaign' });
-  }
- }
+      return redirect(303, `/campaigns/${campaign.id}`);
+    } catch (error) {
+      return fail(500, { form, message: 'Failed to create campaign' });
+    }
+  },
 };
 ```
 
@@ -733,8 +733,12 @@ import * as Accordion from '$lib/components/ui/accordion/index.js';
 - **Requirements:** Specific prop types and callback signatures
 
 ```typescript
-function handleFilesSelected(files: File[]) { /* ... */ }
-function handleFileRejected({ reason, file }: { reason: string; file: File }) { /* ... */ }
+function handleFilesSelected(files: File[]) {
+  /* ... */
+}
+function handleFileRejected({ reason, file }: { reason: string; file: File }) {
+  /* ... */
+}
 ```
 
 - **Props:** Use `string` type for rejection reason, not `any`

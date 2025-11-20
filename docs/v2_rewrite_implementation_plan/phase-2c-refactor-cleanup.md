@@ -47,7 +47,6 @@ project: Annotated[Project, Depends(get_current_project)]
 #### 🔧 `getattr` vs direct access
 
 - [ ] Replace `getattr(foo, "bar")` with `foo.bar` unless:
-
   - Field is dynamic
   - There's a fallback value
   - Object may be missing the attribute and is guarded

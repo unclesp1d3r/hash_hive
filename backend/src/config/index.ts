@@ -88,7 +88,7 @@ export const config = {
   redis: {
     host: env.REDIS_HOST,
     port: env.REDIS_PORT,
-    password: env.REDIS_PASSWORD || undefined,
+    password: env.REDIS_PASSWORD === '' ? undefined : env.REDIS_PASSWORD,
   },
   s3: {
     endpoint: env.S3_ENDPOINT,
