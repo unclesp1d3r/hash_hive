@@ -1,0 +1,28 @@
+# HashHive
+
+> Distributed password cracking platform orchestrating hashcat across multiple agents with campaign management and real-time monitoring
+
+## Core Documentation
+
+- [README](README.md): Main project documentation and getting started guide
+- [Agents Guide](AGENTS.md): AI assistant guidance for working with this codebase
+- [Contributing](CONTRIBUTING.md): Contribution guidelines and development workflow
+- [Security](SECURITY.md): Security policies, vulnerability reporting, and deployment best practices
+
+## Specifications
+
+- [Product Overview](.kiro/steering/product.md): Core capabilities and target users
+- [Project Structure](.kiro/steering/structure.md): Repository layout and naming conventions
+- [Technical Stack](.kiro/steering/tech.md): MERN architecture, libraries, and commands
+
+## Implementation Plans
+
+- [System Design](.kiro/specs/mern-migration/design.md): Architecture and data models
+- [Migration Requirements](.kiro/specs/mern-migration/requirements.md): Migration requirements from CipherSwarm
+- [Task Breakdown](.kiro/specs/mern-migration/tasks.md): Implementation task list
+- [Task 1 Summary](.kiro/specs/mern-migration/TASK_1_SUMMARY.md): Project foundation and infrastructure setup completion
+
+## Optional
+
+- [MERN Proposal](docs/MERN_proposal.md): Original migration proposal and rationale
+- [V2 Upgrade Overview](docs/v2-upgrade-overview.md): Version 2 upgrade summary
