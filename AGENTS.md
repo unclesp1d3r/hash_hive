@@ -5,6 +5,7 @@ This file provides guidance to AI coding assistants (including WARP) when workin
 ## Project overview
 
 HashHive is a greenfield MERN (MongoDB, Express, React, Node.js) implementation that replaces the legacy Rails-based CipherSwarm platform. It orchestrates distributed password cracking with hashcat across multiple agents, providing:
+
 - Agent management and monitoring
 - Campaign and attack orchestration with DAG-based dependencies
 - Queue-based task distribution over a shared keyspace
@@ -76,6 +77,7 @@ When adding new modules or services, follow this monorepo layout and keep domain
 ### Backend service architecture
 
 The backend is a Node.js + TypeScript service with a clear layering:
+
 - **Routes / Controllers (`src/routes/`)**
   - HTTP endpoints grouped by API surface: Web API, Agent API, Control API
   - Thin controllers: parse/validate input, call service layer, map results to HTTP responses
@@ -107,6 +109,7 @@ The design documents in `.kiro/specs/mern-migration/design.md` and `.kiro/specs/
 ### API surfaces
 
 There are three primary API surfaces, all backed by the same service and model layer:
+
 - **Agent API (`/api/v1/agent/*`)**
   - Token-authenticated API for hashcat agents
   - Defined by `openapi/agent-api.yaml`; this spec drives both server implementation and client SDK generation
@@ -123,6 +126,7 @@ Agent API contract tests and other API contract tests should validate responses 
 ### Frontend architecture
 
 The frontend is a Next.js App Router application in TypeScript:
+
 - Uses Tailwind CSS and shadcn/ui for UI components
 - Forms are built with React Hook Form + Zod schemas
 - Data fetching and caching rely on React Query (TanStack Query)
@@ -134,6 +138,7 @@ Server components handle initial data loading where appropriate, with client com
 ### Data model and collections (summary)
 
 The core collections in MongoDB (see `.kiro/steering/structure.md` and `.kiro/specs/mern-migration/design.md` for full details) include:
+
 - **Identity & access**: `users`, `projects`, `project_users`, `roles`
 - **Agents & telemetry**: `operating_systems`, `agents`, `agent_errors`
 - **Campaign orchestration**: `campaigns`, `attacks` (with DAG dependencies), `tasks` (work ranges, progress, results)
@@ -177,6 +182,7 @@ docker compose up  # Start MongoDB, Redis, MinIO, backend, and frontend locally
 ## Testing strategy (planned)
 
 The intended testing strategy, as defined in `.kiro/specs/mern-migration/design.md` and `.kiro/specs/mern-migration/tasks.md`, is:
+
 - **Backend**
   - Jest unit tests focused on service-layer business logic, utilities, and validation schemas
   - Jest + supertest integration tests for API endpoints
@@ -194,6 +200,7 @@ When adding new features, look for the appropriate test suite in `backend/tests/
 ## Design and documentation sources
 
 Before making major changes, consult these documents:
+
 - `.kiro/steering/product.md` — high-level product overview and core capabilities
 - `.kiro/steering/structure.md` — repository and module structure, collection list, and API route structure
 - `.kiro/steering/tech.md` — technology stack, common commands, and key libraries
