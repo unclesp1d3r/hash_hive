@@ -5,6 +5,7 @@ HashHive is a greenfield MERN (MongoDB, Express, React, Node.js) platform orches
 ## Architecture Overview
 
 **Three-tier monorepo:**
+
 - `backend/` - Node.js + Express/Fastify API with Mongoose ODM
 - `frontend/` - Next.js with App Router, shadcn/ui, React Query
 - `shared/` - Common TypeScript types and Zod schemas
@@ -12,6 +13,7 @@ HashHive is a greenfield MERN (MongoDB, Express, React, Node.js) platform orches
 **Service layer pattern:** Business logic lives in `backend/src/services/`, NOT in route handlers. Routes are thin controllers that validate input, call services, and map responses.
 
 **Key services** (see `.kiro/specs/mern-migration/design.md`):
+
 - `AuthService` - JWT/session auth, password hashing
 - `ProjectService` - Multi-tenancy, role-based access control
 - `AgentService` - Agent registration, heartbeat, capability detection
@@ -24,6 +26,7 @@ HashHive is a greenfield MERN (MongoDB, Express, React, Node.js) platform orches
 ## Critical Design Documents
 
 **Always consult before major changes:**
+
 - `.kiro/steering/` - Product overview, tech stack, structure (source of truth)
 - `.kiro/specs/mern-migration/` - Requirements, detailed design, task breakdown
 - `AGENTS.md` - AI agent guidance (this file provides extended context)
@@ -59,28 +62,40 @@ npm run test:integration -w backend  # Integration tests with Testcontainers
 
 ## Code Patterns
 
+### Formatting & Linting
+
+- Prettier formats all code: TypeScript, JavaScript, JSON, Markdown, **and YAML**
+- Run `just format` or `npm run format` to format all files
+- Husky pre-commit hooks auto-format staged files (including YAML)
+- Kiro automation runs formatting on file save for all supported types
+
 ### Error Handling
+
 - Use `AppError` class from `backend/src/middleware/error-handler.ts`
 - Machine-readable error codes, structured responses with request IDs
 - Log errors with Pino logger, never `console.log`
 
 ### Validation
+
 - Zod schemas for request/response validation
 - Define schemas alongside routes or in `shared/` for reuse
 - Mongoose schemas use Zod for type inference where applicable
 
 ### Testing Strategy
+
 - **Backend:** Jest + supertest for HTTP tests, Testcontainers for integration
 - **Frontend:** Jest + React Testing Library for components, Playwright for E2E
 - **Coverage thresholds:** 80% functions/lines/statements, 50% branches
 - **Test setup:** `backend/tests/setup.ts` configures test env vars (30s timeout)
 
 ### Logging
+
 - Use Pino logger from `backend/src/utils/logger.ts`
 - Structured JSON logs with pretty-print in development
 - Include context: request IDs, user IDs, operation names
 
 ### API Design
+
 - **Agent API:** OpenAPI spec in `openapi/agent-api.yaml` - validate responses in contract tests
 - **Web API:** Session-authenticated, RESTful JSON at `/api/v1/web/*`
 - **Control API:** Idempotent automation endpoints at `/api/v1/control/*`
