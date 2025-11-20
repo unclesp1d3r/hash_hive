@@ -1,0 +1,179 @@
+openapi: 3.0.3
+info:
+  title: HashHive Agent API
+  description: API specification for HashHive agents to communicate with the server
+  version: 1.0.0
+  contact:
+    name: HashHive Team
+
+servers:
+  - url: http://localhost:3001/api/v1/agent
+    description: Development server
+
+tags:
+  - name: Authentication
+    description: Agent authentication and session management
+  - name: Heartbeat
+    description: Agent status and capability reporting
+  - name: Tasks
+    description: Task retrieval and progress reporting
+
+paths:
+  /sessions:
+    post:
+      summary: Create agent session
+      description: Authenticate agent and create a new session
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - agentId
+              properties:
+                token:
+                  type: string
+                  description: Agent authentication token
+                agentId:
+                  type: string
+                  description: Unique agent identifier
+      responses:
+        "200":
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessionToken:
+                    type: string
+                  config:
+                    type: object
+        "401":
+          description: Authentication failed
+
+  /heartbeat:
+    post:
+      summary: Send agent heartbeat
+      description: Report agent status and capabilities
+      tags:
+        - Heartbeat
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+                - capabilities
+              properties:
+                status:
+                  type: string
+                  enum: [online, busy, error]
+                capabilities:
+                  type: object
+                deviceInfo:
+                  type: object
+      responses:
+        "200":
+          description: Heartbeat acknowledged
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  acknowledged:
+                    type: boolean
+
+  /tasks/next:
+    post:
+      summary: Request next task
+      description: Retrieve the next available task for the agent
+      tags:
+        - Tasks
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - capabilities
+              properties:
+                capabilities:
+                  type: object
+      responses:
+        "200":
+          description: Task retrieved or no tasks available
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      task:
+                        type: object
+                  - type: object
+                    properties:
+                      task:
+                        type: "null"
+
+  /tasks/{taskId}/report:
+    post:
+      summary: Report task progress
+      description: Update task status and progress
+      tags:
+        - Tasks
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                progress:
+                  type: object
+                status:
+                  type: string
+                results:
+                  type: object
+                errors:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        "200":
+          description: Progress reported successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  acknowledged:
+                    type: boolean
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

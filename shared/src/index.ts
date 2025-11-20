@@ -1,0 +1,4 @@
+// Shared types and utilities
+// This will be populated with common types in subsequent tasks
+
+export * from './types';
