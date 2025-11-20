@@ -908,14 +908,16 @@ async def create_e2e_test_users(session: AsyncSession) -> dict[str, int]:
 
 ```typescript
 export default async function globalSetup() {
-    // Start Docker stack with proper error handling
-    execSync('docker compose -f ../docker-compose.e2e.yml up -d --build');
+  // Start Docker stack with proper error handling
+  execSync('docker compose -f ../docker-compose.e2e.yml up -d --build');
 
-    // Wait for services with health checks
-    await waitForServices();
+  // Wait for services with health checks
+  await waitForServices();
 
-    // Seed test data using backend container
-    execSync('docker compose -f ../docker-compose.e2e.yml exec -T backend python scripts/seed_e2e_data.py');
+  // Seed test data using backend container
+  execSync(
+    'docker compose -f ../docker-compose.e2e.yml exec -T backend python scripts/seed_e2e_data.py'
+  );
 }
 ```
 
@@ -1041,27 +1043,27 @@ export async function handle({
 
 ```typescript
 export const load: PageServerLoad = async ({ cookies, locals }) => {
-    // Use session from hooks.server.js
-    const sessionCookie = cookies.get('sessionid') || locals.session;
+  // Use session from hooks.server.js
+  const sessionCookie = cookies.get('sessionid') || locals.session;
 
-    if (!sessionCookie) {
-        throw redirect(302, '/login');
-    }
+  if (!sessionCookie) {
+    throw redirect(302, '/login');
+  }
 
-    try {
-        const response = await serverApi.get('/api/v1/web/campaigns/', {
-            headers: {
-                'Cookie': `sessionid=${sessionCookie}`,
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-        return { campaigns: response.data };
-    } catch (error) {
-        if (error.response?.status === 401) {
-            throw redirect(302, '/login');
-        }
-        throw error(500, 'Failed to load data');
+  try {
+    const response = await serverApi.get('/api/v1/web/campaigns/', {
+      headers: {
+        Cookie: `sessionid=${sessionCookie}`,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    });
+    return { campaigns: response.data };
+  } catch (error) {
+    if (error.response?.status === 401) {
+      throw redirect(302, '/login');
     }
+    throw error(500, 'Failed to load data');
+  }
 };
 ```
 
@@ -1071,26 +1073,22 @@ export const load: PageServerLoad = async ({ cookies, locals }) => {
 
 ```typescript
 export class ServerApiClient {
-    async authenticatedRequest(
-        endpoint: string,
-        options: RequestInit,
-        cookies: Cookies
-    ) {
-        const sessionCookie = cookies.get('sessionid');
+  async authenticatedRequest(endpoint: string, options: RequestInit, cookies: Cookies) {
+    const sessionCookie = cookies.get('sessionid');
 
-        if (!sessionCookie) {
-            throw new Error('No session cookie found');
-        }
-
-        return fetch(`${this.baseURL}${endpoint}`, {
-            ...options,
-            headers: {
-                ...options.headers,
-                'Cookie': `sessionid=${sessionCookie}`,
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
+    if (!sessionCookie) {
+      throw new Error('No session cookie found');
     }
+
+    return fetch(`${this.baseURL}${endpoint}`, {
+      ...options,
+      headers: {
+        ...options.headers,
+        Cookie: `sessionid=${sessionCookie}`,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    });
+  }
 }
 ```
 
@@ -1100,42 +1098,42 @@ export class ServerApiClient {
 
 ```typescript
 export const actions: Actions = {
-    default: async ({ request, cookies }) => {
-        const form = await superValidate(request, zod(loginSchema));
+  default: async ({ request, cookies }) => {
+    const form = await superValidate(request, zod(loginSchema));
 
-        if (!form.valid) {
-            return fail(400, { form });
-        }
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/v1/web/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form.data)
-            });
-
-            if (!response.ok) {
-                return fail(401, { form, message: 'Invalid credentials' });
-            }
-
-            // Extract and set session cookie
-            const setCookieHeader = response.headers.get('set-cookie');
-            const sessionMatch = setCookieHeader?.match(/sessionid=([^;]+)/);
-
-            if (sessionMatch) {
-                cookies.set('sessionid', sessionMatch[1], {
-                    httpOnly: true,
-                    secure: true,
-                    sameSite: 'strict',
-                    maxAge: 60 * 60 * 24 * 7 // 7 days
-                });
-            }
-
-            throw redirect(303, '/');
-        } catch (error) {
-            return fail(500, { form, message: 'Login failed' });
-        }
+    if (!form.valid) {
+      return fail(400, { form });
     }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/web/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form.data),
+      });
+
+      if (!response.ok) {
+        return fail(401, { form, message: 'Invalid credentials' });
+      }
+
+      // Extract and set session cookie
+      const setCookieHeader = response.headers.get('set-cookie');
+      const sessionMatch = setCookieHeader?.match(/sessionid=([^;]+)/);
+
+      if (sessionMatch) {
+        cookies.set('sessionid', sessionMatch[1], {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'strict',
+          maxAge: 60 * 60 * 24 * 7, // 7 days
+        });
+      }
+
+      throw redirect(303, '/');
+    } catch (error) {
+      return fail(500, { form, message: 'Login failed' });
+    }
+  },
 };
 ```
 
@@ -1145,18 +1143,16 @@ export const actions: Actions = {
 
 ```typescript
 export const load: PageServerLoad = async ({ cookies }) => {
-    // Bypass authentication in test environments
-    if (process.env.NODE_ENV === 'test' ||
-        process.env.PLAYWRIGHT_TEST ||
-        process.env.CI) {
-        return {
-            campaigns: mockCampaignData,
-            user: mockUserData
-        };
-    }
+  // Bypass authentication in test environments
+  if (process.env.NODE_ENV === 'test' || process.env.PLAYWRIGHT_TEST || process.env.CI) {
+    return {
+      campaigns: mockCampaignData,
+      user: mockUserData,
+    };
+  }
 
-    // Normal authentication flow
-    return authenticatedLoad(cookies);
+  // Normal authentication flow
+  return authenticatedLoad(cookies);
 };
 ```
 

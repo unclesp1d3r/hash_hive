@@ -7,6 +7,7 @@ CipherSwarm is currently implemented as a Rails 8 monolith backed by PostgreSQL 
 ### Alternatives Considered
 
 1. **Stay on Rails 8 (Status Quo + Iterative Refactors)**
+
    - **Pros**
      - Mature, battle-tested framework and ecosystem
      - Existing code, tests, and documentation remain directly usable
@@ -17,6 +18,7 @@ CipherSwarm is currently implemented as a Rails 8 monolith backed by PostgreSQL 
      - Harder to share validation/runtime types between API and frontend
 
 2. **FastAPI + SvelteKit (Existing V2 Plan)**
+
    - **Pros**
      - Strong typed data modeling via Pydantic
      - Excellent async story and rich Python ecosystem
@@ -26,6 +28,7 @@ CipherSwarm is currently implemented as a Rails 8 monolith backed by PostgreSQL 
      - Requires full replatforming and reimplementation effort similar in magnitude to MERN
 
 3. **MERN Stack (MongoDB + Express + React + Node.js) – Chosen**
+
    - **Pros**
      - Single-language stack (TypeScript) across backend and frontend
      - Shared types between models, DTOs, and React components
@@ -183,15 +186,18 @@ MongoDB provides flexible schemas but must be constrained with explicit TypeScri
 Base URL: `/api/v1`.
 
 - **Auth**
+
   - `POST /auth/login` – user login, returns session cookie/JWT
   - `POST /auth/logout`
   - `GET /auth/me` – current user profile & project memberships
 
 - **Projects & Users**
+
   - `GET /projects`, `POST /projects`, `GET /projects/:id`, `PATCH /projects/:id`
   - `GET /projects/:id/users`, `POST /projects/:id/users`, `PATCH /projects/:id/users/:userId`
 
 - **Agents (Agent API & UI)**
+
   - Agent API (token-based, **fully described in OpenAPI**):
     - `POST /agent/sessions` – agent authenticate/handshake
     - `POST /agent/heartbeat` – status, capabilities, device info
@@ -201,24 +207,29 @@ Base URL: `/api/v1`.
     - `GET /agents`, `GET /agents/:id`, `PATCH /agents/:id`, etc.
 
 - **Campaigns & Attacks**
+
   - `GET /campaigns`, `POST /campaigns`, `GET /campaigns/:id`, `PATCH /campaigns/:id`
   - `POST /campaigns/:id/start`, `POST /campaigns/:id/pause`, `POST /campaigns/:id/stop`
   - `GET /campaigns/:id/attacks`, `POST /campaigns/:id/attacks`, etc.
 
 - **Tasks**
+
   - `GET /attacks/:id/tasks`
   - Administrative controls (requeue, cancel, retry) via `/tasks/:id/*` endpoints.
 
 - **Resources**
+
   - `GET /resources/hash-lists`, `POST /resources/hash-lists`
   - `POST /resources/hash-lists/:id/import` – parse uploaded hashes
   - `GET /resources/word-lists`, `POST /resources/word-lists` (file uploads)
   - Similar endpoints for rulelists and masklists.
 
 - **Hash Analysis**
+
   - `POST /hashes/guess-type` – input: blob of hash-like content, output: candidate hash types with confidence scores.
 
 - **Events & Dashboards**
+
   - `GET /events/stream` – SSE or WebSocket upgrade endpoint for live updates
   - Event types: agent_status, campaign_status, attack_status, task_update, crack_result, system_alert.
 
@@ -298,30 +309,36 @@ Base URL: `/api/v1`.
 ### 6.2 Major UI Areas (Aligned with V2 Web UI Proposal)
 
 - **Authentication & User Profile**
+
   - Login, logout, password management, user profile pages.
   - Project switcher and role-aware navigation, mirroring the V2 design.
 
 - **Operations Dashboard**
+
   - Global overview of agents, campaigns, attacks, and recent crack results.
   - Real-time tiles using WebSockets/SSE subscriptions.
   - Status summaries and trend charts consistent with the V2 dashboard concepts.
 
 - **Campaigns & Attacks**
+
   - List, detail, and wizard-style creation/editing flows for campaigns and attacks.
   - Visual DAG or stepped workflow for attack sequences, matching V2’s guided campaign management.
   - Inline validation and keyspace/ETA estimates derived from the backend.
 
 - **Agents**
+
   - Agent list with filters by status and project.
   - Agent detail: hardware info, current task, recent errors, performance history, and hash rate metrics.
   - Controls for enabling/disabling agents, setting priorities, and viewing recent errors.
 
 - **Resources**
+
   - Resource browser with tabs for hash lists, wordlists, rulelists, masklists.
   - Upload & validation flows, preview of stats, linkage to campaigns/attacks.
   - Crackable uploads and hash-type guessing workflows as described in the V2 proposal.
 
 - **Admin / Settings**
+
   - User & role management, project configuration, global settings.
   - Feature flags and environment/status indicators for operators.
 
@@ -342,16 +359,19 @@ Base URL: `/api/v1`.
 ## 7. Testing & Quality Strategy
 
 - **Backend**
+
   - Unit tests for services and utilities
   - API contract tests (Jest + supertest) for each route group
   - Integration tests with Testcontainers for MongoDB, Redis, MinIO
 
 - **Frontend**
+
   - Component tests for critical UI components
   - Route-level tests for load functions and forms
   - E2E for end-to-end workflows: agent setup, campaign creation, attack execution, results review
 
 - **Cross-Cutting**
+
   - Schema tests to ensure API DTOs align with UI expectations
   - Load/performance tests for task distribution and high agent counts
 
@@ -378,6 +398,7 @@ The migration strategy assumes **no strict backward-compatibility requirements**
 Two primary strategies are supported, both relying on offline or near-offline data migration instead of dual-write or shared-schema operation:
 
 - **Big-Bang Cutover**
+
   - Schedule a maintenance window.
   - Put the Rails system into read-only or fully offline mode.
   - Run data export and transformation scripts.
@@ -386,6 +407,7 @@ Two primary strategies are supported, both relying on offline or near-offline da
   - Roll back by re-enabling Rails and discarding the MERN environment if acceptance checks fail.
 
 - **Shadow Environment with Final Cutover**
+
   - Stand up a full MERN environment using a **snapshot** of production data.
   - Perform validation, load testing, and UAT against the MERN stack.
   - Shortly before go-live, repeat the export/transform/import process with a fresh snapshot.
@@ -423,28 +445,34 @@ There is **no requirement** to maintain HTTP-level or database-level compatibili
 ## 9. Implementation Phases (MERN-Specific)
 
 1. **Foundation**
+
    - Scaffold Node/Express API and Next.js app
    - Integrate MongoDB, Redis, and MinIO
    - Establish TypeScript configuration, linting, formatting, test harnesses
 
 2. **Identity & Projects**
+
    - Implement users, projects, roles, session management
    - Build basic admin UI and authentication flows
 
 3. **Agents & Resources**
+
    - Implement Agent API endpoints and models
    - Implement resource management (hash lists, wordlists, rulelists, masklists) and UI
 
 4. **Campaigns, Attacks, Tasks**
+
    - Implement campaign/attack/task domain
    - Implement task distribution service & queues
    - Build dashboards and editors in React
 
 5. **Real-Time Events & Analytics**
+
    - Implement event bus and WebSockets/SSE endpoints
    - Wire UI dashboards and logs to live feeds
 
 6. **Hardening & Cutover**
+
    - Load testing, failure scenario testing, and resilience checks
    - Final data migration and switch agents & users to MERN stack
    - Decommission or archive Rails implementation after stable period.

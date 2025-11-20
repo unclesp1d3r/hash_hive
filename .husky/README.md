@@ -10,16 +10,13 @@ Runs automatically before each commit.
 
 **What it does:**
 
-- Runs `lint-staged` to check and fix only staged files
-- Lints TypeScript/JavaScript files with ESLint
-- Formats code with Prettier
-- Automatically fixes issues when possible
+- Runs `lint-staged` to format only staged files
+- Formats code with Prettier for consistent style
+- Fast and non-intrusive
 
 **Files checked:**
 
-- `*.{ts,tsx}` - TypeScript files (lint + format)
-- `*.{js,jsx}` - JavaScript files (lint + format)
-- `*.{json,md,yaml,yml}` - Config/doc files (format only)
+- `*.{ts,tsx,js,jsx,json,md,yaml,yml}` - All code and config files (format only)
 
 ### pre-push
 

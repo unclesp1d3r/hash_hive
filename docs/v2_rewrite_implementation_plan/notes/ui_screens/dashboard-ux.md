@@ -56,7 +56,6 @@ The Dashboard UI follows a classic sidebar + header layout with a responsive, da
 - **Main Content Area:**
 
   - Top strip with operational status **cards** arranged in a responsive row layout. Each card summarizes a critical system metric and uses a compact, visually scannable format. All cards should update reactively using real-time data, with no need for manual refresh.
-
     - **Active Agents** — Displays the number of online agents out of the total registered. Clicking this card opens the **Agent Status Sheet**, which provides a detailed overview of each agent. The card should include a short label (e.g., "Online / Total"), a numeric highlight, and optional icon.
     - **Running Tasks** — Reflects the number of active campaigns, showing the total and a percentage breakdown of running vs completed tasks. This metric gives a sense of overall system activity.
     - **Recently Cracked Hashes** — Counts the number of hashes cracked in the last 24 hours, scoped to the user's accessible projects. Should include a link to view all results.

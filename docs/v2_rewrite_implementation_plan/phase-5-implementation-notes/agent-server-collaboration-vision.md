@@ -33,7 +33,7 @@
 
 ## Overview
 
-This document outlines a future-forward vision for Phase 5 of CipherSwarm: transforming agents into adaptive, observant, and partially autonomous nodes that work *with* the server, not *for* it. These ideas extend the Sync Extensions model by elevating both agent responsibility and server strategy.
+This document outlines a future-forward vision for Phase 5 of CipherSwarm: transforming agents into adaptive, observant, and partially autonomous nodes that work _with_ the server, not _for_ it. These ideas extend the Sync Extensions model by elevating both agent responsibility and server strategy.
 
 The goal is a smarter, more cooperative distributed cracking system — one that adapts to real-world conditions, anticipates failure, and evolves over time.
 
