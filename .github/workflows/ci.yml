@@ -17,13 +17,6 @@ jobs:
 
       - uses: bahmutov/npm-install@v1
 
-      - uses: bahmutov/npm-install@v1
-        with:
-          working-directory: |
-            backend
-            frontend
-            shared
-
       - name: Install just
         uses: extractions/setup-just@v1
 
