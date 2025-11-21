@@ -35,6 +35,16 @@ describe('Redis Connection Integration Tests', () => {
   }, 30000);
 
   afterEach(async () => {
+    // Flush all data before disconnecting, if a client is available
+    try {
+      const client = getRedisClient();
+      if (client.status === 'ready') {
+        await client.flushall();
+      }
+    } catch {
+      // Client was not initialized; nothing to flush
+    }
+
     await disconnectRedis();
   });
 
@@ -112,6 +122,8 @@ describe('Redis Connection Integration Tests', () => {
   describe('Redis operations', () => {
     beforeEach(async () => {
       await connectRedis();
+      const client = getRedisClient();
+      await client.flushdb();
     });
 
     it('should set and get values', async () => {

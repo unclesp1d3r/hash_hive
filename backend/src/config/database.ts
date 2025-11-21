@@ -35,12 +35,14 @@ export async function connectDatabase(
   while (attempt < retries) {
     try {
       attempt++;
+      const mongoUri = process.env['MONGODB_URI'] ?? config.mongodb.uri;
+      const maskedUri = mongoUri.replace(/\/\/.*@/, '//***@');
       logger.info(
-        { attempt, maxRetries: retries, uri: config.mongodb.uri.replace(/\/\/.*@/, '//***@') },
+        { attempt, maxRetries: retries, uri: maskedUri },
         'Attempting MongoDB connection'
       );
 
-      await mongoose.connect(config.mongodb.uri, connectionOptions);
+      await mongoose.connect(mongoUri, connectionOptions);
 
       isConnected = true;
       logger.info('MongoDB connected successfully');

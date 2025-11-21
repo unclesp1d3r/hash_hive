@@ -73,7 +73,7 @@ export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
   (schema.methods as Record<string, unknown>)['restore'] = async function (
     this: SoftDeleteDocument
   ) {
-    this.deleted_at = null;
+    this.set('deleted_at', undefined);
     this.is_deleted = false;
     return await this.save();
   };
@@ -82,18 +82,27 @@ export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
   (schema.query as Record<string, unknown>)['notDeleted'] = function <ResultType, DocType>(
     this: Query<ResultType, DocType>
   ) {
+    // Explicitly exclude deleted documents
+    const currentOptions = this.getOptions() as Record<string, unknown>;
+    void this.setOptions({ ...currentOptions, includeDeleted: false });
     return this.where({ is_deleted: false });
   };
 
   (schema.query as Record<string, unknown>)['onlyDeleted'] = function <ResultType, DocType>(
     this: Query<ResultType, DocType>
   ) {
+    // Include only soft-deleted documents and prevent the default middleware from overriding
+    const currentOptions = this.getOptions() as Record<string, unknown>;
+    void this.setOptions({ ...currentOptions, includeDeleted: true });
     return this.where({ is_deleted: true });
   };
 
   (schema.query as Record<string, unknown>)['withDeleted'] = function <ResultType, DocType>(
     this: Query<ResultType, DocType>
   ) {
+    // Return all documents regardless of soft-delete status
+    const currentOptions = this.getOptions() as Record<string, unknown>;
+    void this.setOptions({ ...currentOptions, includeDeleted: true });
     return this;
   };
 

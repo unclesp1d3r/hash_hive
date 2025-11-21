@@ -78,10 +78,9 @@ format:
 format-check:
     npm run format:check
 
-# Run TypeScript type checking
+# Run TypeScript type checking across all workspaces
 type-check:
-    npm run type-check
-    tsc --noEmit
+    npm run type-check --workspaces
 
 # Start Docker services
 docker-up:
