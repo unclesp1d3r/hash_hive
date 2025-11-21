@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { Queue, QueueEvents, Worker, type Job, type ConnectionOptions } from 'bullmq';
 import { config } from './index';
 import { logger } from '../utils/logger';
@@ -147,7 +148,7 @@ export const registerWorker = <T = unknown, R = unknown>(
     };
   }
 ): Worker<T, R> => {
-  const workerId = `${queueName}-worker-${Date.now()}`;
+  const workerId = `${queueName}-worker-${randomUUID()}`;
 
   logger.info({ queueName, workerId }, 'Registering worker');
 
@@ -193,30 +194,58 @@ export const registerWorker = <T = unknown, R = unknown>(
 export const moveToDeadLetterQueue = async (job: Job<unknown>, reason: string): Promise<void> => {
   const deadLetterQueue = getQueue(QUEUE_NAMES.DEAD_LETTER);
 
-  await deadLetterQueue.add(
-    'dead-letter-job',
-    {
-      originalQueue: job.queueName,
-      originalJobId: job.id,
-      originalData: job.data as Record<string, unknown>,
-      failedReason: reason,
-      failedAt: new Date().toISOString(),
-      attemptsMade: job.attemptsMade,
-    },
-    {
-      removeOnComplete: false, // Keep dead-letter jobs indefinitely
-      removeOnFail: false,
-    }
-  );
+  try {
+    await deadLetterQueue.add(
+      'dead-letter-job',
+      {
+        originalQueue: job.queueName,
+        originalJobId: job.id,
+        originalData: job.data as Record<string, unknown>,
+        failedReason: reason,
+        failedAt: new Date().toISOString(),
+        attemptsMade: job.attemptsMade,
+      },
+      {
+        removeOnComplete: false, // Keep dead-letter jobs indefinitely
+        removeOnFail: false,
+      }
+    );
 
-  logger.warn(
-    {
-      originalQueue: job.queueName,
-      originalJobId: job.id,
-      reason,
-    },
-    'Job moved to dead-letter queue'
-  );
+    // Only remove the original job if the dead-letter add succeeded
+    try {
+      await job.remove();
+    } catch (removeError) {
+      logger.error(
+        {
+          originalQueue: job.queueName,
+          originalJobId: job.id,
+          error: removeError,
+        },
+        'Failed to remove original job after moving to dead-letter queue'
+      );
+      throw removeError;
+    }
+
+    logger.warn(
+      {
+        originalQueue: job.queueName,
+        originalJobId: job.id,
+        reason,
+      },
+      'Job moved to dead-letter queue'
+    );
+  } catch (error) {
+    logger.error(
+      {
+        originalQueue: job.queueName,
+        originalJobId: job.id,
+        reason,
+        error,
+      },
+      'Failed to move job to dead-letter queue'
+    );
+    throw error;
+  }
 };
 
 /**
