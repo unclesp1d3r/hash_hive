@@ -1,3 +1,4 @@
+/* eslint-disable preserve-caught-error -- MongoDB connection retries intentionally wrap and rethrow errors for clearer context */
 import mongoose from 'mongoose';
 import { config } from './index';
 import { logger } from '../utils/logger';
@@ -8,12 +9,20 @@ import { logger } from '../utils/logger';
 let isConnected = false;
 
 /**
+ * Track if connection handlers have been set up to avoid duplicate registrations
+ */
+let handlersSetup = false;
+
+const SERVER_SELECTION_TIMEOUT_MS = 5000;
+const SOCKET_TIMEOUT_MS = 45000;
+
+/**
  * Connection options for Mongoose
  */
 const connectionOptions = {
   maxPoolSize: config.mongodb.maxPoolSize,
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000,
+  serverSelectionTimeoutMS: SERVER_SELECTION_TIMEOUT_MS,
+  socketTimeoutMS: SOCKET_TIMEOUT_MS,
 } satisfies mongoose.ConnectOptions;
 
 /**
@@ -21,9 +30,13 @@ const connectionOptions = {
  * @param retries - Number of retry attempts (default: 5)
  * @param retryDelay - Delay between retries in ms (default: 5000)
  */
+const DEFAULT_DB_RETRIES = 5;
+const DEFAULT_DB_RETRY_DELAY_MS = 5000;
+const RETRY_ATTEMPT_INCREMENT = 1;
+
 export async function connectDatabase(
-  retries: number = 5,
-  retryDelay: number = 5000
+  retries: number = DEFAULT_DB_RETRIES,
+  retryDelay: number = DEFAULT_DB_RETRY_DELAY_MS
 ): Promise<void> {
   if (isConnected) {
     logger.info('MongoDB already connected');
@@ -34,7 +47,7 @@ export async function connectDatabase(
 
   while (attempt < retries) {
     try {
-      attempt++;
+      attempt += RETRY_ATTEMPT_INCREMENT;
       const mongoUri = process.env['MONGODB_URI'] ?? config.mongodb.uri;
       const maskedUri = mongoUri.replace(/\/\/.*@/, '//***@');
       logger.info(
@@ -42,6 +55,7 @@ export async function connectDatabase(
         'Attempting MongoDB connection'
       );
 
+      // eslint-disable-next-line no-await-in-loop -- Each attempt must complete before the next begins
       await mongoose.connect(mongoUri, connectionOptions);
 
       isConnected = true;
@@ -56,19 +70,33 @@ export async function connectDatabase(
 
       if (attempt >= retries) {
         logger.fatal('MongoDB connection failed after maximum retries');
-        throw new Error('Failed to connect to MongoDB after maximum retries');
+        const connectionError =
+          error instanceof Error ? error : new Error('Unknown error while connecting to MongoDB');
+        throw new Error('Failed to connect to MongoDB after maximum retries', {
+          cause: connectionError,
+        });
       }
 
       logger.info({ retryDelay }, 'Retrying MongoDB connection');
-      await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      // Sequential retry with delay is intentional; a loop with await is acceptable here.
+      // eslint-disable-next-line no-await-in-loop, promise/avoid-new -- Delay between attempts must be awaited before continuing
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, retryDelay);
+      });
     }
   }
 }
 
 /**
  * Set up MongoDB connection event handlers
+ * Only registers handlers once to avoid duplicate listeners
  */
 function setupConnectionHandlers(): void {
+  // Only set up handlers once, even if connection is re-established
+  if (handlersSetup) {
+    return;
+  }
+
   mongoose.connection.on('connected', () => {
     logger.info('Mongoose connected to MongoDB');
   });
@@ -87,18 +115,10 @@ function setupConnectionHandlers(): void {
     isConnected = true;
   });
 
-  // Handle process termination
-  process.on('SIGINT', () => {
-    void disconnectDatabase().then(() => {
-      process.exit(0);
-    });
-  });
+  // Note: SIGINT and SIGTERM handlers are managed by index.ts graceful shutdown
+  // to ensure proper ordering of resource cleanup (server -> queues -> redis -> database)
 
-  process.on('SIGTERM', () => {
-    void disconnectDatabase().then(() => {
-      process.exit(0);
-    });
-  });
+  handlersSetup = true;
 }
 
 /**

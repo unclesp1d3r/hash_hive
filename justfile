@@ -4,6 +4,23 @@
 default:
     @just --list
 
+# -----------------------------
+# 🔧 Setup & Installation
+# -----------------------------
+
+# Update uv and pnpm dependencies
+[unix]
+update-deps:
+    cd {{justfile_dir()}}
+    npm update --all --include=dev
+    pre-commit autoupdate
+
+[windows]
+update-deps:
+    cd {{justfile_dir()}}
+    npm update --all --include=dev
+    pre-commit autoupdate
+
 # Install all dependencies
 install:
     npm install
@@ -15,6 +32,20 @@ setup:
 # Validate project setup
 validate:
     ./scripts/validate-setup.sh
+
+# Copy environment files from examples
+env-setup:
+    cp backend/.env.example backend/.env
+    cp frontend/.env.example frontend/.env
+
+# Install pre-commit hooks
+install-hooks:
+    pre-commit install
+    bash scripts/install-git-hooks.sh
+
+# -----------------------------
+# 🚀 Development Environment
+# -----------------------------
 
 # Start development servers (backend + frontend)
 dev:
@@ -28,19 +59,50 @@ dev-backend:
 dev-frontend:
     npm run dev -w frontend
 
-# Build all packages
-build:
-    npm run build
+# Run backend in production mode
+start-backend:
+    npm run start -w backend
 
-# Build specific package
-build-backend:
-    npm run build -w backend
+# Run frontend in production mode
+start-frontend:
+    npm run start -w frontend
 
-build-frontend:
-    npm run build -w frontend
+# Show environment info
+info:
+    @echo "Node version: $(node -v)"
+    @echo "npm version: $(npm -v)"
+    @echo "Docker version: $(docker --version)"
+    @echo ""
+    @echo "Services:"
+    @docker compose ps
 
-build-shared:
-    npm run build -w shared
+# Restart a specific service
+restart service:
+    docker compose restart {{service}}
+
+# -----------------------------
+# 🧹 Linting, Typing, Dep Check
+# -----------------------------
+
+# Lint all code
+lint:
+    npm run lint
+
+# Format all code
+format:
+    npm run format
+
+# Check code formatting
+format-check:
+    npm run format:check
+
+# Run TypeScript type checking across all workspaces
+type-check:
+    npm run type-check --workspaces
+
+# -----------------------------
+# 🧪 Testing & Coverage
+# -----------------------------
 
 # Run all tests
 test:
@@ -66,21 +128,46 @@ test-e2e:
 test-watch:
     npm run test:watch -w backend
 
-# Lint all code
-lint:
-    npm run lint
+# Generate coverage report
+coverage:
+    npm run test:coverage -w backend
 
-# Format all code
-format:
-    npm run format
+# -----------------------------
+# 📦 Build & Clean
+# -----------------------------
 
-# Check code formatting
-format-check:
-    npm run format:check
+# Build all packages
+build:
+    npm run build
 
-# Run TypeScript type checking across all workspaces
-type-check:
-    npm run type-check --workspaces
+# Build specific package
+build-backend:
+    npm run build -w backend
+
+build-frontend:
+    npm run build -w frontend
+
+build-shared:
+    npm run build -w shared
+
+# Clean build artifacts and dependencies
+clean:
+    rm -rf node_modules
+    rm -rf backend/node_modules backend/dist
+    rm -rf frontend/node_modules frontend/.next
+    rm -rf shared/node_modules shared/dist
+    rm -rf coverage
+
+# Clean Docker volumes
+clean-docker:
+    docker compose down -v
+
+# Full clean (code + docker)
+clean-all: clean clean-docker
+
+# -----------------------------
+# 🐳 Docker & Infrastructure
+# -----------------------------
 
 # Start Docker services
 docker-up:
@@ -107,41 +194,13 @@ docker-reset:
 docker-status:
     docker compose ps
 
-# Clean build artifacts and dependencies
-clean:
-    rm -rf node_modules
-    rm -rf backend/node_modules backend/dist
-    rm -rf frontend/node_modules frontend/.next
-    rm -rf shared/node_modules shared/dist
-    rm -rf coverage
-
-# Clean Docker volumes
-clean-docker:
-    docker compose down -v
-
-# Full clean (code + docker)
-clean-all: clean clean-docker
-
-# Copy environment files from examples
-env-setup:
-    cp backend/.env.example backend/.env
-    cp frontend/.env.example frontend/.env
-
-# Run backend in production mode
-start-backend:
-    npm run start -w backend
-
-# Run frontend in production mode
-start-frontend:
-    npm run start -w frontend
-
-# Generate coverage report
-coverage:
-    npm run test:coverage -w backend
-
 # Open MinIO console
 minio-console:
     open http://localhost:9001
+
+# -----------------------------
+# 🗄️ Database Tasks
+# -----------------------------
 
 # Connect to MongoDB shell
 mongo-shell:
@@ -151,17 +210,16 @@ mongo-shell:
 redis-cli:
     docker compose exec redis redis-cli
 
-# Show environment info
-info:
-    @echo "Node version: $(node -v)"
-    @echo "npm version: $(npm -v)"
-    @echo "Docker version: $(docker --version)"
-    @echo ""
-    @echo "Services:"
-    @docker compose ps
-
-# Restart a specific service
-restart service:
-    docker compose restart {{service}}
+# -----------------------------
+# 🤖 CI Workflow
+# -----------------------------
 
 ci-check: lint format-check type-check test coverage
+
+# -----------------------------
+# 📚 Documentation
+# -----------------------------
+
+# -----------------------------
+# 🚢 Production Build & Deployment
+# -----------------------------

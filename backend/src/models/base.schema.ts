@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-magic-numbers -- Mongoose index directions and defaults rely on conventional numeric values (1, -1, 0, etc.) */
 import { Schema } from 'mongoose';
 import type { Document, Query } from 'mongoose';
 
@@ -30,7 +31,7 @@ export const baseSchemaOptions: Record<string, unknown> = {
     virtuals: true,
     transform: (_doc: unknown, ret: Record<string, unknown>) => {
       // Remove MongoDB internal fields from JSON output
-      // eslint-disable-next-line @typescript-eslint/naming-convention
+      // eslint-disable-next-line @typescript-eslint/naming-convention -- Mongoose reserves __v for internal versioning
       const { __v, ...rest } = ret;
       return rest;
     },
@@ -46,7 +47,7 @@ export const baseSchemaOptions: Record<string, unknown> = {
  */
 export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
   // Add soft delete fields
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-type-assertion -- Mongoose schema mutation relies on runtime APIs
   (schema as any).add({
     deleted_at: {
       type: Date,
@@ -61,6 +62,7 @@ export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
   });
 
   // Add soft delete method
+  // eslint-disable-next-line no-param-reassign -- Mongoose plugin pattern mutates schema methods
   (schema.methods as Record<string, unknown>)['softDelete'] = async function (
     this: SoftDeleteDocument
   ) {
@@ -70,6 +72,7 @@ export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
   };
 
   // Add restore method
+  // eslint-disable-next-line no-param-reassign -- Mongoose plugin pattern mutates schema methods
   (schema.methods as Record<string, unknown>)['restore'] = async function (
     this: SoftDeleteDocument
   ) {
@@ -79,6 +82,7 @@ export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
   };
 
   // Add query helpers to exclude soft-deleted documents by default
+  // eslint-disable-next-line no-param-reassign -- Mongoose plugin pattern augments query helpers
   (schema.query as Record<string, unknown>)['notDeleted'] = function <ResultType, DocType>(
     this: Query<ResultType, DocType>
   ) {
@@ -88,6 +92,7 @@ export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
     return this.where({ is_deleted: false });
   };
 
+  // eslint-disable-next-line no-param-reassign -- Mongoose plugin pattern augments query helpers
   (schema.query as Record<string, unknown>)['onlyDeleted'] = function <ResultType, DocType>(
     this: Query<ResultType, DocType>
   ) {
@@ -97,6 +102,7 @@ export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
     return this.where({ is_deleted: true });
   };
 
+  // eslint-disable-next-line no-param-reassign -- Mongoose plugin pattern augments query helpers
   (schema.query as Record<string, unknown>)['withDeleted'] = function <ResultType, DocType>(
     this: Query<ResultType, DocType>
   ) {
@@ -110,7 +116,7 @@ export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
   const excludeDeletedMiddleware = function <ResultType, DocType>(
     this: Query<ResultType, DocType>,
     next: () => void
-  ) {
+  ): void {
     // Only apply if not explicitly requesting deleted documents
     const options = this.getOptions() as Record<string, unknown>;
     if (options['includeDeleted'] !== true) {
@@ -134,14 +140,16 @@ export function addCommonIndexes<T extends Document>(
   schema: Schema<T>,
   additionalIndexes?: Array<{ fields: Record<string, 1 | -1>; options?: Record<string, unknown> }>
 ): void {
+  const DESCENDING = -1 as const;
+
   // Index on created_at for sorting
-  schema.index({ created_at: -1 });
+  schema.index({ created_at: DESCENDING });
 
   // Index on updated_at for sorting
-  schema.index({ updated_at: -1 });
+  schema.index({ updated_at: DESCENDING });
 
   // Add any additional indexes
-  if (additionalIndexes !== null && additionalIndexes !== undefined) {
+  if (additionalIndexes !== undefined) {
     additionalIndexes.forEach(({ fields, options }) => {
       schema.index(fields, options);
     });
@@ -158,7 +166,7 @@ export function addCommonIndexes<T extends Document>(
 export function createBaseSchema<T extends Document>(
   definition: Record<string, unknown>,
   options: Record<string, unknown> = {},
-  enableSoftDelete: boolean = false,
+  enableSoftDelete = false,
   indexes?: Array<{ fields: Record<string, 1 | -1>; options?: Record<string, unknown> }>
 ): Schema<T> {
   // Merge base options with custom options

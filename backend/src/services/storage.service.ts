@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/prefer-destructuring, preserve-caught-error -- StorageService focuses on readability over aggressive destructuring; error wrapping is used for clearer high-level messages */
 import {
   S3Client,
   PutObjectCommand,
@@ -8,7 +9,7 @@ import {
   HeadBucketCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import type { Readable } from 'stream';
+import { Readable } from 'node:stream';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 
@@ -45,20 +46,23 @@ export interface PresignedUrlOptions {
 export class StorageService {
   private readonly client: S3Client;
   private readonly bucketName: string;
-  private initialized: boolean = false;
+  private initialized = false;
 
   constructor() {
-    this.bucketName = config.s3.bucketName;
+    const { bucketName, endpoint, region, accessKeyId, secretAccessKey, forcePathStyle } =
+      config.s3;
+
+    this.bucketName = bucketName;
 
     // Configure S3 client for MinIO or AWS S3
     this.client = new S3Client({
-      endpoint: config.s3.endpoint,
-      region: config.s3.region,
+      endpoint,
+      region,
       credentials: {
-        accessKeyId: config.s3.accessKeyId,
-        secretAccessKey: config.s3.secretAccessKey,
+        accessKeyId,
+        secretAccessKey,
       },
-      forcePathStyle: config.s3.forcePathStyle, // Required for MinIO
+      forcePathStyle, // Required for MinIO
     });
 
     logger.info(
@@ -85,8 +89,10 @@ export class StorageService {
       await this.client.send(new HeadBucketCommand({ Bucket: this.bucketName }));
       logger.info({ bucket: this.bucketName }, 'Storage bucket exists');
     } catch (error: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Narrowing AWS error shape for HTTP status check
       const err = error as { name?: string; $metadata?: { httpStatusCode?: number } };
-      if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
+      const HTTP_STATUS_NOT_FOUND = 404;
+      if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === HTTP_STATUS_NOT_FOUND) {
         // Bucket doesn't exist, create it
         logger.info({ bucket: this.bucketName }, 'Creating storage bucket');
         await this.client.send(new CreateBucketCommand({ Bucket: this.bucketName }));
@@ -141,7 +147,8 @@ export class StorageService {
         'Failed to upload file'
       );
       throw new Error(
-        `Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        { cause: error instanceof Error ? error : undefined }
       );
     }
   }
@@ -162,8 +169,13 @@ export class StorageService {
 
       const response = await this.client.send(command);
 
-      if (response.Body == null) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive check for unexpected SDK responses
+      if (response.Body === null || response.Body === undefined) {
         throw new Error('No body in response');
+      }
+
+      if (!(response.Body instanceof Readable)) {
+        throw new Error('Unexpected body type in response');
       }
 
       logger.info(
@@ -176,14 +188,16 @@ export class StorageService {
       );
 
       return {
-        body: response.Body as Readable,
+        body: response.Body,
         contentType: response.ContentType,
         contentLength: response.ContentLength,
         metadata: response.Metadata,
       };
     } catch (error: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Narrowing AWS error shape for HTTP status check
       const err = error as { name?: string; $metadata?: { httpStatusCode?: number } };
-      if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === 404) {
+      const HTTP_STATUS_NOT_FOUND = 404;
+      if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === HTTP_STATUS_NOT_FOUND) {
         logger.warn({ key, bucket: this.bucketName }, 'File not found');
         throw new Error(`File not found: ${key}`);
       }
@@ -197,7 +211,8 @@ export class StorageService {
         'Failed to download file'
       );
       throw new Error(
-        `Failed to download file: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to download file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        { cause: error instanceof Error ? error : undefined }
       );
     }
   }
@@ -234,7 +249,8 @@ export class StorageService {
         'Failed to delete file'
       );
       throw new Error(
-        `Failed to delete file: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to delete file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        { cause: error instanceof Error ? error : undefined }
       );
     }
   }
@@ -255,16 +271,20 @@ export class StorageService {
 
       const response = await this.client.send(command);
 
+      const DEFAULT_SIZE_BYTES = 0;
+
       return {
         key,
-        size: response.ContentLength ?? 0,
+        size: response.ContentLength ?? DEFAULT_SIZE_BYTES,
         contentType: response.ContentType,
         lastModified: response.LastModified,
         metadata: response.Metadata,
       };
     } catch (error: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Narrowing AWS error shape for HTTP status check
       const err = error as { name?: string; $metadata?: { httpStatusCode?: number } };
-      if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
+      const HTTP_STATUS_NOT_FOUND = 404;
+      if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === HTTP_STATUS_NOT_FOUND) {
         throw new Error(`File not found: ${key}`);
       }
 
@@ -277,7 +297,8 @@ export class StorageService {
         'Failed to get file metadata'
       );
       throw new Error(
-        `Failed to get file metadata: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to get file metadata: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        { cause: error instanceof Error ? error : undefined }
       );
     }
   }
@@ -292,7 +313,8 @@ export class StorageService {
   async getPresignedUrl(key: string, options: PresignedUrlOptions = {}): Promise<string> {
     await this.initialize();
 
-    const { expiresIn = 3600 } = options; // Default 1 hour
+    const DEFAULT_PRESIGNED_URL_EXPIRY_SECONDS = 3600;
+    const { expiresIn = DEFAULT_PRESIGNED_URL_EXPIRY_SECONDS } = options; // Default 1 hour
 
     try {
       const command = new GetObjectCommand({
@@ -322,7 +344,8 @@ export class StorageService {
         'Failed to generate presigned URL'
       );
       throw new Error(
-        `Failed to generate presigned URL: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to generate presigned URL: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        { cause: error instanceof Error ? error : undefined }
       );
     }
   }

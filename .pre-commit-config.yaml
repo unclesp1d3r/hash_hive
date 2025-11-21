@@ -37,9 +37,9 @@ repos:
     rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
-        types_or: [file, yaml]
-        types: [text]
-        exclude: ^(node_modules/|dist/|\.next/|coverage/|\.git/|package-lock\.json)
+        # Only run Prettier on code/config files, not Markdown or JSONC
+        types_or: [javascript, jsx, ts, tsx, json, yaml]
+        exclude: ^(node_modules/|dist/|\.next/|coverage/|\.git/|package-lock\.json|.*\.md$|.*\.jsonc$)
 
   # Local hooks for npm scripts
   - repo: local

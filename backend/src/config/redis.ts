@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/prefer-destructuring -- Redis config uses imperative property access where destructuring adds little value */
 import Redis from 'ioredis';
 import { config } from './index';
 import { logger } from '../utils/logger';
@@ -8,6 +9,8 @@ let redisClient: Redis | null = null;
  * Create and configure Redis client with health checks and reconnection logic
  */
 export const createRedisClient = (): Redis => {
+  const MAX_RETRIES_PER_REQUEST = 3;
+
   const options: {
     host: string;
     port: number;
@@ -19,9 +22,11 @@ export const createRedisClient = (): Redis => {
   } = {
     host: config.redis.host,
     port: config.redis.port,
-    maxRetriesPerRequest: 3,
+    maxRetriesPerRequest: MAX_RETRIES_PER_REQUEST,
     retryStrategy: (times: number) => {
-      const delay = Math.min(times * 50, 2000);
+      const BASE_DELAY_MS = 50;
+      const MAX_DELAY_MS = 2000;
+      const delay = Math.min(times * BASE_DELAY_MS, MAX_DELAY_MS);
       logger.warn({ attempt: times, delay }, 'Redis connection retry');
       return delay;
     },
@@ -81,7 +86,7 @@ export const createRedisClient = (): Redis => {
  * Connect to Redis with health check
  */
 export const connectRedis = async (): Promise<Redis> => {
-  if (redisClient != null && redisClient.status === 'ready') {
+  if (redisClient !== null && redisClient.status === 'ready') {
     return redisClient;
   }
 
@@ -93,9 +98,10 @@ export const connectRedis = async (): Promise<Redis> => {
     await redisClient.connect();
 
     // Verify connection with PING
-    const pong = await redisClient.ping();
+    const pongLiteral = await redisClient.ping();
+    const pong: string = pongLiteral;
     if (pong !== 'PONG') {
-      throw new Error('Redis PING failed');
+      throw new Error(`Redis PING failed: expected "PONG", received "${pong}"`);
     }
 
     logger.info('✅ Redis connected successfully');
@@ -110,7 +116,7 @@ export const connectRedis = async (): Promise<Redis> => {
  * Disconnect from Redis gracefully
  */
 export const disconnectRedis = async (): Promise<void> => {
-  if (redisClient == null) {
+  if (redisClient === null) {
     return;
   }
 
@@ -121,7 +127,7 @@ export const disconnectRedis = async (): Promise<void> => {
   } catch (error) {
     logger.error({ error }, 'Error disconnecting from Redis');
     // Force close if graceful quit fails
-    if (redisClient != null) {
+    if (redisClient !== null) {
       redisClient.disconnect();
     }
     redisClient = null;
@@ -132,7 +138,7 @@ export const disconnectRedis = async (): Promise<void> => {
  * Get the current Redis client instance
  */
 export const getRedisClient = (): Redis => {
-  if (redisClient == null || redisClient.status !== 'ready') {
+  if (redisClient?.status !== 'ready') {
     throw new Error('Redis client not initialized. Call connectRedis() first.');
   }
   return redisClient;
@@ -146,7 +152,7 @@ export const checkRedisHealth = async (): Promise<{
   latency?: number;
   error?: string;
 }> => {
-  if (redisClient == null || redisClient.status !== 'ready') {
+  if (redisClient?.status !== 'ready') {
     return {
       status: 'unhealthy',
       error: 'Redis client not connected',

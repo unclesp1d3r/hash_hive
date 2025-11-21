@@ -1,10 +1,12 @@
+/* eslint-disable @typescript-eslint/no-magic-numbers -- Health metrics include standard HTTP codes and 1024-based memory units */
 import { Router } from 'express';
-import type { Request, Response } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import { config } from '../config';
 import { isMongoConnected } from '../config/database';
 import { checkRedisHealth } from '../config/redis';
 import { checkQueueHealth } from '../config/queue';
+import { logger } from '../utils/logger';
 
 export const healthRouter = Router();
 
@@ -15,8 +17,8 @@ export const healthRouter = Router();
  * @route GET /health
  * @returns {object} 200 - Health status information
  */
-healthRouter.get('/', (_req: Request, res: Response) => {
-  void (async () => {
+healthRouter.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
     const mongoConnected = isMongoConnected();
     const redisHealth = await checkRedisHealth();
     const queueHealth = await checkQueueHealth();
@@ -24,6 +26,8 @@ healthRouter.get('/', (_req: Request, res: Response) => {
     const allHealthy =
       mongoConnected && redisHealth.status === 'healthy' && queueHealth.status === 'healthy';
     const overallStatus = allHealthy ? 'healthy' : 'degraded';
+
+    const BYTES_IN_MB = 1024 * 1024;
 
     const healthInfo = {
       status: overallStatus,
@@ -33,8 +37,8 @@ healthRouter.get('/', (_req: Request, res: Response) => {
       version: process.env['npm_package_version'] ?? '1.0.0',
       node: process.version,
       memory: {
-        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+        used: Math.round(process.memoryUsage().heapUsed / BYTES_IN_MB),
+        total: Math.round(process.memoryUsage().heapTotal / BYTES_IN_MB),
         unit: 'MB',
       },
       database: {
@@ -53,9 +57,14 @@ healthRouter.get('/', (_req: Request, res: Response) => {
       },
     };
 
-    const statusCode = allHealthy ? 200 : 503;
+    const HTTP_OK = 200;
+    const HTTP_SERVICE_UNAVAILABLE = 503;
+    const statusCode = allHealthy ? HTTP_OK : HTTP_SERVICE_UNAVAILABLE;
     res.status(statusCode).json(healthInfo);
-  })();
+  } catch (err) {
+    logger.error({ err }, 'Health check failed');
+    next(err);
+  }
 });
 
 /**
@@ -65,8 +74,8 @@ healthRouter.get('/', (_req: Request, res: Response) => {
  * @route GET /health/ready
  * @returns {object} 200 - Readiness status
  */
-healthRouter.get('/ready', (_req: Request, res: Response) => {
-  void (async () => {
+healthRouter.get('/ready', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
     const mongoConnected = isMongoConnected();
     const redisHealth = await checkRedisHealth();
     const queueHealth = await checkQueueHealth();
@@ -87,9 +96,14 @@ healthRouter.get('/ready', (_req: Request, res: Response) => {
       },
     };
 
-    const statusCode = isReady ? 200 : 503;
+    const HTTP_OK = 200;
+    const HTTP_SERVICE_UNAVAILABLE = 503;
+    const statusCode = isReady ? HTTP_OK : HTTP_SERVICE_UNAVAILABLE;
     res.status(statusCode).json(readinessInfo);
-  })();
+  } catch (err) {
+    logger.error({ err }, 'Readiness check failed');
+    next(err);
+  }
 });
 
 /**
@@ -100,7 +114,8 @@ healthRouter.get('/ready', (_req: Request, res: Response) => {
  * @returns {object} 200 - Liveness status
  */
 healthRouter.get('/live', (_req: Request, res: Response) => {
-  res.status(200).json({
+  const HTTP_OK = 200;
+  res.status(HTTP_OK).json({
     status: 'alive',
     timestamp: new Date().toISOString(),
   });

@@ -1,4 +1,5 @@
-import { randomUUID } from 'crypto';
+/* eslint-disable @typescript-eslint/prefer-destructuring -- Queue config uses imperative property access where destructuring adds little value */
+import { randomUUID } from 'node:crypto';
 import { Queue, QueueEvents, Worker, type Job, type ConnectionOptions } from 'bullmq';
 import { config } from './index';
 import { logger } from '../utils/logger';
@@ -19,14 +20,16 @@ export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
  * BullMQ connection configuration
  */
 const getConnectionOptions = (): ConnectionOptions => {
+  const { host, port, password } = config.redis;
+
   const options: ConnectionOptions = {
-    host: config.redis.host,
-    port: config.redis.port,
+    host,
+    port,
     maxRetriesPerRequest: null, // BullMQ requires this to be null for blocking operations
   };
 
-  if (config.redis.password !== '' && config.redis.password !== undefined) {
-    options.password = config.redis.password;
+  if (password !== '' && password !== undefined) {
+    options.password = password;
   }
 
   return options;
@@ -39,23 +42,31 @@ const queues = new Map<QueueName, Queue>();
 const queueEvents = new Map<QueueName, QueueEvents>();
 const workers = new Map<string, Worker>();
 
+const DEFAULT_JOB_ATTEMPTS = 3;
+const DEFAULT_BACKOFF_DELAY_MS = 1000;
+const COMPLETED_JOB_TTL_SECONDS = 86400; // 24 hours
+const FAILED_JOB_TTL_SECONDS = 604800; // 7 days
+const MAX_COMPLETED_JOBS = 1000;
+const MAX_FAILED_JOBS = 5000;
+const DEFAULT_WORKER_CONCURRENCY = 1;
+
 /**
  * Default queue options
  */
 const defaultQueueOptions = {
   defaultJobOptions: {
-    attempts: 3,
+    attempts: DEFAULT_JOB_ATTEMPTS,
     backoff: {
       type: 'exponential' as const,
-      delay: 1000,
+      delay: DEFAULT_BACKOFF_DELAY_MS,
     },
     removeOnComplete: {
-      age: 86400, // Keep completed jobs for 24 hours
-      count: 1000, // Keep last 1000 completed jobs
+      age: COMPLETED_JOB_TTL_SECONDS,
+      count: MAX_COMPLETED_JOBS, // Keep last 1000 completed jobs
     },
     removeOnFail: {
-      age: 604800, // Keep failed jobs for 7 days
-      count: 5000, // Keep last 5000 failed jobs
+      age: FAILED_JOB_TTL_SECONDS,
+      count: MAX_FAILED_JOBS, // Keep last 5000 failed jobs
     },
   },
 };
@@ -161,7 +172,7 @@ export const registerWorker = <T = unknown, R = unknown>(
     };
   } = {
     connection: getConnectionOptions(),
-    concurrency: options?.concurrency ?? 1,
+    concurrency: options?.concurrency ?? DEFAULT_WORKER_CONCURRENCY,
   };
 
   if (options?.limiter !== undefined) {
@@ -200,7 +211,7 @@ export const moveToDeadLetterQueue = async (job: Job<unknown>, reason: string): 
       {
         originalQueue: job.queueName,
         originalJobId: job.id,
-        originalData: job.data as Record<string, unknown>,
+        originalData: job.data,
         failedReason: reason,
         failedAt: new Date().toISOString(),
         attemptsMade: job.attemptsMade,
@@ -296,11 +307,18 @@ export const getAllQueueMetrics = async (): Promise<
     }
   > = {};
 
-  for (const queueName of queues.keys()) {
-    metrics[queueName] = await getQueueMetrics(queueName);
+  const results = await Promise.all(
+    Array.from(queues.keys()).map(async (queueName) => {
+      const queueMetrics = await getQueueMetrics(queueName);
+      return [queueName, queueMetrics] as const;
+    })
+  );
+
+  for (const [queueName, queueMetrics] of results) {
+    metrics[queueName] = queueMetrics;
   }
 
-  return metrics;
+  return metrics as Record<QueueName, Awaited<ReturnType<typeof getQueueMetrics>>>;
 };
 
 /**
@@ -383,13 +401,15 @@ export const checkQueueHealth = async (): Promise<{
       }
     > = {};
 
-    for (const [name, queue] of queues.entries()) {
-      const metrics = await getQueueMetrics(name);
-      const client = await queue.client;
-      queueStatuses[name] = {
-        status: client.status,
-        metrics,
-      };
+    const results = await Promise.all(
+      Array.from(queues.entries()).map(async ([name, queue]) => {
+        const [metrics, client] = await Promise.all([getQueueMetrics(name), queue.client]);
+        return [name, { status: client.status, metrics }] as const;
+      })
+    );
+
+    for (const [name, data] of results) {
+      queueStatuses[name] = data;
     }
 
     return {

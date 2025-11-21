@@ -12,6 +12,13 @@ import { securityHeadersMiddleware } from './middleware/security-headers';
 import { errorHandler } from './middleware/error-handler';
 import { healthRouter } from './routes/health';
 
+// HTTP status / exit code constants to avoid magic numbers
+const HTTP_STATUS_SERVER_ERROR_THRESHOLD = 500;
+const HTTP_STATUS_CLIENT_ERROR_THRESHOLD = 400;
+const EXIT_CODE_SUCCESS = 0;
+const EXIT_CODE_FAILURE = 1;
+const FORCE_SHUTDOWN_TIMEOUT_MS = 10000;
+
 // Create Express application
 const app = express();
 
@@ -23,16 +30,14 @@ app.use(
   pinoHttp({
     logger,
     customLogLevel: (_req, res, err) => {
-      if (res.statusCode >= 500 || err != null) return 'error';
-      if (res.statusCode >= 400) return 'warn';
+      const hasError = err instanceof Error;
+      if (res.statusCode >= HTTP_STATUS_SERVER_ERROR_THRESHOLD || hasError) return 'error';
+      if (res.statusCode >= HTTP_STATUS_CLIENT_ERROR_THRESHOLD) return 'warn';
       return 'info';
     },
-    customSuccessMessage: (req, res) => {
-      return `${req.method} ${req.url} ${res.statusCode}`;
-    },
-    customErrorMessage: (req, res, err) => {
-      return `${req.method} ${req.url} ${res.statusCode} - ${err.message}`;
-    },
+    customSuccessMessage: (req, res) => `${req.method} ${req.url} ${res.statusCode}`,
+    customErrorMessage: (req, res, err) =>
+      `${req.method} ${req.url} ${res.statusCode} - ${err.message}`,
     customAttributeKeys: {
       req: 'request',
       res: 'response',
@@ -47,6 +52,7 @@ app.use(
         query: req.query,
         params: req.params,
         remoteAddress: req.ip,
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- req.socket can be undefined in test environments (supertest)
         remotePort: req.socket?.remotePort,
       }),
       res: (res: express.Response) => ({
@@ -127,7 +133,7 @@ if (require.main === module) {
     })
     .catch((error: unknown) => {
       logger.fatal({ error }, 'Failed to start server');
-      process.exit(1);
+      process.exit(EXIT_CODE_FAILURE);
     });
 }
 
@@ -144,19 +150,19 @@ function setupGracefulShutdown(server: ReturnType<typeof app.listen>): void {
         .then(() => {
           logger.info('All connections closed');
           logger.info('Graceful shutdown complete');
-          process.exit(0);
+          process.exit(EXIT_CODE_SUCCESS);
         })
         .catch((error: unknown) => {
           logger.error({ error }, 'Error during graceful shutdown');
-          process.exit(1);
+          process.exit(EXIT_CODE_FAILURE);
         });
     });
 
     // Force shutdown after 10 seconds
     setTimeout(() => {
       logger.error('Forced shutdown after timeout');
-      process.exit(1);
-    }, 10000);
+      process.exit(EXIT_CODE_FAILURE);
+    }, FORCE_SHUTDOWN_TIMEOUT_MS);
   };
 
   process.on('SIGTERM', () => {
@@ -169,12 +175,12 @@ function setupGracefulShutdown(server: ReturnType<typeof app.listen>): void {
   // Handle uncaught errors
   process.on('uncaughtException', (error) => {
     logger.fatal({ error }, 'Uncaught exception');
-    process.exit(1);
+    process.exit(EXIT_CODE_FAILURE);
   });
 
   process.on('unhandledRejection', (reason, promise) => {
     logger.fatal({ reason, promise }, 'Unhandled rejection');
-    process.exit(1);
+    process.exit(EXIT_CODE_FAILURE);
   });
 }
 

@@ -4,11 +4,12 @@
   "description": "Monitors source code files for changes and provides automated code quality analysis including code smells, design patterns, best practices, readability, maintainability, and performance optimizations",
   "version": "1",
   "when": {
-    "type": "fileCreated",
+    "type": "fileEdited",
     "patterns": [
-      "**/*.ts",
-      "**/*.tsx",
-      "**/*.js"
+      "backend/src/**/*.ts",
+      "frontend/**/*.tsx",
+      "frontend/**/*.ts",
+      "shared/src/**/*.ts"
     ]
   },
   "then": {
