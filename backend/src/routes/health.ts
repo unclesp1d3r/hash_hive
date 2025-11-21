@@ -57,10 +57,12 @@ healthRouter.get('/', async (_req: Request, res: Response, next: NextFunction) =
       },
     };
 
+    // The /health endpoint reports overall status ("healthy" vs "degraded") in the
+    // response body but always returns HTTP 200 so that basic health checks and
+    // monitoring systems can rely on a stable liveness signal. Readiness remains
+    // enforced via /health/ready, which continues to use 200/503 semantics.
     const HTTP_OK = 200;
-    const HTTP_SERVICE_UNAVAILABLE = 503;
-    const statusCode = allHealthy ? HTTP_OK : HTTP_SERVICE_UNAVAILABLE;
-    res.status(statusCode).json(healthInfo);
+    res.status(HTTP_OK).json(healthInfo);
   } catch (err) {
     logger.error({ err }, 'Health check failed');
     next(err);

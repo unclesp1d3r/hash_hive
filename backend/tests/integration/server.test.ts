@@ -57,13 +57,17 @@ describe('Express Server Integration', () => {
     it('should respond to GET /health', async () => {
       const response = await request(app).get('/health');
 
-      expect([200, 503]).toContain(response.status);
+      // /health always returns HTTP 200, with overall health encoded in the
+      // response body as either "healthy" or "degraded".
+      expect(response.status).toBe(200);
       expect(['healthy', 'degraded']).toContain(response.body.status);
     });
 
     it('should respond to GET /health/ready', async () => {
       const response = await request(app).get('/health/ready');
 
+      // /health/ready continues to use 200/503 semantics depending on
+      // infrastructure readiness.
       expect([200, 503]).toContain(response.status);
       expect(['ready', 'not_ready']).toContain(response.body.status);
     });
