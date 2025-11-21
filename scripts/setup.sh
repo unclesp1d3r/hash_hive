@@ -47,6 +47,19 @@ sleep 5
 echo "🔍 Checking service health..."
 docker compose ps
 
+# Install pre-commit hooks
+if command -v pre-commit &> /dev/null; then
+    echo "🔧 Installing pre-commit hooks..."
+    pre-commit install
+else
+    echo "⚠️  pre-commit not found. Install it with: pip install pre-commit"
+    echo "   Then run: pre-commit install"
+fi
+
+# Install git hooks (pre-push)
+echo "🔧 Installing git hooks..."
+bash scripts/install-git-hooks.sh
+
 echo ""
 echo "✅ Setup complete!"
 echo ""

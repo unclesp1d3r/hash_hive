@@ -1,3 +1,0 @@
-# Run type checking and tests before push
-npm run type-check
-npm run test -- --silent
