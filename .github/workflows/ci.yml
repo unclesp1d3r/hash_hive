@@ -1,14 +1,29 @@
 name: CI
-on: [push, pull_request]
+'on':
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
 jobs:
   ci-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 'lts/*'
+          node-version-file: 'package.json'
+          cache: npm
+
+      - uses: bahmutov/npm-install@v1
+
+      - uses: bahmutov/npm-install@v1
+        with:
+          working-directory: |
+            backend
+            frontend
+            shared
+
       - name: Install just
         uses: extractions/setup-just@v1
 
