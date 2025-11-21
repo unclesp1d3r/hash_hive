@@ -168,6 +168,11 @@ describe('BullMQ Queue Integration Tests', () => {
     it('should handle concurrent job processing', async () => {
       const queue = getQueue(QUEUE_NAMES.TASKS);
       const processedJobs: string[] = [];
+      let completedCount = 0;
+      let resolveCompletion: (() => void) | undefined;
+      const allJobsCompleted = new Promise<void>((resolve) => {
+        resolveCompletion = resolve;
+      });
 
       // Register worker with concurrency
       const worker = registerWorker(
@@ -175,24 +180,38 @@ describe('BullMQ Queue Integration Tests', () => {
         async (job: Job) => {
           await new Promise((resolve) => setTimeout(resolve, 100));
           processedJobs.push(job.data.id);
+          completedCount++;
+          if (completedCount === 5 && resolveCompletion) {
+            resolveCompletion();
+          }
           return { success: true };
         },
         { concurrency: 3 }
       );
 
-      // Add multiple jobs
-      const jobPromises = [];
-      for (let i = 0; i < 5; i++) {
-        jobPromises.push(queue.add('concurrent-job', { id: `job-${i}` }));
+      try {
+        // Give worker time to be ready
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Add multiple jobs
+        const jobPromises = [];
+        for (let i = 0; i < 5; i++) {
+          jobPromises.push(queue.add('concurrent-job', { id: `job-${i}` }));
+        }
+        await Promise.all(jobPromises);
+
+        // Wait for all jobs to complete with timeout
+        await Promise.race([
+          allJobsCompleted,
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout waiting for jobs')), 10000)
+          ),
+        ]);
+
+        expect(processedJobs).toHaveLength(5);
+      } finally {
+        await worker.close();
       }
-      await Promise.all(jobPromises);
-
-      // Wait for processing
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      expect(processedJobs).toHaveLength(5);
-
-      await worker.close();
     });
   });
 
