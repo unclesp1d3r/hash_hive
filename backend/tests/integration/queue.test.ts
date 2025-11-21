@@ -1,4 +1,4 @@
-import { GenericContainer, StartedTestContainer } from 'testcontainers';
+import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
 import { Job } from 'bullmq';
 import {
   initializeQueues,
@@ -15,18 +15,18 @@ import {
 import { connectRedis, disconnectRedis } from '../../src/config/redis';
 
 describe('BullMQ Queue Integration Tests', () => {
-  let redisContainer: StartedTestContainer;
+  let redisContainer: StartedRedisContainer;
   let originalEnv: NodeJS.ProcessEnv;
 
   beforeAll(async () => {
     // Save original environment
     originalEnv = { ...process.env };
 
-    // Start Redis container
-    redisContainer = await new GenericContainer('redis:7-alpine').withExposedPorts(6379).start();
+    // Start Redis container via community module
+    redisContainer = await new RedisContainer('redis:7-alpine').start();
 
     const redisHost = redisContainer.getHost();
-    const redisPort = redisContainer.getMappedPort(6379);
+    const redisPort = redisContainer.getPort();
 
     // Update environment for tests
     process.env['REDIS_HOST'] = redisHost;

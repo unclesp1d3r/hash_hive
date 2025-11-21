@@ -1,10 +1,27 @@
 import request from 'supertest';
+import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
 import { app } from '../../src/index';
 import { connectRedis, disconnectRedis } from '../../src/config/redis';
 import { initializeQueues, closeQueues } from '../../src/config/queue';
 
+let redisContainer: StartedRedisContainer;
+let originalEnv: NodeJS.ProcessEnv;
+
 describe('Express Server Integration', () => {
   beforeAll(async () => {
+    // Preserve original environment for isolation across test suites
+    originalEnv = { ...process.env };
+
+    // Start Redis in a disposable Testcontainers-managed container via community module
+    redisContainer = await new RedisContainer('redis:7-alpine').start();
+
+    const redisHost = redisContainer.getHost();
+    const redisPort = redisContainer.getPort();
+
+    process.env['REDIS_HOST'] = redisHost;
+    process.env['REDIS_PORT'] = redisPort.toString();
+    process.env['REDIS_PASSWORD'] = '';
+
     await connectRedis();
     initializeQueues();
   });
@@ -12,6 +29,13 @@ describe('Express Server Integration', () => {
   afterAll(async () => {
     await closeQueues();
     await disconnectRedis();
+
+    if (redisContainer !== undefined) {
+      await redisContainer.stop();
+    }
+
+    // Restore original environment variables
+    process.env = originalEnv;
   });
   describe('Middleware Pipeline', () => {
     it('should add request ID to response headers', async () => {

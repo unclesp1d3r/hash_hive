@@ -18,11 +18,17 @@ const SOCKET_TIMEOUT_MS = 45000;
 
 /**
  * Connection options for Mongoose
+ *
+ * In the test environment, we enable `directConnection` so that the MongoDB
+ * driver talks directly to the Testcontainers-managed MongoDB instance
+ * without attempting replica set discovery on the internal container
+ * hostname (which is not resolvable from the host).
  */
 const connectionOptions = {
   maxPoolSize: config.mongodb.maxPoolSize,
   serverSelectionTimeoutMS: SERVER_SELECTION_TIMEOUT_MS,
   socketTimeoutMS: SOCKET_TIMEOUT_MS,
+  directConnection: config.server.isTest,
 } satisfies mongoose.ConnectOptions;
 
 /**

@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { GenericContainer, StartedTestContainer } from 'testcontainers';
+import { MongoDBContainer, StartedMongoDBContainer } from '@testcontainers/mongodb';
 
 // Jest setup file for global test configuration
 // This file runs before all tests
@@ -16,20 +16,19 @@ process.env['MONGODB_URI'] =
 // Increase test timeout for integration tests
 jest.setTimeout(30000);
 
-let mongoContainer: StartedTestContainer | null = null;
+let mongoContainer: StartedMongoDBContainer | null = null;
 
 beforeAll(async () => {
-  // If user has provided a non-local MongoDB URI, respect it and do not start a container
+  // If user has provided an explicit non-local MongoDB URI, respect it and do not start a container
   const currentUri = process.env['MONGODB_URI'];
   if (currentUri && !currentUri.includes('localhost') && !currentUri.includes('127.0.0.1')) {
     return;
   }
 
-  mongoContainer = await new GenericContainer('mongo:7').withExposedPorts(27017).start();
+  // Use the MongoDB community module to provision an ephemeral test database
+  mongoContainer = await new MongoDBContainer('mongo:7').start();
 
-  const host = mongoContainer.getHost();
-  const port = mongoContainer.getMappedPort(27017);
-  process.env['MONGODB_URI'] = `mongodb://${host}:${port}/hashhive-test`;
+  process.env['MONGODB_URI'] = mongoContainer.getConnectionString();
 });
 
 afterAll(async () => {
