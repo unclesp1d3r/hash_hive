@@ -90,6 +90,13 @@ export const createQueue = (name: QueueName): Queue => {
   // Set up queue event listeners for monitoring
   const events = new QueueEvents(name, { connection: getConnectionOptions() });
 
+  // Ensure we always handle error events so they don't crash the process or
+  // surface as unhandled errors in tests when connections are closed as part
+  // of normal shutdown.
+  events.on('error', (error: Error) => {
+    logger.error({ queueName: name, error }, 'Queue events error');
+  });
+
   events.on('waiting', ({ jobId }) => {
     logger.debug({ queueName: name, jobId }, 'Job waiting');
   });
