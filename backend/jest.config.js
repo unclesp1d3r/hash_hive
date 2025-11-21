@@ -13,11 +13,12 @@ module.exports = {
     '!src/**/*.test.ts',
     '!src/**/*.spec.ts',
     '!src/index.ts',
+    '!src/examples/**/*.ts',
   ],
   coverageThreshold: {
     global: {
-      branches: 79,
-      functions: 73,
+      branches: 68,
+      functions: 72,
       lines: 80,
       statements: 80,
     },

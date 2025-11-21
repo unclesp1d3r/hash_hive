@@ -6,14 +6,15 @@
   "when": {
     "type": "fileEdited",
     "patterns": [
-      "backend/src/**/*.ts",
-      "frontend/**/*.tsx",
-      "frontend/**/*.ts",
-      "shared/src/**/*.ts"
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js"
     ]
   },
   "then": {
     "type": "askAgent",
     "prompt": "Analyze the modified code in the changed file for potential improvements. Focus on:\n\n1. **Code Smells**: Identify any code smells such as duplicated code, long functions, large classes, excessive parameters, or inappropriate intimacy between modules.\n\n2. **Design Patterns**: Suggest applicable design patterns that could improve the code structure and maintainability.\n\n3. **Best Practices**: Check adherence to TypeScript/JavaScript best practices, MERN stack conventions, and the project's established patterns (as defined in the steering documents).\n\n4. **Readability**: Evaluate variable naming, function clarity, comment quality, and overall code organization.\n\n5. **Maintainability**: Assess modularity, coupling, cohesion, and ease of future modifications.\n\n6. **Performance**: Identify potential performance bottlenecks, unnecessary computations, inefficient algorithms, or memory leaks.\n\n7. **Type Safety**: Ensure proper TypeScript usage, type annotations, and avoidance of `any` types.\n\n8. **Error Handling**: Verify appropriate error handling patterns and edge case coverage.\n\nProvide specific, actionable suggestions while maintaining the existing functionality. Reference relevant project conventions from the steering documents when applicable."
-  }
+  },
+  "workspaceFolderName": "hash_hive",
+  "shortName": "code-quality-analyzer"
 }

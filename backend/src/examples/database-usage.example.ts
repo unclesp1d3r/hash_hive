@@ -94,7 +94,7 @@ async function demonstrateUsage() {
 
     // Example 2: Soft delete
     console.log('\n🗑️  Example 2: Soft delete functionality');
-    const project1 = await Project.create({
+    await Project.create({
       name: 'Active Project',
       description: 'This project is active',
     });
@@ -146,7 +146,7 @@ async function demonstrateUsage() {
         auth_token: 'unique-token-123', // Duplicate!
         status: 'online',
       });
-    } catch (error: any) {
+    } catch {
       console.log('✅ Unique index working - duplicate prevented');
     }
 

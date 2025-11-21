@@ -31,7 +31,7 @@
     - Create dead-letter queue handling
     - _Requirements: 1.3, 6.2_
 
-  - [ ] 2.4 Implement S3/MinIO storage service
+  - [x] 2.4 Implement S3/MinIO storage service
     - Configure S3 client with MinIO for development
     - Create StorageService abstraction for file operations
     - Implement upload, download, and delete operations
