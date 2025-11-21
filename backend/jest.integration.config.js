@@ -2,6 +2,10 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  // Integration tests talk to real containers (Redis, MongoDB, MinIO) and
+  // share external resources, so we run them in a single worker to avoid
+  // cross-test interference.
+  maxWorkers: 1,
   roots: ['<rootDir>/tests/integration'],
   testMatch: ['**/*.test.ts'],
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/**/*.test.ts'],

@@ -47,13 +47,7 @@ describe('BullMQ Queue Integration Tests', () => {
   }, 30000);
 
   afterEach(async () => {
-    // Clean up all jobs from all queues before closing
-    try {
-      const taskQueue = getQueue(QUEUE_NAMES.TASKS);
-      await taskQueue.obliterate({ force: true });
-    } catch {
-      // Queue might not exist
-    }
+    // Close all queues and workers between tests to avoid cross-test interference
     await closeQueues();
   });
 
@@ -168,22 +162,14 @@ describe('BullMQ Queue Integration Tests', () => {
     it('should handle concurrent job processing', async () => {
       const queue = getQueue(QUEUE_NAMES.TASKS);
       const processedJobs: string[] = [];
-      let completedCount = 0;
-      let resolveCompletion: (() => void) | undefined;
-      const allJobsCompleted = new Promise<void>((resolve) => {
-        resolveCompletion = resolve;
-      });
 
       // Register worker with concurrency
       const worker = registerWorker(
         QUEUE_NAMES.TASKS,
         async (job: Job) => {
+          // Simulate some processing work
           await new Promise((resolve) => setTimeout(resolve, 100));
           processedJobs.push(job.data.id);
-          completedCount++;
-          if (completedCount === 5 && resolveCompletion) {
-            resolveCompletion();
-          }
           return { success: true };
         },
         { concurrency: 3 }
@@ -194,19 +180,31 @@ describe('BullMQ Queue Integration Tests', () => {
         await new Promise((resolve) => setTimeout(resolve, 100));
 
         // Add multiple jobs
-        const jobPromises = [];
+        const jobPromises = [] as Array<Promise<Job>>;
         for (let i = 0; i < 5; i++) {
           jobPromises.push(queue.add('concurrent-job', { id: `job-${i}` }));
         }
         await Promise.all(jobPromises);
 
-        // Wait for all jobs to complete with timeout
-        await Promise.race([
-          allJobsCompleted,
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout waiting for jobs')), 10000)
-          ),
-        ]);
+        // Poll until all jobs have been processed or we hit a timeout
+        const MAX_WAIT_MS = 20000;
+        const POLL_INTERVAL_MS = 100;
+        const start = Date.now();
+
+        // eslint-disable-next-line no-constant-condition -- loop exits via break/throw
+        while (true) {
+          if (processedJobs.length === 5) {
+            break;
+          }
+
+          if (Date.now() - start > MAX_WAIT_MS) {
+            throw new Error(`Timeout waiting for jobs. Processed: ${processedJobs.length}`);
+          }
+
+          // Small delay between polls to avoid tight loop
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+        }
 
         expect(processedJobs).toHaveLength(5);
       } finally {

@@ -6,14 +6,15 @@ import {
   BaseDocument,
   SoftDeleteDocument,
 } from '../../src/models/base.schema';
+import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 
 describe('Base Schema', () => {
   beforeAll(async () => {
-    await mongoose.connect(process.env['MONGODB_URI'] ?? 'mongodb://localhost:27017/hashhive-test');
+    await connectDatabase();
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    await disconnectDatabase();
   });
 
   afterEach(async () => {

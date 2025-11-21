@@ -1,6 +1,9 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  // Run tests in a single worker to avoid interference between integration tests
+  // that share external resources like Redis and BullMQ queues.
+  maxWorkers: 1,
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   moduleNameMapper: {
