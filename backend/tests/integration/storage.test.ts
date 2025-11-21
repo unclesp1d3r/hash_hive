@@ -1,10 +1,10 @@
-import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
+import { MinioContainer, StartedMinioContainer } from '@testcontainers/minio';
 import { ListBucketsCommand } from '@aws-sdk/client-s3';
 import { StorageService } from '../../src/services/storage.service';
 import { Readable } from 'stream';
 
 describe('StorageService Integration', () => {
-  let minioContainer: StartedTestContainer;
+  let minioContainer: StartedMinioContainer;
   let storageService: StorageService;
   let originalEnv: NodeJS.ProcessEnv;
 
@@ -12,19 +12,11 @@ describe('StorageService Integration', () => {
     // Save original environment
     originalEnv = { ...process.env };
 
-    // Start MinIO container
-    minioContainer = await new GenericContainer('minio/minio:latest')
-      .withCommand(['server', '/data'])
-      .withExposedPorts(9000)
-      .withEnvironment({
-        MINIO_ROOT_USER: 'minioadmin',
-        MINIO_ROOT_PASSWORD: 'minioadmin',
-      })
-      .withWaitStrategy(Wait.forLogMessage(/API:/))
-      .start();
+    // Start MinIO container via community module
+    minioContainer = await new MinioContainer('minio/minio:latest').start();
 
     const minioHost = minioContainer.getHost();
-    const minioPort = minioContainer.getMappedPort(9000);
+    const minioPort = minioContainer.getPort();
     const minioEndpoint = `http://${minioHost}:${minioPort}`;
 
     // Update environment for test

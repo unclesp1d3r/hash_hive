@@ -214,7 +214,16 @@ redis-cli:
 # 🤖 CI Workflow
 # -----------------------------
 
-ci-check: lint format-check type-check test coverage
+# Run the full CI check locally or in GitHub Actions.
+# This relies on Jest + Testcontainers to provision MongoDB, Redis, and MinIO
+# for the backend test suites, so no docker-compose step is required.
+ci-check:
+    @just lint
+    @just format-check
+    @just type-check
+    @just test-backend
+    @just test-integration
+    @just coverage
 
 # -----------------------------
 # 📚 Documentation

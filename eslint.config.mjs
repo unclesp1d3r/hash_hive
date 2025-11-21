@@ -14,6 +14,11 @@ const baseConfig = [
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+      },
+    },
     plugins: {
       react: reactPlugin,
     },
@@ -56,7 +61,9 @@ const backendConfig = {
   files: ['backend/**/*.{ts,tsx,js,jsx}'],
   languageOptions: {
     parserOptions: {
-      project: ['./backend/tsconfig.json'],
+      projectService: false,
+      project: './backend/tsconfig.eslint.json',
+      tsconfigRootDir: __dirname,
     },
   },
   ignores: ['backend/src/examples/**'],
@@ -168,12 +175,12 @@ export default [
     ],
   },
   ...baseConfig,
+  love,
   backendConfig,
   sharedConfig,
   backendExamplesConfig,
   frontendConfig,
   nodeConfigFiles,
-  love,
   nextEnvOverride,
   backendExamplesNoProjectOverride,
   frontendConfigFilesNoProjectOverride,
