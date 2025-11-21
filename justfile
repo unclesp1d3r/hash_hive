@@ -81,6 +81,7 @@ format-check:
 # Run TypeScript type checking
 type-check:
     npm run type-check
+    tsc --noEmit
 
 # Start Docker services
 docker-up:

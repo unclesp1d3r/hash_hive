@@ -4,6 +4,9 @@ import cors from 'cors';
 import pinoHttp from 'pino-http';
 import { config } from './config';
 import { logger } from './utils/logger';
+import { connectDatabase, disconnectDatabase } from './config/database';
+import { connectRedis, disconnectRedis } from './config/redis';
+import { initializeQueues, closeQueues } from './config/queue';
 import { requestIdMiddleware } from './middleware/request-id';
 import { securityHeadersMiddleware } from './middleware/security-headers';
 import { errorHandler } from './middleware/error-handler';
@@ -102,17 +105,33 @@ app.use(errorHandler);
 
 // Start server only if this file is run directly (not imported)
 if (require.main === module) {
-  const server = app.listen(config.server.port, () => {
-    logger.info(
-      {
-        port: config.server.port,
-        env: config.server.env,
-        baseUrl: config.server.baseUrl,
-      },
-      '🚀 HashHive Backend started successfully'
-    );
-  });
+  // Initialize all infrastructure before starting server
+  Promise.all([connectDatabase(), connectRedis()])
+    .then(() => {
+      // Initialize BullMQ queues after Redis is connected
+      initializeQueues();
 
+      const server = app.listen(config.server.port, () => {
+        logger.info(
+          {
+            port: config.server.port,
+            env: config.server.env,
+            baseUrl: config.server.baseUrl,
+          },
+          '🚀 HashHive Backend started successfully'
+        );
+      });
+
+      // Store server reference for graceful shutdown
+      setupGracefulShutdown(server);
+    })
+    .catch((error: unknown) => {
+      logger.fatal({ error }, 'Failed to start server');
+      process.exit(1);
+    });
+}
+
+function setupGracefulShutdown(server: ReturnType<typeof app.listen>): void {
   // Graceful shutdown handling
   const gracefulShutdown = (signal: string): void => {
     logger.info({ signal }, 'Received shutdown signal, closing server gracefully...');
@@ -120,12 +139,17 @@ if (require.main === module) {
     server.close(() => {
       logger.info('HTTP server closed');
 
-      // Close database connections and other resources here in subsequent tasks
-      // await mongoose.connection.close();
-      // await redis.quit();
-
-      logger.info('Graceful shutdown complete');
-      process.exit(0);
+      // Close all resources in order
+      Promise.all([closeQueues(), disconnectRedis(), disconnectDatabase()])
+        .then(() => {
+          logger.info('All connections closed');
+          logger.info('Graceful shutdown complete');
+          process.exit(0);
+        })
+        .catch((error: unknown) => {
+          logger.error({ error }, 'Error during graceful shutdown');
+          process.exit(1);
+        });
     });
 
     // Force shutdown after 10 seconds

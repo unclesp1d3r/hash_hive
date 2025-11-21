@@ -2,6 +2,27 @@ import request from 'supertest';
 import express from 'express';
 import { healthRouter } from '../../src/routes/health';
 
+// Mock database, Redis and Queue modules
+jest.mock('../../src/config/database', () => ({
+  isMongoConnected: jest.fn().mockReturnValue(true),
+}));
+
+jest.mock('../../src/config/redis', () => ({
+  checkRedisHealth: jest.fn().mockResolvedValue({
+    status: 'healthy',
+    latency: 5,
+  }),
+}));
+
+jest.mock('../../src/config/queue', () => ({
+  checkQueueHealth: jest.fn().mockResolvedValue({
+    status: 'healthy',
+    queues: {
+      tasks: { status: 'ready', metrics: { waiting: 0, active: 0 } },
+    },
+  }),
+}));
+
 describe('Health Check Endpoints', () => {
   let app: express.Application;
 
@@ -25,6 +46,8 @@ describe('Health Check Endpoints', () => {
       expect(response.body.memory).toHaveProperty('used');
       expect(response.body.memory).toHaveProperty('total');
       expect(response.body.memory).toHaveProperty('unit', 'MB');
+      expect(response.body).toHaveProperty('redis');
+      expect(response.body).toHaveProperty('queues');
     });
 
     it('should return valid timestamp in ISO format', async () => {
@@ -52,6 +75,8 @@ describe('Health Check Endpoints', () => {
       expect(response.body).toHaveProperty('timestamp');
       expect(response.body).toHaveProperty('checks');
       expect(response.body.checks).toHaveProperty('server', 'ok');
+      expect(response.body.checks).toHaveProperty('redis', 'ok');
+      expect(response.body.checks).toHaveProperty('queues', 'ok');
     });
   });
 
