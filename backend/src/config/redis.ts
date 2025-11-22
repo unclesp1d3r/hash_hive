@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/prefer-destructuring -- Redis config uses imperative property access where destructuring adds little value */
 import Redis from 'ioredis';
 import { config } from './index';
 import { logger } from '../utils/logger';
@@ -11,6 +10,12 @@ let redisClient: Redis | null = null;
 export const createRedisClient = (): Redis => {
   const MAX_RETRIES_PER_REQUEST = 3;
 
+  // Read Redis config from environment at connection time to support test container configuration
+  // This allows tests to override REDIS_HOST and REDIS_PORT after module load
+  const redisHost = process.env['REDIS_HOST'] ?? config.redis.host;
+  const redisPort = process.env['REDIS_PORT'] === undefined ? config.redis.port : parseInt(process.env['REDIS_PORT'], 10);
+  const redisPassword = process.env['REDIS_PASSWORD'] ?? config.redis.password;
+
   const options: {
     host: string;
     port: number;
@@ -20,8 +25,8 @@ export const createRedisClient = (): Redis => {
     reconnectOnError: (err: Error) => boolean;
     lazyConnect: boolean;
   } = {
-    host: config.redis.host,
-    port: config.redis.port,
+    host: redisHost,
+    port: redisPort,
     maxRetriesPerRequest: MAX_RETRIES_PER_REQUEST,
     retryStrategy: (times: number) => {
       const BASE_DELAY_MS = 50;
@@ -42,8 +47,8 @@ export const createRedisClient = (): Redis => {
     lazyConnect: true, // Don't connect immediately, wait for explicit connect()
   };
 
-  if (config.redis.password !== '' && config.redis.password !== undefined) {
-    options.password = config.redis.password;
+  if (redisPassword !== '' && redisPassword !== undefined) {
+    options.password = redisPassword;
   }
 
   const client = new Redis(options);
@@ -52,8 +57,8 @@ export const createRedisClient = (): Redis => {
   client.on('connect', () => {
     logger.info(
       {
-        host: config.redis.host,
-        port: config.redis.port,
+        host: redisHost,
+        port: redisPort,
       },
       'Redis client connecting'
     );
