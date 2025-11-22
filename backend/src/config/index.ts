@@ -94,21 +94,53 @@ export const config = {
     isTest: env.NODE_ENV === 'test',
   },
   mongodb: {
-    uri: env.MONGODB_URI,
-    maxPoolSize: env.MONGODB_MAX_POOL_SIZE,
+    get uri() {
+      return process.env['MONGODB_URI'] ?? env.MONGODB_URI;
+    },
+    get maxPoolSize() {
+      return process.env['MONGODB_MAX_POOL_SIZE'] === undefined
+        ? env.MONGODB_MAX_POOL_SIZE
+        : parseInt(process.env['MONGODB_MAX_POOL_SIZE'], 10);
+    },
   },
   redis: {
-    host: env.REDIS_HOST,
-    port: env.REDIS_PORT,
-    password: env.REDIS_PASSWORD === '' ? undefined : env.REDIS_PASSWORD,
+    get host() {
+      return process.env['REDIS_HOST'] ?? env.REDIS_HOST;
+    },
+    get port() {
+      return process.env['REDIS_PORT'] === undefined
+        ? env.REDIS_PORT
+        : parseInt(process.env['REDIS_PORT'], 10);
+    },
+    get password() {
+      return (
+        process.env['REDIS_PASSWORD'] ??
+        (env.REDIS_PASSWORD === '' ? undefined : env.REDIS_PASSWORD)
+      );
+    },
   },
   s3: {
-    endpoint: env.S3_ENDPOINT,
-    accessKeyId: env.S3_ACCESS_KEY_ID,
-    secretAccessKey: env.S3_SECRET_ACCESS_KEY,
-    bucketName: env.S3_BUCKET_NAME,
-    region: env.S3_REGION,
-    forcePathStyle: env.S3_FORCE_PATH_STYLE,
+    get endpoint() {
+      return process.env['S3_ENDPOINT'] ?? env.S3_ENDPOINT;
+    },
+    get accessKeyId() {
+      return process.env['S3_ACCESS_KEY_ID'] ?? env.S3_ACCESS_KEY_ID;
+    },
+    get secretAccessKey() {
+      return process.env['S3_SECRET_ACCESS_KEY'] ?? env.S3_SECRET_ACCESS_KEY;
+    },
+    get bucketName() {
+      return process.env['S3_BUCKET_NAME'] ?? env.S3_BUCKET_NAME;
+    },
+    get region() {
+      return process.env['S3_REGION'] ?? env.S3_REGION;
+    },
+    get forcePathStyle() {
+      if (process.env['S3_FORCE_PATH_STYLE'] !== undefined) {
+        return process.env['S3_FORCE_PATH_STYLE'] === 'true';
+      }
+      return env.S3_FORCE_PATH_STYLE;
+    },
   },
   auth: {
     jwtSecret: env.JWT_SECRET,

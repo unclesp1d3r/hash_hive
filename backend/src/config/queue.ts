@@ -49,6 +49,7 @@ const FAILED_JOB_TTL_SECONDS = 604800; // 7 days
 const MAX_COMPLETED_JOBS = 1000;
 const MAX_FAILED_JOBS = 5000;
 const DEFAULT_WORKER_CONCURRENCY = 1;
+const QUEUE_CLOSE_DELAY_MS = 250; // Delay after closing queues to allow connections to fully close
 
 /**
  * Default queue options
@@ -94,6 +95,11 @@ export const createQueue = (name: QueueName): Queue => {
   // surface as unhandled errors in tests when connections are closed as part
   // of normal shutdown.
   events.on('error', (error: Error) => {
+    // Suppress expected "Connection is closed" errors during shutdown
+    if (error.message.includes('Connection is closed')) {
+      logger.debug({ queueName: name }, 'Queue events connection closed (expected during shutdown)');
+      return;
+    }
     logger.error({ queueName: name, error }, 'Queue events error');
   });
 
@@ -337,21 +343,32 @@ export const closeQueues = async (): Promise<void> => {
   // Close all workers first
   const workerClosePromises = Array.from(workers.values()).map(async (worker) => {
     try {
+      // Remove all event listeners to prevent errors during shutdown
+      worker.removeAllListeners();
       await worker.close();
     } catch (error) {
-      logger.error({ error }, 'Error closing worker');
+      // Ignore errors during shutdown as they're expected when connections are closing
+      // Only log if it's not a connection closed error
+      if (error instanceof Error && !error.message.includes('Connection is closed')) {
+        logger.error({ error }, 'Error closing worker');
+      }
     }
   });
 
   await Promise.all(workerClosePromises);
   workers.clear();
 
-  // Close all queue events
-  const eventsClosePromises = Array.from(queueEvents.values()).map(async (events) => {
+  // Close all queue events - remove listeners first to prevent unhandled errors
+  const eventsClosePromises = Array.from(queueEvents.entries()).map(async ([queueName, events]) => {
     try {
+      // Remove all event listeners before closing to prevent errors during shutdown
+      events.removeAllListeners();
       await events.close();
     } catch (error) {
-      logger.error({ error }, 'Error closing queue events');
+      // Ignore connection closed errors during shutdown as they're expected
+      if (error instanceof Error && !error.message.includes('Connection is closed')) {
+        logger.error({ queueName, error }, 'Error closing queue events');
+      }
     }
   });
 
@@ -363,12 +380,23 @@ export const closeQueues = async (): Promise<void> => {
     try {
       await queue.close();
     } catch (error) {
-      logger.error({ error }, 'Error closing queue');
+      // Ignore connection closed errors during shutdown
+      if (error instanceof Error && !error.message.includes('Connection is closed')) {
+        logger.error({ error }, 'Error closing queue');
+      }
     }
   });
 
   await Promise.all(queueClosePromises);
   queues.clear();
+
+  // Small delay to allow connections to fully close
+  // eslint-disable-next-line promise/avoid-new -- setTimeout requires Promise wrapper
+  await new Promise<void>((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, QUEUE_CLOSE_DELAY_MS);
+  });
 
   logger.info('BullMQ queues and workers closed successfully');
 };
