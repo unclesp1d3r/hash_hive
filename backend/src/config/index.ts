@@ -77,27 +77,35 @@ const envSchema = z.object({
 const parseEnv = (): z.infer<typeof envSchema> & { JWT_SECRET: string; SESSION_SECRET: string } => {
   try {
     const parsed = envSchema.parse(process.env);
-    const nodeEnv = parsed.NODE_ENV;
+    const {
+      NODE_ENV: nodeEnv,
+      JWT_SECRET: jwtSecretRaw,
+      SESSION_SECRET: sessionSecretRaw,
+    } = parsed;
 
     // Handle JWT_SECRET
-    let jwtSecret = parsed.JWT_SECRET;
-    if (!jwtSecret) {
-      if (nodeEnv === 'production') {
-        console.error('❌ JWT_SECRET must be set in production environment');
-        process.exit(INVALID_ENV_EXIT_CODE);
+    const jwtSecret: string = (() => {
+      if (jwtSecretRaw === undefined || jwtSecretRaw === '') {
+        if (nodeEnv === 'production') {
+          console.error('❌ JWT_SECRET must be set in production environment');
+          process.exit(INVALID_ENV_EXIT_CODE);
+        }
+        return generateSecureSecret();
       }
-      jwtSecret = generateSecureSecret();
-    }
+      return jwtSecretRaw;
+    })();
 
     // Handle SESSION_SECRET
-    let sessionSecret = parsed.SESSION_SECRET;
-    if (!sessionSecret) {
-      if (nodeEnv === 'production') {
-        console.error('❌ SESSION_SECRET must be set in production environment');
-        process.exit(INVALID_ENV_EXIT_CODE);
+    const sessionSecret: string = (() => {
+      if (sessionSecretRaw === undefined || sessionSecretRaw === '') {
+        if (nodeEnv === 'production') {
+          console.error('❌ SESSION_SECRET must be set in production environment');
+          process.exit(INVALID_ENV_EXIT_CODE);
+        }
+        return generateSecureSecret();
       }
-      sessionSecret = generateSecureSecret();
-    }
+      return sessionSecretRaw;
+    })();
 
     return {
       ...parsed,
@@ -128,10 +136,14 @@ export const config = {
       return getNodeEnv();
     },
     get port() {
-      return process.env['PORT'] === undefined ? env.PORT : parseInt(process.env['PORT'], 10);
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { PORT: portEnv } = process.env;
+      return portEnv === undefined ? env.PORT : parseInt(portEnv, 10);
     },
     get baseUrl() {
-      return process.env['API_BASE_URL'] ?? env.API_BASE_URL;
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { API_BASE_URL: baseUrlEnv } = process.env;
+      return baseUrlEnv ?? env.API_BASE_URL;
     },
     get isDevelopment() {
       return getNodeEnv() === 'development';
@@ -145,25 +157,30 @@ export const config = {
   },
   mongodb: {
     get uri() {
-      return process.env['MONGODB_URI'] ?? env.MONGODB_URI;
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { MONGODB_URI: uriEnv } = process.env;
+      return uriEnv ?? env.MONGODB_URI;
     },
     get maxPoolSize() {
-      return process.env['MONGODB_MAX_POOL_SIZE'] === undefined
-        ? env.MONGODB_MAX_POOL_SIZE
-        : parseInt(process.env['MONGODB_MAX_POOL_SIZE'], 10);
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { MONGODB_MAX_POOL_SIZE: poolSizeEnv } = process.env;
+      return poolSizeEnv === undefined ? env.MONGODB_MAX_POOL_SIZE : parseInt(poolSizeEnv, 10);
     },
   },
   redis: {
     get host() {
-      return process.env['REDIS_HOST'] ?? env.REDIS_HOST;
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { REDIS_HOST: hostEnv } = process.env;
+      return hostEnv ?? env.REDIS_HOST;
     },
     get port() {
-      return process.env['REDIS_PORT'] === undefined
-        ? env.REDIS_PORT
-        : parseInt(process.env['REDIS_PORT'], 10);
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { REDIS_PORT: portEnv } = process.env;
+      return portEnv === undefined ? env.REDIS_PORT : parseInt(portEnv, 10);
     },
     get password() {
-      const envPassword = process.env['REDIS_PASSWORD'];
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { REDIS_PASSWORD: envPassword } = process.env;
       if (envPassword !== undefined) {
         return envPassword;
       }
@@ -172,23 +189,35 @@ export const config = {
   },
   s3: {
     get endpoint() {
-      return process.env['S3_ENDPOINT'] ?? env.S3_ENDPOINT;
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { S3_ENDPOINT: endpointEnv } = process.env;
+      return endpointEnv ?? env.S3_ENDPOINT;
     },
     get accessKeyId() {
-      return process.env['S3_ACCESS_KEY_ID'] ?? env.S3_ACCESS_KEY_ID;
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { S3_ACCESS_KEY_ID: accessKeyIdEnv } = process.env;
+      return accessKeyIdEnv ?? env.S3_ACCESS_KEY_ID;
     },
     get secretAccessKey() {
-      return process.env['S3_SECRET_ACCESS_KEY'] ?? env.S3_SECRET_ACCESS_KEY;
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { S3_SECRET_ACCESS_KEY: secretAccessKeyEnv } = process.env;
+      return secretAccessKeyEnv ?? env.S3_SECRET_ACCESS_KEY;
     },
     get bucketName() {
-      return process.env['S3_BUCKET_NAME'] ?? env.S3_BUCKET_NAME;
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { S3_BUCKET_NAME: bucketNameEnv } = process.env;
+      return bucketNameEnv ?? env.S3_BUCKET_NAME;
     },
     get region() {
-      return process.env['S3_REGION'] ?? env.S3_REGION;
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { S3_REGION: regionEnv } = process.env;
+      return regionEnv ?? env.S3_REGION;
     },
     get forcePathStyle() {
-      if (process.env['S3_FORCE_PATH_STYLE'] !== undefined) {
-        return process.env['S3_FORCE_PATH_STYLE'] === 'true';
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { S3_FORCE_PATH_STYLE: forcePathStyleEnv } = process.env;
+      if (forcePathStyleEnv !== undefined) {
+        return forcePathStyleEnv === 'true';
       }
       return env.S3_FORCE_PATH_STYLE;
     },
