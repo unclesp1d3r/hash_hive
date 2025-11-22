@@ -165,7 +165,7 @@ export const config = {
     get password() {
       const envPassword = process.env['REDIS_PASSWORD'];
       if (envPassword !== undefined) {
-        return envPassword === '' ? undefined : envPassword;
+        return envPassword;
       }
       return env.REDIS_PASSWORD === '' ? undefined : env.REDIS_PASSWORD;
     },

@@ -53,9 +53,8 @@ describe('Config', () => {
 
     it('should handle empty password correctly', () => {
       process.env['REDIS_PASSWORD'] = '';
-      // Empty strings are normalized to undefined for both process.env and env sources
-      // so Redis clients receive undefined for "no authentication" consistently
-      expect(config.redis.password).toBeUndefined();
+      // Should treat an explicitly-set empty REDIS_PASSWORD as empty string
+      expect(config.redis.password).toBe('');
     });
   });
 
