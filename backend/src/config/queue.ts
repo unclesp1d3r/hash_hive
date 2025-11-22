@@ -42,6 +42,32 @@ const queues = new Map<QueueName, Queue>();
 const queueEvents = new Map<QueueName, QueueEvents>();
 const workers = new Map<string, Worker>();
 
+/**
+ * Helper to detect and suppress expected connection-closed errors that can
+ * occur during normal shutdown when Redis connections are being torn down.
+ */
+const isConnectionClosedError = (error: Error & { context?: Error }): boolean => {
+  const errorMessage = error.message;
+  const contextMessage = error.context?.message ?? '';
+
+  const hasConnectionClosedMessage =
+    errorMessage.includes('Connection is closed') ||
+    contextMessage.includes('Connection is closed');
+
+  // BullMQ sometimes wraps the underlying error in an "Unhandled error" wrapper
+  // while keeping the original message in the context object, so we treat both
+  // forms as equivalent for suppression purposes.
+  if (hasConnectionClosedMessage) {
+    return true;
+  }
+
+  if (errorMessage.includes('Unhandled error') && contextMessage.includes('Connection is closed')) {
+    return true;
+  }
+
+  return false;
+};
+
 const DEFAULT_JOB_ATTEMPTS = 3;
 const DEFAULT_BACKOFF_DELAY_MS = 1000;
 const COMPLETED_JOB_TTL_SECONDS = 86400; // 24 hours
@@ -88,6 +114,17 @@ export const createQueue = (name: QueueName): Queue => {
     ...defaultQueueOptions,
   });
 
+  // Ensure we always handle queue-level error events so they don't crash the
+  // process or surface as unhandled errors in tests when connections are
+  // closed as part of normal shutdown.
+  queue.on('error', (error: Error & { context?: Error }) => {
+    if (isConnectionClosedError(error)) {
+      logger.debug({ queueName: name }, 'Queue connection closed (expected during shutdown)');
+      return;
+    }
+    logger.error({ queueName: name, error }, 'Queue error');
+  });
+
   // Set up queue event listeners for monitoring
   const events = new QueueEvents(name, { connection: getConnectionOptions() });
 
@@ -98,15 +135,7 @@ export const createQueue = (name: QueueName): Queue => {
     // Suppress expected "Connection is closed" errors during shutdown
     // BullMQ may wrap errors as "Unhandled error. (Error: Connection is closed...)"
     // and may put the actual error in the context property
-    const errorMessage = error.message;
-    const contextMessage = error.context?.message ?? '';
-    const hasConnectionClosedMessage =
-      errorMessage.includes('Connection is closed') ||
-      contextMessage.includes('Connection is closed');
-    const isConnectionClosed =
-      hasConnectionClosedMessage ||
-      (errorMessage.includes('Unhandled error') && hasConnectionClosedMessage);
-    if (isConnectionClosed) {
+    if (isConnectionClosedError(error)) {
       logger.debug(
         { queueName: name },
         'Queue events connection closed (expected during shutdown)'

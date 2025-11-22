@@ -3,6 +3,7 @@ dist
 build
 .next
 coverage
+test-results
 *.log
 .env
 .env.*
