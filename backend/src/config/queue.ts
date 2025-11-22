@@ -97,7 +97,10 @@ export const createQueue = (name: QueueName): Queue => {
   events.on('error', (error: Error) => {
     // Suppress expected "Connection is closed" errors during shutdown
     if (error.message.includes('Connection is closed')) {
-      logger.debug({ queueName: name }, 'Queue events connection closed (expected during shutdown)');
+      logger.debug(
+        { queueName: name },
+        'Queue events connection closed (expected during shutdown)'
+      );
       return;
     }
     logger.error({ queueName: name, error }, 'Queue events error');

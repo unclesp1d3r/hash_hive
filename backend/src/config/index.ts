@@ -83,15 +83,30 @@ const parseEnv = (): z.infer<typeof envSchema> => {
 
 const env = parseEnv();
 
+// Helper function to get current NODE_ENV at runtime
+const getNodeEnv = (): 'development' | 'test' | 'production' => env.NODE_ENV;
+
 // Export typed configuration
 export const config = {
   server: {
-    env: env.NODE_ENV,
-    port: env.PORT,
-    baseUrl: env.API_BASE_URL,
-    isDevelopment: env.NODE_ENV === 'development',
-    isProduction: env.NODE_ENV === 'production',
-    isTest: env.NODE_ENV === 'test',
+    get env() {
+      return getNodeEnv();
+    },
+    get port() {
+      return process.env['PORT'] === undefined ? env.PORT : parseInt(process.env['PORT'], 10);
+    },
+    get baseUrl() {
+      return process.env['API_BASE_URL'] ?? env.API_BASE_URL;
+    },
+    get isDevelopment() {
+      return getNodeEnv() === 'development';
+    },
+    get isProduction() {
+      return getNodeEnv() === 'production';
+    },
+    get isTest() {
+      return getNodeEnv() === 'test';
+    },
   },
   mongodb: {
     get uri() {

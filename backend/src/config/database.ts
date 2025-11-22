@@ -17,19 +17,22 @@ const SERVER_SELECTION_TIMEOUT_MS = 5000;
 const SOCKET_TIMEOUT_MS = 45000;
 
 /**
- * Connection options for Mongoose
+ * Get connection options for Mongoose
  *
  * In the test environment, we enable `directConnection` so that the MongoDB
  * driver talks directly to the Testcontainers-managed MongoDB instance
  * without attempting replica set discovery on the internal container
  * hostname (which is not resolvable from the host).
+ *
+ * Returns a function to ensure options are evaluated at runtime, not module load time.
+ * This is critical for tests where NODE_ENV may be set after module import.
  */
-const connectionOptions = {
+const getConnectionOptions = (): mongoose.ConnectOptions => ({
   maxPoolSize: config.mongodb.maxPoolSize,
   serverSelectionTimeoutMS: SERVER_SELECTION_TIMEOUT_MS,
   socketTimeoutMS: SOCKET_TIMEOUT_MS,
   directConnection: config.server.isTest,
-} satisfies mongoose.ConnectOptions;
+});
 
 /**
  * Connect to MongoDB with retry logic
@@ -62,7 +65,7 @@ export async function connectDatabase(
       );
 
       // eslint-disable-next-line no-await-in-loop -- Each attempt must complete before the next begins
-      await mongoose.connect(mongoUri, connectionOptions);
+      await mongoose.connect(mongoUri, getConnectionOptions());
 
       isConnected = true;
       logger.info('MongoDB connected successfully');
