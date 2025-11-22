@@ -94,9 +94,19 @@ export const createQueue = (name: QueueName): Queue => {
   // Ensure we always handle error events so they don't crash the process or
   // surface as unhandled errors in tests when connections are closed as part
   // of normal shutdown.
-  events.on('error', (error: Error) => {
+  events.on('error', (error: Error & { context?: Error }) => {
     // Suppress expected "Connection is closed" errors during shutdown
-    if (error.message.includes('Connection is closed')) {
+    // BullMQ may wrap errors as "Unhandled error. (Error: Connection is closed...)"
+    // and may put the actual error in the context property
+    const errorMessage = error.message;
+    const contextMessage = error.context?.message ?? '';
+    const hasConnectionClosedMessage =
+      errorMessage.includes('Connection is closed') ||
+      contextMessage.includes('Connection is closed');
+    const isConnectionClosed =
+      hasConnectionClosedMessage ||
+      (errorMessage.includes('Unhandled error') && hasConnectionClosedMessage);
+    if (isConnectionClosed) {
       logger.debug(
         { queueName: name },
         'Queue events connection closed (expected during shutdown)'
@@ -361,17 +371,21 @@ export const closeQueues = async (): Promise<void> => {
   await Promise.all(workerClosePromises);
   workers.clear();
 
-  // Close all queue events - remove listeners first to prevent unhandled errors
+  // Close all queue events - close first, then remove listeners
+  // Keep error handler active during close to catch connection errors
   const eventsClosePromises = Array.from(queueEvents.entries()).map(async ([queueName, events]) => {
     try {
-      // Remove all event listeners before closing to prevent errors during shutdown
-      events.removeAllListeners();
+      // Close first while error handler is still active
       await events.close();
+      // Remove listeners after close completes
+      events.removeAllListeners();
     } catch (error) {
       // Ignore connection closed errors during shutdown as they're expected
       if (error instanceof Error && !error.message.includes('Connection is closed')) {
         logger.error({ queueName, error }, 'Error closing queue events');
       }
+      // Ensure listeners are removed even if close fails
+      events.removeAllListeners();
     }
   });
 
