@@ -53,40 +53,9 @@ describe('Config', () => {
 
     it('should handle empty password correctly', () => {
       process.env['REDIS_PASSWORD'] = '';
-      // The getter logic returns undefined if env var is set but empty string (from original config logic)
-      // OR if the getter sees empty string.
-      // Let's check the implementation:
-      // return process.env['REDIS_PASSWORD'] ?? (env.REDIS_PASSWORD === '' ? undefined : env.REDIS_PASSWORD);
-      // If process.env['REDIS_PASSWORD'] is '', it returns ''.
-      // Wait, the original logic was: env.REDIS_PASSWORD === '' ? undefined : env.REDIS_PASSWORD
-      // My new logic: process.env['REDIS_PASSWORD'] ?? ...
-      // If I set process.env['REDIS_PASSWORD'] = '', the getter returns ''.
-      // If the original intention was to treat empty string as undefined, I might need to adjust the getter or the test expectation.
-      // Let's look at the original code again.
-      // original: password: env.REDIS_PASSWORD === '' ? undefined : env.REDIS_PASSWORD,
-      // So if env var was empty string, it became undefined.
-
-      // My new getter:
-      // get password() {
-      //   return process.env['REDIS_PASSWORD'] ?? (env.REDIS_PASSWORD === '' ? undefined : env.REDIS_PASSWORD);
-      // },
-
-      // If I set process.env['REDIS_PASSWORD'] = '', the nullish coalescing operator returns '' (because '' is not null/undefined).
-      // So it returns ''.
-      // This might be a slight behavior change if the app expects undefined for no password.
-      // However, ioredis handles empty string password by just not using it? Or does it try to auth with empty string?
-      // Usually undefined means "no password".
-
-      // Let's adjust the test to expect what the current code does, or fix the code if needed.
-      // If I want to maintain exact parity:
-      // get password() {
-      //   const val = process.env['REDIS_PASSWORD'];
-      //   if (val !== undefined) return val === '' ? undefined : val;
-      //   return env.REDIS_PASSWORD === '' ? undefined : env.REDIS_PASSWORD;
-      // }
-
-      // But for now, let's see what it does.
-      expect(config.redis.password).toBe('');
+      // Empty strings are normalized to undefined for both process.env and env sources
+      // so Redis clients receive undefined for "no authentication" consistently
+      expect(config.redis.password).toBeUndefined();
     });
   });
 

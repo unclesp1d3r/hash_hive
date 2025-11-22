@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
@@ -10,6 +11,13 @@ const DEFAULT_REDIS_PORT = 6379;
 const DEFAULT_SESSION_MAX_AGE_MS = 604800000; // 7 days
 const MIN_SECRET_LENGTH = 32;
 const INVALID_ENV_EXIT_CODE = 1;
+
+/**
+ * Generates a secure random secret of the specified length.
+ * Uses crypto.randomBytes for cryptographically secure randomness.
+ */
+const generateSecureSecret = (length: number = MIN_SECRET_LENGTH): string =>
+  crypto.randomBytes(length).toString('base64');
 
 // Environment variable schema with validation
 const envSchema = z.object({
@@ -51,9 +59,9 @@ const envSchema = z.object({
   S3_FORCE_PATH_STYLE: z.coerce.boolean().default(true),
 
   // Authentication
-  JWT_SECRET: z.string().min(MIN_SECRET_LENGTH).default('change-me-in-production'),
+  JWT_SECRET: z.string().min(MIN_SECRET_LENGTH).optional(),
   JWT_EXPIRES_IN: z.string().default('7d'),
-  SESSION_SECRET: z.string().min(MIN_SECRET_LENGTH).default('change-me-in-production'),
+  SESSION_SECRET: z.string().min(MIN_SECRET_LENGTH).optional(),
   SESSION_MAX_AGE: z
     .string()
     .transform((val) => Number(val))
@@ -66,9 +74,36 @@ const envSchema = z.object({
 });
 
 // Parse and validate environment variables
-const parseEnv = (): z.infer<typeof envSchema> => {
+const parseEnv = (): z.infer<typeof envSchema> & { JWT_SECRET: string; SESSION_SECRET: string } => {
   try {
-    return envSchema.parse(process.env);
+    const parsed = envSchema.parse(process.env);
+    const nodeEnv = parsed.NODE_ENV;
+
+    // Handle JWT_SECRET
+    let jwtSecret = parsed.JWT_SECRET;
+    if (!jwtSecret) {
+      if (nodeEnv === 'production') {
+        console.error('❌ JWT_SECRET must be set in production environment');
+        process.exit(INVALID_ENV_EXIT_CODE);
+      }
+      jwtSecret = generateSecureSecret();
+    }
+
+    // Handle SESSION_SECRET
+    let sessionSecret = parsed.SESSION_SECRET;
+    if (!sessionSecret) {
+      if (nodeEnv === 'production') {
+        console.error('❌ SESSION_SECRET must be set in production environment');
+        process.exit(INVALID_ENV_EXIT_CODE);
+      }
+      sessionSecret = generateSecureSecret();
+    }
+
+    return {
+      ...parsed,
+      JWT_SECRET: jwtSecret,
+      SESSION_SECRET: sessionSecret,
+    };
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.error('❌ Invalid environment variables:');
@@ -128,10 +163,11 @@ export const config = {
         : parseInt(process.env['REDIS_PORT'], 10);
     },
     get password() {
-      return (
-        process.env['REDIS_PASSWORD'] ??
-        (env.REDIS_PASSWORD === '' ? undefined : env.REDIS_PASSWORD)
-      );
+      const envPassword = process.env['REDIS_PASSWORD'];
+      if (envPassword !== undefined) {
+        return envPassword === '' ? undefined : envPassword;
+      }
+      return env.REDIS_PASSWORD === '' ? undefined : env.REDIS_PASSWORD;
     },
   },
   s3: {
