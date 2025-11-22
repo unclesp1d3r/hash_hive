@@ -1,16 +1,18 @@
 import 'express-async-errors';
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import pinoHttp from 'pino-http';
 import { config } from './config';
 import { logger } from './utils/logger';
-import { connectDatabase, disconnectDatabase } from './config/database';
-import { connectRedis, disconnectRedis } from './config/redis';
+import { connectDatabase, disconnectDatabase } from './db';
+import { connectRedis, disconnectRedis } from './db/redis';
 import { initializeQueues, closeQueues } from './config/queue';
 import { requestIdMiddleware } from './middleware/request-id';
 import { securityHeadersMiddleware } from './middleware/security-headers';
 import { errorHandler } from './middleware/error-handler';
 import { healthRouter } from './routes/health';
+import { webRouter } from './routes';
 
 // HTTP status / exit code constants to avoid magic numbers
 const HTTP_STATUS_SERVER_ERROR_THRESHOLD = 500;
@@ -94,6 +96,9 @@ app.use(
 // Security headers
 app.use(securityHeadersMiddleware);
 
+// Cookie parsing middleware
+app.use(cookieParser());
+
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -101,8 +106,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Health check endpoint
 app.use('/health', healthRouter);
 
-// API routes will be added here in subsequent tasks
-// app.use('/api/v1/web', webRouter);
+// API routes
+app.use('/api/v1/web', webRouter);
 // app.use('/api/v1/agent', agentRouter);
 // app.use('/api/v1/control', controlRouter);
 
