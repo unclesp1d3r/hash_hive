@@ -67,7 +67,8 @@ await project.softDelete();
 // Restore a soft deleted document
 await project.restore();
 
-// Query only active (not deleted) documents (default behavior)
+// Query only active (not deleted) documents - this is the default behavior
+// Soft-deleted documents are automatically excluded from all queries
 const activeProjects = await Project.find();
 
 // Query only deleted documents
@@ -76,9 +77,11 @@ const deletedProjects = await Project.find().onlyDeleted();
 // Query all documents including deleted
 const allProjects = await Project.find().withDeleted();
 
-// Explicitly include deleted documents
+// Explicitly include deleted documents (alternative syntax)
 const allProjectsAlt = await Project.find().setOptions({ includeDeleted: true });
 ```
+
+**Important:** Soft-deleted documents are automatically excluded from all query operations (`find`, `findOne`, `findOneAndUpdate`, `countDocuments`) via Mongoose pre-hooks. You must explicitly use `.withDeleted()` or `.onlyDeleted()` query helpers if you need to access soft-deleted documents.
 
 #### Schema with Custom Indexes
 

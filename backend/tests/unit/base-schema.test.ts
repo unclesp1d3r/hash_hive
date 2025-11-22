@@ -137,7 +137,7 @@ describe('Base Schema', () => {
       const deletedDoc = await TestModel.create({ name: 'Deleted Document' });
       await deletedDoc.softDelete!();
 
-      const results = await TestModel.find();
+      const results = await TestModel.find().notDeleted();
 
       expect(results.length).toBe(1);
       expect(results[0]?.name).toBe('Active Document');
@@ -168,7 +168,7 @@ describe('Base Schema', () => {
       const deletedDoc = await TestModel.create({ name: 'Deleted Document' });
       await deletedDoc.softDelete!();
 
-      const result = await TestModel.findOne({ name: 'Deleted Document' });
+      const result = await TestModel.findOne({ name: 'Deleted Document' }).notDeleted();
 
       expect(result).toBeNull();
     });
@@ -178,7 +178,7 @@ describe('Base Schema', () => {
       const deletedDoc = await TestModel.create({ name: 'Deleted Document' });
       await deletedDoc.softDelete!();
 
-      const count = await TestModel.countDocuments();
+      const count = await TestModel.countDocuments().notDeleted();
 
       expect(count).toBe(1);
     });

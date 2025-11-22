@@ -19,6 +19,18 @@ export interface SoftDeleteDocument extends BaseDocument {
 }
 
 /**
+ * Query options interface for soft delete functionality
+ */
+interface SoftDeleteQueryOptions extends Record<string, unknown> {
+  includeDeleted?: boolean;
+}
+
+/**
+ * Option key for including deleted documents in queries
+ */
+const INCLUDE_DELETED_OPTION = 'includeDeleted' as const;
+
+/**
  * Base schema options with timestamps
  */
 export const baseSchemaOptions: Record<string, unknown> = {
@@ -87,8 +99,8 @@ export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
     this: Query<ResultType, DocType>
   ) {
     // Explicitly exclude deleted documents
-    const currentOptions = this.getOptions() as Record<string, unknown>;
-    void this.setOptions({ ...currentOptions, includeDeleted: false });
+    const currentOptions = this.getOptions() as SoftDeleteQueryOptions;
+    this.setOptions({ ...currentOptions, [INCLUDE_DELETED_OPTION]: false });
     return this.where({ is_deleted: false });
   };
 
@@ -97,8 +109,8 @@ export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
     this: Query<ResultType, DocType>
   ) {
     // Include only soft-deleted documents and prevent the default middleware from overriding
-    const currentOptions = this.getOptions() as Record<string, unknown>;
-    void this.setOptions({ ...currentOptions, includeDeleted: true });
+    const currentOptions = this.getOptions() as SoftDeleteQueryOptions;
+    this.setOptions({ ...currentOptions, [INCLUDE_DELETED_OPTION]: true });
     return this.where({ is_deleted: true });
   };
 
@@ -107,24 +119,20 @@ export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
     this: Query<ResultType, DocType>
   ) {
     // Return all documents regardless of soft-delete status
-    const currentOptions = this.getOptions() as Record<string, unknown>;
-    void this.setOptions({ ...currentOptions, includeDeleted: true });
+    const currentOptions = this.getOptions() as SoftDeleteQueryOptions;
+    this.setOptions({ ...currentOptions, [INCLUDE_DELETED_OPTION]: true });
     return this;
   };
 
-  // Modify default find queries to exclude soft-deleted documents
-  const excludeDeletedMiddleware = function <ResultType, DocType>(
-    this: Query<ResultType, DocType>,
-    next: () => void
-  ): void {
-    // Only apply if not explicitly requesting deleted documents
-    const options = this.getOptions() as Record<string, unknown>;
-    if (options['includeDeleted'] !== true) {
+  // Automatically exclude soft-deleted documents from queries
+  const excludeDeletedMiddleware = function (this: Query<unknown, unknown>): void {
+    const options = this.getOptions() as SoftDeleteQueryOptions;
+    if (options[INCLUDE_DELETED_OPTION] !== true) {
       void this.where({ is_deleted: false });
     }
-    next();
   };
 
+  // Register middleware for common query operations
   schema.pre('find', excludeDeletedMiddleware);
   schema.pre('findOne', excludeDeletedMiddleware);
   schema.pre('findOneAndUpdate', excludeDeletedMiddleware);
