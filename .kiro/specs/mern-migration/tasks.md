@@ -17,21 +17,21 @@
     - Set up health check endpoint at /health
     - _Requirements: 1.1, 13.4_
 
-  - [ ] 2.2 Implement MongoDB connection and base models
+  - [x] 2.2 Implement MongoDB connection and base models
     - Configure Mongoose with TypeScript type inference
     - Create base schema with timestamps and soft delete support
     - Implement connection management with retry logic
     - Set up database indexes for common query patterns
     - _Requirements: 1.1, 1.3_
 
-  - [ ] 2.3 Set up Redis and BullMQ infrastructure
+  - [x] 2.3 Set up Redis and BullMQ infrastructure
     - Configure Redis connection with health checks
     - Initialize BullMQ queue manager with default queues
     - Implement queue monitoring and metrics collection
     - Create dead-letter queue handling
     - _Requirements: 1.3, 6.2_
 
-  - [ ] 2.4 Implement S3/MinIO storage service
+  - [x] 2.4 Implement S3/MinIO storage service
     - Configure S3 client with MinIO for development
     - Create StorageService abstraction for file operations
     - Implement upload, download, and delete operations
