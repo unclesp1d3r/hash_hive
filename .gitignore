@@ -40,3 +40,6 @@ logs/
 tmp/
 temp/
 **/tsconfig.tsbuildinfo
+
+
+frontend/test-results/
