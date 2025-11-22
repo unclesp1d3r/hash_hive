@@ -28,7 +28,8 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
     "prettier": "^3.6.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "just": "^0.1.8"
   },
   "engines": {
     "node": ">=20.0.0",

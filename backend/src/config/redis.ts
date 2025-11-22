@@ -13,7 +13,10 @@ export const createRedisClient = (): Redis => {
   // Read Redis config from environment at connection time to support test container configuration
   // This allows tests to override REDIS_HOST and REDIS_PORT after module load
   const redisHost = process.env['REDIS_HOST'] ?? config.redis.host;
-  const redisPort = process.env['REDIS_PORT'] === undefined ? config.redis.port : parseInt(process.env['REDIS_PORT'], 10);
+  const redisPort =
+    process.env['REDIS_PORT'] === undefined
+      ? config.redis.port
+      : parseInt(process.env['REDIS_PORT'], 10);
   const redisPassword = process.env['REDIS_PASSWORD'] ?? config.redis.password;
 
   const options: {
