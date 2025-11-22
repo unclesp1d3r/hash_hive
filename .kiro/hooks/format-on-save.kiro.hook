@@ -19,5 +19,7 @@
   "then": {
     "type": "runCommand",
     "command": "just format"
-  }
+  },
+  "workspaceFolderName": "hash_hive",
+  "shortName": "format-on-save"
 }

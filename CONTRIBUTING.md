@@ -183,12 +183,13 @@ npm run build -w shared
 
 ### Git Hooks
 
-The project uses Husky and lint-staged for automated quality checks:
+The project uses [pre-commit](https://pre-commit.com) for automated quality checks:
 
 **Pre-commit Hook:**
 
 - Automatically runs on `git commit`
-- Formats only staged files with Prettier
+- Formats staged files with Prettier
+- Runs TypeScript type checking
 - Ensures consistent code style
 
 **Pre-push Hook:**
@@ -198,6 +199,27 @@ The project uses Husky and lint-staged for automated quality checks:
 - Runs all test suites
 - Prevents pushing broken code
 
+**Installation:**
+
+```bash
+# Install pre-commit (requires Python)
+pip install pre-commit
+
+# Install hooks
+pre-commit install
+just install-hooks  # Or use the justfile command
+```
+
+The setup script (`./scripts/setup.sh`) will automatically install hooks if pre-commit is available.
+
+**Updating Hooks:**
+
+```bash
+pre-commit autoupdate
+# Or via justfile
+just update-deps
+```
+
 To skip hooks in emergencies (not recommended):
 
 ```bash
@@ -205,13 +227,11 @@ git commit --no-verify
 git push --no-verify
 ```
 
-The hooks are automatically installed when you run `npm install` via the `prepare` script.
-
 ### Commit Messages
 
 Follow conventional commits:
 
-```
+```markdown
 feat: add agent heartbeat endpoint
 fix: resolve task assignment race condition
 docs: update API documentation
