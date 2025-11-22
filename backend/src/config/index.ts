@@ -1,69 +1,124 @@
+import crypto from 'node:crypto';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
 // Load environment variables
 dotenv.config();
 
+const DEFAULT_SERVER_PORT = 3001;
+const DEFAULT_MONGODB_POOL_SIZE = 10;
+const DEFAULT_REDIS_PORT = 6379;
+const DEFAULT_SESSION_MAX_AGE_MS = 604800000; // 7 days
+const MIN_SECRET_LENGTH = 32;
+const INVALID_ENV_EXIT_CODE = 1;
+
+/**
+ * Generates a secure random secret of the specified length.
+ * Uses crypto.randomBytes for cryptographically secure randomness.
+ */
+const generateSecureSecret = (length: number = MIN_SECRET_LENGTH): string =>
+  crypto.randomBytes(length).toString('base64');
+
 // Environment variable schema with validation
 const envSchema = z.object({
   // Server
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z.string().transform(Number).pipe(z.number().int().positive()).default('3001'),
+  PORT: z
+    .string()
+    .transform((val) => Number(val))
+    .pipe(z.number().int().positive())
+    .default(DEFAULT_SERVER_PORT),
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().url() is the canonical way to validate URLs in current Zod
   API_BASE_URL: z.string().url().default('http://localhost:3001'),
 
   // MongoDB
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().url() is the canonical way to validate URLs in current Zod
   MONGODB_URI: z.string().url().default('mongodb://localhost:27017/hashhive'),
   MONGODB_MAX_POOL_SIZE: z
     .string()
-    .transform(Number)
+    .transform((val) => Number(val))
     .pipe(z.number().int().positive())
-    .default('10'),
+    .default(DEFAULT_MONGODB_POOL_SIZE),
 
   // Redis
   REDIS_HOST: z.string().default('localhost'),
-  REDIS_PORT: z.string().transform(Number).pipe(z.number().int().positive()).default('6379'),
+  REDIS_PORT: z
+    .string()
+    .transform((val) => Number(val))
+    .pipe(z.number().int().positive())
+    .default(DEFAULT_REDIS_PORT),
   REDIS_PASSWORD: z.string().optional().default(''),
 
   // S3/MinIO
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().url() is the canonical way to validate URLs in current Zod
   S3_ENDPOINT: z.string().url().default('http://localhost:9000'),
   S3_ACCESS_KEY_ID: z.string().default('minioadmin'),
   S3_SECRET_ACCESS_KEY: z.string().default('minioadmin'),
   S3_BUCKET_NAME: z.string().default('hashhive'),
   S3_REGION: z.string().default('us-east-1'),
-  S3_FORCE_PATH_STYLE: z
-    .string()
-    .transform((val) => val === 'true')
-    .default('true'),
+  S3_FORCE_PATH_STYLE: z.coerce.boolean().default(true),
 
   // Authentication
-  JWT_SECRET: z.string().min(32).default('change-me-in-production'),
+  JWT_SECRET: z.string().min(MIN_SECRET_LENGTH).optional(),
   JWT_EXPIRES_IN: z.string().default('7d'),
-  SESSION_SECRET: z.string().min(32).default('change-me-in-production'),
+  SESSION_SECRET: z.string().min(MIN_SECRET_LENGTH).optional(),
   SESSION_MAX_AGE: z
     .string()
-    .transform(Number)
+    .transform((val) => Number(val))
     .pipe(z.number().int().positive())
-    .default('604800000'),
+    .default(DEFAULT_SESSION_MAX_AGE_MS),
 
   // Logging
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
-  LOG_PRETTY: z
-    .string()
-    .transform((val) => val === 'true')
-    .default('true'),
+  LOG_PRETTY: z.coerce.boolean().default(true),
 });
 
 // Parse and validate environment variables
-const parseEnv = () => {
+const parseEnv = (): z.infer<typeof envSchema> & { JWT_SECRET: string; SESSION_SECRET: string } => {
   try {
-    return envSchema.parse(process.env);
+    const parsed = envSchema.parse(process.env);
+    const {
+      NODE_ENV: nodeEnv,
+      JWT_SECRET: jwtSecretRaw,
+      SESSION_SECRET: sessionSecretRaw,
+    } = parsed;
+
+    // Handle JWT_SECRET
+    const jwtSecret: string = (() => {
+      if (jwtSecretRaw === undefined || jwtSecretRaw === '') {
+        if (nodeEnv === 'production') {
+          console.error('❌ JWT_SECRET must be set in production environment');
+          process.exit(INVALID_ENV_EXIT_CODE);
+        }
+        return generateSecureSecret();
+      }
+      return jwtSecretRaw;
+    })();
+
+    // Handle SESSION_SECRET
+    const sessionSecret: string = (() => {
+      if (sessionSecretRaw === undefined || sessionSecretRaw === '') {
+        if (nodeEnv === 'production') {
+          console.error('❌ SESSION_SECRET must be set in production environment');
+          process.exit(INVALID_ENV_EXIT_CODE);
+        }
+        return generateSecureSecret();
+      }
+      return sessionSecretRaw;
+    })();
+
+    return {
+      ...parsed,
+      JWT_SECRET: jwtSecret,
+      SESSION_SECRET: sessionSecret,
+    };
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.error('❌ Invalid environment variables:');
-      error.errors.forEach((err) => {
-        console.error(`  - ${err.path.join('.')}: ${err.message}`);
+      error.issues.forEach((issue) => {
+        console.error(`  - ${issue.path.join('.')}: ${issue.message}`);
       });
-      process.exit(1);
+      process.exit(INVALID_ENV_EXIT_CODE);
     }
     throw error;
   }
@@ -71,32 +126,101 @@ const parseEnv = () => {
 
 const env = parseEnv();
 
+// Helper function to get current NODE_ENV at runtime
+const getNodeEnv = (): 'development' | 'test' | 'production' => env.NODE_ENV;
+
 // Export typed configuration
 export const config = {
   server: {
-    env: env.NODE_ENV,
-    port: env.PORT,
-    baseUrl: env.API_BASE_URL,
-    isDevelopment: env.NODE_ENV === 'development',
-    isProduction: env.NODE_ENV === 'production',
-    isTest: env.NODE_ENV === 'test',
+    get env() {
+      return getNodeEnv();
+    },
+    get port() {
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { PORT: portEnv } = process.env;
+      return portEnv === undefined ? env.PORT : parseInt(portEnv, 10);
+    },
+    get baseUrl() {
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { API_BASE_URL: baseUrlEnv } = process.env;
+      return baseUrlEnv ?? env.API_BASE_URL;
+    },
+    get isDevelopment() {
+      return getNodeEnv() === 'development';
+    },
+    get isProduction() {
+      return getNodeEnv() === 'production';
+    },
+    get isTest() {
+      return getNodeEnv() === 'test';
+    },
   },
   mongodb: {
-    uri: env.MONGODB_URI,
-    maxPoolSize: env.MONGODB_MAX_POOL_SIZE,
+    get uri() {
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { MONGODB_URI: uriEnv } = process.env;
+      return uriEnv ?? env.MONGODB_URI;
+    },
+    get maxPoolSize() {
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { MONGODB_MAX_POOL_SIZE: poolSizeEnv } = process.env;
+      return poolSizeEnv === undefined ? env.MONGODB_MAX_POOL_SIZE : parseInt(poolSizeEnv, 10);
+    },
   },
   redis: {
-    host: env.REDIS_HOST,
-    port: env.REDIS_PORT,
-    password: env.REDIS_PASSWORD === '' ? undefined : env.REDIS_PASSWORD,
+    get host() {
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { REDIS_HOST: hostEnv } = process.env;
+      return hostEnv ?? env.REDIS_HOST;
+    },
+    get port() {
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { REDIS_PORT: portEnv } = process.env;
+      return portEnv === undefined ? env.REDIS_PORT : parseInt(portEnv, 10);
+    },
+    get password() {
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { REDIS_PASSWORD: envPassword } = process.env;
+      if (envPassword !== undefined) {
+        return envPassword;
+      }
+      return env.REDIS_PASSWORD === '' ? undefined : env.REDIS_PASSWORD;
+    },
   },
   s3: {
-    endpoint: env.S3_ENDPOINT,
-    accessKeyId: env.S3_ACCESS_KEY_ID,
-    secretAccessKey: env.S3_SECRET_ACCESS_KEY,
-    bucketName: env.S3_BUCKET_NAME,
-    region: env.S3_REGION,
-    forcePathStyle: env.S3_FORCE_PATH_STYLE,
+    get endpoint() {
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { S3_ENDPOINT: endpointEnv } = process.env;
+      return endpointEnv ?? env.S3_ENDPOINT;
+    },
+    get accessKeyId() {
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { S3_ACCESS_KEY_ID: accessKeyIdEnv } = process.env;
+      return accessKeyIdEnv ?? env.S3_ACCESS_KEY_ID;
+    },
+    get secretAccessKey() {
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { S3_SECRET_ACCESS_KEY: secretAccessKeyEnv } = process.env;
+      return secretAccessKeyEnv ?? env.S3_SECRET_ACCESS_KEY;
+    },
+    get bucketName() {
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { S3_BUCKET_NAME: bucketNameEnv } = process.env;
+      return bucketNameEnv ?? env.S3_BUCKET_NAME;
+    },
+    get region() {
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { S3_REGION: regionEnv } = process.env;
+      return regionEnv ?? env.S3_REGION;
+    },
+    get forcePathStyle() {
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
+      const { S3_FORCE_PATH_STYLE: forcePathStyleEnv } = process.env;
+      if (forcePathStyleEnv !== undefined) {
+        return forcePathStyleEnv === 'true';
+      }
+      return env.S3_FORCE_PATH_STYLE;
+    },
   },
   auth: {
     jwtSecret: env.JWT_SECRET,

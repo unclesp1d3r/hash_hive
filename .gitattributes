@@ -1,0 +1,155 @@
+# Auto-detect text files and normalize to LF in the repo
+* text=auto eol=lf
+
+# Explicit Next.js / Node.js settings
+# JavaScript / TypeScript source stays LF everywhere
+*.js   text eol=lf diff=javascript
+*.jsx  text eol=lf diff=javascript
+*.ts   text eol=lf
+*.tsx  text eol=lf
+
+# Common Node / Next.js text assets
+*.json   text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.toml   text eol=lf
+*.css    text eol=lf diff=css
+*.scss   text eol=lf
+*.sass   text eol=lf
+*.html   text eol=lf diff=html
+*.md     text eol=lf diff=markdown
+*.env    text eol=lf
+
+# Lockfiles – keep exact byte-for-byte consistency
+package-lock.json -text
+pnpm-lock.yaml   -text
+yarn.lock        -text
+
+# Shell and scripts (LF in repo; Windows scripts use CRLF)
+*.sh   text eol=lf
+*.bash text eol=lf
+*.zsh  text eol=lf
+*.ps1  text eol=crlf
+*.cmd  text eol=crlf
+*.bat  text eol=crlf
+
+# Python files
+*.pxd    text diff=python
+*.py     text diff=python
+*.py3    text diff=python
+*.pyw    text diff=python
+*.pyx    text diff=python
+*.pyz    text diff=python
+*.pyi    text diff=python
+*.ipynb  text diff=python
+
+# Docker files
+Dockerfile text
+*.dockerfile text
+docker-compose*.yml text
+.dockerignore text
+
+# Git files
+*.gitattributes text
+.gitignore      text
+*.md            text diff=markdown
+.gitattributes  export-ignore
+.gitignore      export-ignore
+*.gitattributes linguist-language=gitattributes
+*.gitattributes linguist-detectable=true
+*.gitattributes linguist-documentation=false
+
+# Documentation
+*.md text diff=markdown
+*.txt text
+*.rst text
+LICENSE text
+
+# Config files
+*.json   text
+*.toml    text
+*.yml      text
+*.yaml     text
+*.ini      text
+*.cfg      text
+*.conf     text
+*.xml      text
+
+# Web files
+*.html      text diff=html
+*.html.j2   text diff=html
+*.css       text diff=css
+*.js        text diff=javascript
+*.jsx       text diff=javascript
+*.ts        text
+*.tsx       text
+*.vue       text
+
+# SQL files
+*.sql text
+
+# Binary files
+*.db     binary
+*.p      binary
+*.pkl    binary
+*.pickle binary
+*.pyc    binary export-ignore
+*.pyd    binary export-ignore
+*.pyo    binary export-ignore
+*.pdb    binary
+
+# Image files
+*.png      binary
+*.jpg      binary
+*.jpeg     binary
+*.gif      binary
+*.tif      binary
+*.tiff     binary
+*.ico      binary
+*.svg      text
+*.eps      binary
+
+# Scripts
+*.bash     text eol=lf
+*.fish     text eol=lf
+*.ksh      text eol=lf
+*.sh       text eol=lf
+*.zsh      text eol=lf
+*.bat      text eol=crlf
+*.cmd      text eol=crlf
+*.ps1      text eol=crlf
+
+# Font files
+*.ttf       binary
+*.eot binary
+*.woff binary
+*.woff2 binary
+
+# Archive files
+*.7z       binary
+*.bz       binary
+*.bz2      binary
+*.bzip2    binary
+*.gz       binary
+*.lz       binary
+*.lzma     binary
+*.rar      binary
+*.tar      binary
+*.taz      binary
+*.tbz      binary
+*.tbz2     binary
+*.tgz      binary
+*.tlz      binary
+*.txz      binary
+*.xz       binary
+*.Z        binary
+*.zip      binary
+*.zst      binary
+
+# Executables
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+
+.env text=utf-8 eol=lf

@@ -1,4 +1,0 @@
-#!/usr/bin/env sh
-
-# Run lint-staged to check and fix staged files
-npx lint-staged

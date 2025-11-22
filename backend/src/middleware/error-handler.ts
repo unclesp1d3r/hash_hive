@@ -1,6 +1,13 @@
+/* eslint-disable complexity, @typescript-eslint/init-declarations -- Centralized error handler trades off complexity for having one authoritative place; safeBody is initialized via branches */
 import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { logger } from '../utils/logger';
+
+const HTTP_BAD_REQUEST = 400;
+const HTTP_UNAUTHORIZED = 401;
+const HTTP_CONFLICT = 409;
+const HTTP_INTERNAL_SERVER_ERROR = 500;
+const MONGO_DUPLICATE_KEY_CODE = 11000;
 
 /**
  * Custom error class for application-specific errors
@@ -10,7 +17,12 @@ export class AppError extends Error {
   public statusCode: number;
   public details?: unknown;
 
-  constructor(code: string, message: string, statusCode: number = 500, details?: unknown) {
+  constructor(
+    code: string,
+    message: string,
+    statusCode = HTTP_INTERNAL_SERVER_ERROR,
+    details?: unknown
+  ) {
     super(message);
     this.name = 'AppError';
     this.code = code;
@@ -47,12 +59,13 @@ export const errorHandler = (
 
   // Safely serialize req.body for logging
   let safeBody: unknown;
-  if (req.body == null) {
+  if (req.body === null || req.body === undefined) {
     safeBody = undefined;
   } else if (typeof req.body === 'object') {
     // Handle objects and arrays - check if JSON-serializable
     try {
       JSON.stringify(req.body);
+      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- Direct assignment keeps logging logic simple
       safeBody = req.body;
     } catch {
       safeBody = '[unserializable body]';
@@ -85,16 +98,16 @@ export const errorHandler = (
       error: {
         code: 'VALIDATION_FAILED',
         message: 'Request validation failed',
-        details: err.errors.map((e) => ({
-          path: e.path.join('.'),
-          message: e.message,
+        details: err.issues.map((issue) => ({
+          path: issue.path.join('.'),
+          message: issue.message,
         })),
         timestamp: new Date().toISOString(),
         requestId,
       },
     };
 
-    res.status(400).json(errorResponse);
+    res.status(HTTP_BAD_REQUEST).json(errorResponse);
     return;
   }
 
@@ -118,7 +131,8 @@ export const errorHandler = (
   if (
     err.name === 'MongoServerError' &&
     'code' in err &&
-    (err as { code: number }).code === 11000
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Narrowing Mongo error shape based on known driver fields
+    (err as { code?: number }).code === MONGO_DUPLICATE_KEY_CODE
   ) {
     const errorResponse: ErrorResponse = {
       error: {
@@ -130,7 +144,7 @@ export const errorHandler = (
       },
     };
 
-    res.status(409).json(errorResponse);
+    res.status(HTTP_CONFLICT).json(errorResponse);
     return;
   }
 
@@ -145,7 +159,7 @@ export const errorHandler = (
       },
     };
 
-    res.status(401).json(errorResponse);
+    res.status(HTTP_UNAUTHORIZED).json(errorResponse);
     return;
   }
 
@@ -159,7 +173,7 @@ export const errorHandler = (
       },
     };
 
-    res.status(401).json(errorResponse);
+    res.status(HTTP_UNAUTHORIZED).json(errorResponse);
     return;
   }
 
@@ -173,5 +187,5 @@ export const errorHandler = (
     },
   };
 
-  res.status(500).json(errorResponse);
+  res.status(HTTP_INTERNAL_SERVER_ERROR).json(errorResponse);
 };

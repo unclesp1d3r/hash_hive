@@ -737,7 +737,7 @@ All API errors follow a consistent structure:
 ```typescript
 export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   const requestId = req.id || generateRequestId();
-  
+
   logger.error({
     err,
     requestId,
@@ -794,7 +794,7 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
 describe('CampaignService', () => {
   let mongoContainer: StartedTestContainer;
   let redisContainer: StartedTestContainer;
-  
+
   beforeAll(async () => {
     mongoContainer = await new GenericContainer('mongo:6')
       .withExposedPorts(27017)
@@ -813,7 +813,7 @@ describe('CampaignService', () => {
         name: 'Test Campaign',
         hashListId: testHashListId
       });
-      
+
       expect(campaign).toBeDefined();
       expect(campaign.name).toBe('Test Campaign');
     });
@@ -853,25 +853,25 @@ describe('CampaignService', () => {
 describe('CampaignWizard', () => {
   it('should create campaign through wizard', async () => {
     render(<CampaignWizard projectId={testProjectId} />);
-    
+
     // Step 1: Basic info
     await userEvent.type(screen.getByLabelText('Name'), 'Test Campaign');
     await userEvent.click(screen.getByText('Next'));
-    
+
     // Step 2: Hash list
     await userEvent.selectOptions(
       screen.getByLabelText('Hash List'),
       'test-hash-list'
     );
     await userEvent.click(screen.getByText('Next'));
-    
+
     // Step 3: Attacks
     await userEvent.click(screen.getByText('Add Attack'));
     // Configure attack...
-    
+
     // Submit
     await userEvent.click(screen.getByText('Create Campaign'));
-    
+
     await waitFor(() => {
       expect(screen.getByText('Campaign created successfully')).toBeInTheDocument();
     });
@@ -892,15 +892,15 @@ describe('Agent API Contract', () => {
       .post('/api/v1/agent/tasks/next')
       .set('Authorization', `Bearer ${agentToken}`)
       .send({ capabilities: testCapabilities });
-    
+
     expect(response.status).toBe(200);
-    
+
     const validation = validateAgainstSchema(
       'POST',
       '/agent/tasks/next',
       response.body
     );
-    
+
     expect(validation.valid).toBe(true);
   });
 });
@@ -985,19 +985,19 @@ import { readFile } from 'fs/promises';
 async function importData() {
   const client = await MongoClient.connect(process.env.MONGO_URL);
   const db = client.db('hashhive');
-  
+
   // Import users
   const users = await loadNDJSON('data/users.ndjson');
   const transformedUsers = await transformUsers(users);
   await db.collection('users').insertMany(transformedUsers);
-  
+
   // Import projects
   const projects = await loadNDJSON('data/projects.ndjson');
   const transformedProjects = await transformProjects(projects);
   await db.collection('projects').insertMany(transformedProjects);
-  
+
   // Continue for all collections...
-  
+
   await client.close();
 }
 ```
@@ -1009,20 +1009,20 @@ async function importData() {
 ```typescript
 async function validateMigration() {
   const checks = [];
-  
+
   // Count validation
   checks.push(await validateCounts('users', railsUserCount));
   checks.push(await validateCounts('projects', railsProjectCount));
   checks.push(await validateCounts('campaigns', railsCampaignCount));
-  
+
   // Relationship validation
   checks.push(await validateReferences('campaigns', 'project_id', 'projects'));
   checks.push(await validateReferences('attacks', 'campaign_id', 'campaigns'));
-  
+
   // Data integrity
   checks.push(await validateHashListIntegrity());
   checks.push(await validateAttackDAGs());
-  
+
   const failed = checks.filter(c => !c.passed);
   if (failed.length > 0) {
     throw new Error(`Migration validation failed: ${failed.length} checks`);

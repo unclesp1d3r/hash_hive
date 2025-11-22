@@ -9,7 +9,11 @@ export const metadata: Metadata = {
   description: 'Distributed password cracking platform',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.ReactElement {
   return (
     <html lang="en">
       <body className={inter.className}>{children}</body>
