@@ -99,6 +99,13 @@ setup:
       pre-commit install
     }
 
+    # Install Git hooks (requires bash - available via Git Bash, WSL, or similar)
+    if (Get-Command bash -ErrorAction SilentlyContinue) {
+      bash scripts/install-git-hooks.sh
+    } else {
+      Write-Warning "bash not found - skipping Git hooks installation. Install Git Bash or WSL to enable."
+    }
+
     Write-Output "Setup complete."
 
 # Validate project setup
@@ -167,14 +174,17 @@ validate:
 
     if [ ! -d node_modules ]; then
         echo "Root dependencies not installed (run: npm install)" >&2
+        exit 1
     fi
 
     if [ ! -d backend/node_modules ]; then
         echo "Backend dependencies not installed (run: npm install -w backend)" >&2
+        exit 1
     fi
 
     if [ ! -d frontend/node_modules ]; then
         echo "Frontend dependencies not installed (run: npm install -w frontend)" >&2
+        exit 1
     fi
 
 [windows]
@@ -299,6 +309,7 @@ start-frontend:
     npm run start -w frontend
 
 # Show environment info
+[unix]
 info:
     @echo "Node version: $(node -v)"
     @echo "npm version: $(npm -v)"
@@ -306,6 +317,16 @@ info:
     @echo ""
     @echo "Services:"
     @docker compose ps
+
+[windows]
+info:
+    #!pwsh.exe
+    Write-Output "Node version: $(node -v)"
+    Write-Output "npm version: $(npm -v)"
+    Write-Output "Docker version: $(docker --version)"
+    Write-Output ""
+    Write-Output "Services:"
+    docker compose ps
 
 # Restart a specific service
 restart service:
@@ -437,8 +458,29 @@ docker-status:
     docker compose ps
 
 # Open MinIO console
+[unix]
 minio-console:
-    open http://localhost:9001
+    #!/usr/bin/env bash
+    URL="http://localhost:9001"
+    if command -v open >/dev/null 2>&1; then
+        open "$URL"
+    elif command -v xdg-open >/dev/null 2>&1; then
+        xdg-open "$URL"
+    else
+        echo "Error: No suitable command found to open URL. Install 'xdg-open' (Linux) or use 'open' (macOS)" >&2
+        exit 1
+    fi
+
+[windows]
+minio-console:
+    #!pwsh.exe
+    $url = "http://localhost:9001"
+    try {
+        Start-Process $url
+    } catch {
+        Write-Error "Failed to open URL: $url"
+        exit 1
+    }
 
 # -----------------------------
 # 🗄️ Database Tasks
@@ -459,13 +501,7 @@ redis-cli:
 # This relies on Jest + Testcontainers to provision MongoDB, Redis, and MinIO
 
 # for the backend test suites, so no docker-compose step is required.
-ci-check:
-    @just lint
-    @just format-check
-    @just type-check
-    @just test-backend
-    @just test-integration
-    @just coverage
+ci-check: lint format-check type-check test-backend test-integration test-frontend test-e2e coverage
 
 # -----------------------------
 # 📚 Documentation
