@@ -280,9 +280,29 @@ env-setup:
     cp frontend/.env.example frontend/.env
 
 # Install pre-commit hooks
+[unix]
 install-hooks:
+    #!/usr/bin/env bash
     pre-commit install
-    bash scripts/install-git-hooks.sh
+    if [ -f scripts/install-git-hooks.sh ]; then
+        bash scripts/install-git-hooks.sh
+    else
+        echo "Note: scripts/install-git-hooks.sh not found - skipping additional hooks"
+    fi
+
+[windows]
+install-hooks:
+    #!pwsh.exe
+    pre-commit install
+    if (Test-Path "scripts/install-git-hooks.sh") {
+        if (Get-Command bash -ErrorAction SilentlyContinue) {
+            bash scripts/install-git-hooks.sh
+        } else {
+            Write-Warning "bash not found - skipping Git hooks installation. Install Git Bash or WSL to enable."
+        }
+    } else {
+        Write-Output "Note: scripts/install-git-hooks.sh not found - skipping additional hooks"
+    }
 
 # -----------------------------
 # 🚀 Development Environment
