@@ -41,5 +41,6 @@ tmp/
 temp/
 **/tsconfig.tsbuildinfo
 
-
+# Test results
 frontend/test-results/
+frontend/playwright-report/index.html
