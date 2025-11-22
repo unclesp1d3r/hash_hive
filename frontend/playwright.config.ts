@@ -9,7 +9,7 @@ const DEFAULT_WORKERS = 1;
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
-export default defineConfig({
+const config = defineConfig({
   testDir: './e2e',
   fullyParallel: true,
   forbidOnly: isCI,
@@ -27,10 +27,15 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
+});
 
-  webServer: {
+// Only add webServer in non-CI environments
+if (!isCI) {
+  config.webServer = {
     command: 'npm run dev',
     url: 'http://localhost:3000',
-    reuseExistingServer: !isCI,
-  },
-});
+    reuseExistingServer: true,
+  };
+}
+
+export default config;
