@@ -1,8 +1,12 @@
 # HashHive justfile - Common development commands
 
+set windows-shell := ["powershell.exe", "-c"]
+set shell := ["bash", "-c"]
+
 # Show available recipes
 default:
-    @just --list
+    @just --choose
+
 
 # -----------------------------
 # 🔧 Setup & Installation
