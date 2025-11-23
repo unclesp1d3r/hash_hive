@@ -7,6 +7,7 @@ import { connectRedis, disconnectRedis } from '../../src/db/redis';
 import { User } from '../../src/models/user.model';
 import { Project } from '../../src/models/project.model';
 import { ProjectUser } from '../../src/models/project-user.model';
+import { getCsrfToken, getCsrfTokenWithSession } from '../helpers/csrf';
 
 let mongoContainer: StartedMongoDBContainer;
 let redisContainer: StartedRedisContainer;
@@ -69,10 +70,17 @@ describe('Authentication Integration Tests', () => {
         status: 'active',
       });
 
-      const response = await request(app).post('/api/v1/web/auth/login').send({
-        email: 'test@example.com',
-        password: 'password123',
-      });
+      // Get CSRF token for state-changing request
+      const { token: csrfToken, cookie: csrfCookie } = await getCsrfToken(app);
+
+      const response = await request(app)
+        .post('/api/v1/web/auth/login')
+        .set('Cookie', csrfCookie)
+        .set('X-CSRF-Token', csrfToken)
+        .send({
+          email: 'test@example.com',
+          password: 'password123',
+        });
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('user');
@@ -98,10 +106,17 @@ describe('Authentication Integration Tests', () => {
         status: 'active',
       });
 
-      const response = await request(app).post('/api/v1/web/auth/login').send({
-        email: 'test@example.com',
-        password: 'wrongpassword',
-      });
+      // Get CSRF token for state-changing request
+      const { token: csrfToken, cookie: csrfCookie } = await getCsrfToken(app);
+
+      const response = await request(app)
+        .post('/api/v1/web/auth/login')
+        .set('Cookie', csrfCookie)
+        .set('X-CSRF-Token', csrfToken)
+        .send({
+          email: 'test@example.com',
+          password: 'wrongpassword',
+        });
 
       expect(response.status).toBe(401);
       expect(response.body.error.code).toBe('AUTH_INVALID_CREDENTIALS');
@@ -133,16 +148,23 @@ describe('Authentication Integration Tests', () => {
         roles: ['admin'],
       });
 
+      // Get CSRF token for login request
+      const { token: csrfToken, cookie: csrfCookie } = await getCsrfToken(app);
+
       // Login to get session
-      const loginResponse = await request(app).post('/api/v1/web/auth/login').send({
-        email: 'test@example.com',
-        password: 'password123',
-      });
+      const loginResponse = await request(app)
+        .post('/api/v1/web/auth/login')
+        .set('Cookie', csrfCookie)
+        .set('X-CSRF-Token', csrfToken)
+        .send({
+          email: 'test@example.com',
+          password: 'password123',
+        });
 
       const cookies = loginResponse.headers['set-cookie'];
       const cookieHeader = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
 
-      // Get current user
+      // Get current user (GET requests don't require CSRF token)
       const response = await request(app).get('/api/v1/web/auth/me').set('Cookie', cookieHeader);
 
       expect(response.status).toBe(200);
@@ -173,19 +195,33 @@ describe('Authentication Integration Tests', () => {
         status: 'active',
       });
 
+      // Get CSRF token for login request
+      const { token: loginCsrfToken, cookie: loginCsrfCookie } = await getCsrfToken(app);
+
       // Login to get session
-      const loginResponse = await request(app).post('/api/v1/web/auth/login').send({
-        email: 'test@example.com',
-        password: 'password123',
-      });
+      const loginResponse = await request(app)
+        .post('/api/v1/web/auth/login')
+        .set('Cookie', loginCsrfCookie)
+        .set('X-CSRF-Token', loginCsrfToken)
+        .send({
+          email: 'test@example.com',
+          password: 'password123',
+        });
 
       const cookies = loginResponse.headers['set-cookie'];
       const cookieHeader = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
 
+      // Get CSRF token with session for logout request
+      const { token: logoutCsrfToken, cookies: logoutCookies } = await getCsrfTokenWithSession(
+        app,
+        cookieHeader
+      );
+
       // Logout
       const response = await request(app)
         .post('/api/v1/web/auth/logout')
-        .set('Cookie', cookieHeader);
+        .set('Cookie', logoutCookies)
+        .set('X-CSRF-Token', logoutCsrfToken);
 
       expect(response.status).toBe(200);
       expect(response.body.message).toBe('Logged out successfully');

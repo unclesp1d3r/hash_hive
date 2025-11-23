@@ -2,6 +2,7 @@ import 'express-async-errors';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import lusca from 'lusca';
 import pinoHttp from 'pino-http';
 import { config } from './config';
 import { logger } from './utils/logger';
@@ -102,6 +103,21 @@ app.use(cookieParser());
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// CSRF protection middleware
+// Note: CSRF protection is NOT required for agent API endpoints (/api/v1/agent)
+// because agent API uses token-based authentication (not cookie-based), making it
+// immune to CSRF attacks. CSRF protection only applies to browser-based requests
+// to /api/v1/web that rely on cookie-based sessions.
+const csrfMiddleware = lusca.csrf();
+app.use((req, res, next) => {
+  // Skip CSRF protection for agent API endpoints
+  if (req.path.startsWith('/api/v1/agent')) {
+    next();
+    return;
+  }
+  csrfMiddleware(req, res, next);
+});
 
 // Health check endpoint
 app.use('/health', healthRouter);
