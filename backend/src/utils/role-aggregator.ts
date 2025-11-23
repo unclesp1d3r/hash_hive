@@ -9,9 +9,7 @@ export async function aggregateUserRoles(userId: string): Promise<string[]> {
 
   // Collect roles from all projects in parallel
   const roleArrays = await Promise.all(
-    projects.map(
-      async (project) => await ProjectService.getUserRolesInProject(userId, project._id.toString())
-    )
+    projects.map((project) => ProjectService.getUserRolesInProject(userId, project._id.toString()))
   );
 
   // Flatten and de-duplicate roles

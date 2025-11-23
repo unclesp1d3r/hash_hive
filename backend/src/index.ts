@@ -220,19 +220,17 @@ app.use((req, res, next) => {
     return;
   }
 
-  // Skip CSRF validation for health check endpoints, but still generate tokens for GET requests
+  // Health check endpoints: generate CSRF tokens for GET/HEAD/OPTIONS, skip CSRF for other methods
   if (req.path.startsWith('/health')) {
-    // For GET/HEAD/OPTIONS, generate CSRF token but don't validate
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
       handleGetRequest(req, res, next);
-      return;
+    } else {
+      next();
     }
-    // For other methods (POST, PUT, DELETE), skip CSRF entirely
-    next();
     return;
   }
 
-  // Skip CSRF validation for GET, HEAD, and OPTIONS requests (but generate tokens)
+  // For non-health, non-agent endpoints: generate CSRF tokens for GET/HEAD/OPTIONS
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
     handleGetRequest(req, res, next);
     return;
