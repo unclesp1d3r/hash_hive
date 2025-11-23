@@ -11,9 +11,14 @@ import rateLimit from 'express-rate-limit';
 const router = express.Router();
 
 // Apply rate limiting to sensitive auth endpoints
+const RATE_LIMIT_WINDOW_MINUTES = 1;
+const RATE_LIMIT_WINDOW_SECONDS = 60;
+const RATE_LIMIT_WINDOW_MILLISECONDS = 1000;
+const RATE_LIMIT_MAX_REQUESTS = 5;
+
 const loginRateLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 5, // limit each IP to 5 requests per windowMs
+  windowMs: RATE_LIMIT_WINDOW_MINUTES * RATE_LIMIT_WINDOW_SECONDS * RATE_LIMIT_WINDOW_MILLISECONDS, // 1 minute
+  max: RATE_LIMIT_MAX_REQUESTS, // limit each IP to 5 requests per windowMs
   message: {
     error: 'Too many login attempts, please try again later.'
   },
