@@ -1,5 +1,5 @@
-import { MongoDBContainer, StartedMongoDBContainer } from '@testcontainers/mongodb';
-import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
+import { MongoDBContainer, type StartedMongoDBContainer } from '@testcontainers/mongodb';
+import { RedisContainer, type StartedRedisContainer } from '@testcontainers/redis';
 import mongoose from 'mongoose';
 import request from 'supertest';
 import { connectDatabase, disconnectDatabase } from '../../src/config/database';
@@ -112,8 +112,9 @@ describe('Database Connection Integration', () => {
       const TestModel = mongoose.model('ConcurrentTest', TestSchema);
 
       // Create multiple documents concurrently
-      const promises = Array.from({ length: 10 }, (_, i) =>
-        TestModel.create({ name: `test-${i}`, counter: i })
+      const promises = Array.from(
+        { length: 10 },
+        async (_, i) => await TestModel.create({ name: `test-${i}`, counter: i })
       );
 
       const results = await Promise.all(promises);

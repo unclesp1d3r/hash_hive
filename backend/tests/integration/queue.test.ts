@@ -1,5 +1,5 @@
-import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
-import { Job } from 'bullmq';
+import { RedisContainer, type StartedRedisContainer } from '@testcontainers/redis';
+import type { Job } from 'bullmq';
 import {
   initializeQueues,
   createQueue,
@@ -197,7 +197,6 @@ describe('BullMQ Queue Integration Tests', () => {
         const POLL_INTERVAL_MS = 100;
         const start = Date.now();
 
-        // eslint-disable-next-line no-constant-condition -- loop exits via break/throw
         while (true) {
           if (processedJobs.length === 5) {
             break;

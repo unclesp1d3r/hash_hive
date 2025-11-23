@@ -1,5 +1,5 @@
-import { MongoDBContainer, StartedMongoDBContainer } from '@testcontainers/mongodb';
-import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
+import { MongoDBContainer, type StartedMongoDBContainer } from '@testcontainers/mongodb';
+import { RedisContainer, type StartedRedisContainer } from '@testcontainers/redis';
 import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 import { connectRedis, disconnectRedis } from '../../src/db/redis';
 import { User } from '../../src/models/user.model';

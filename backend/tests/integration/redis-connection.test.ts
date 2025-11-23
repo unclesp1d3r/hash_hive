@@ -1,4 +1,4 @@
-import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
+import { RedisContainer, type StartedRedisContainer } from '@testcontainers/redis';
 import {
   connectRedis,
   disconnectRedis,
