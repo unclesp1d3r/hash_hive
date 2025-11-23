@@ -6,6 +6,8 @@ const DEFAULT_RETRIES = 3;
 const INITIAL_RETRY_DELAY_MS = 1000;
 const RETRY_DELAY_MULTIPLIER = 2;
 const ATTEMPT_INCREMENT = 1;
+const SERVER_SELECTION_TIMEOUT_MS = 5000;
+const SOCKET_TIMEOUT_MS = 45000;
 
 /**
  * Connect to MongoDB with retry logic and exponential backoff
@@ -33,6 +35,12 @@ export async function connectDatabase(): Promise<void> {
       // eslint-disable-next-line no-await-in-loop -- Each attempt must complete before the next begins
       await mongoose.connect(mongoUri, {
         maxPoolSize: config.mongodb.maxPoolSize,
+        serverSelectionTimeoutMS: SERVER_SELECTION_TIMEOUT_MS,
+        socketTimeoutMS: SOCKET_TIMEOUT_MS,
+        // In test environment, enable directConnection so MongoDB driver talks directly
+        // to Testcontainers-managed MongoDB instance without attempting replica set discovery
+        // on the internal container hostname (which is not resolvable from the host).
+        directConnection: config.server.isTest,
       });
 
       logger.info('MongoDB connected successfully');
