@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
+import { RedisContainer, type StartedRedisContainer } from '@testcontainers/redis';
 import { app } from '../../src/index';
 import { connectRedis, disconnectRedis } from '../../src/config/redis';
 import { initializeQueues, closeQueues } from '../../src/config/queue';

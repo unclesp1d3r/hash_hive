@@ -97,7 +97,7 @@ describe('Database Connection', () => {
       await dropDatabase();
 
       // Verify database is empty
-      const db = mongoose.connection.db;
+      const { db } = mongoose.connection;
       if (db !== undefined) {
         const collections = await db.listCollections().toArray();
         expect(collections.length).toBe(0);

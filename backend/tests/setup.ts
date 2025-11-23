@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { MongoDBContainer, StartedMongoDBContainer } from '@testcontainers/mongodb';
+import { MongoDBContainer, type StartedMongoDBContainer } from '@testcontainers/mongodb';
 
 // Jest setup file for global test configuration
 // This file runs before all tests

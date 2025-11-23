@@ -1,7 +1,7 @@
-import { MinioContainer, StartedMinioContainer } from '@testcontainers/minio';
+import { MinioContainer, type StartedMinioContainer } from '@testcontainers/minio';
 import { ListBucketsCommand } from '@aws-sdk/client-s3';
-import { StorageService } from '../../src/services/storage.service';
-import { Readable } from 'stream';
+import type { StorageService } from '../../src/services/storage.service';
+import { Readable } from 'node:stream';
 
 describe('StorageService Integration', () => {
   let minioContainer: StartedMinioContainer;
@@ -305,11 +305,13 @@ describe('StorageService Integration', () => {
 
   describe('Concurrent Operations', () => {
     it('should handle multiple uploads concurrently', async () => {
-      const uploads = Array.from({ length: 10 }, (_, i) =>
-        storageService.upload({
-          key: `test-files/concurrent-${i}.txt`,
-          body: Buffer.from(`Content ${i}`),
-        })
+      const uploads = Array.from(
+        { length: 10 },
+        async (_, i) =>
+          await storageService.upload({
+            key: `test-files/concurrent-${i}.txt`,
+            body: Buffer.from(`Content ${i}`),
+          })
       );
 
       const results = await Promise.all(uploads);
@@ -320,10 +322,10 @@ describe('StorageService Integration', () => {
       });
 
       // Verify all files exist
-      const existsChecks = results.map((key) => storageService.exists(key));
+      const existsChecks = results.map(async (key) => await storageService.exists(key));
       const existsResults = await Promise.all(existsChecks);
 
-      expect(existsResults.every((exists) => exists === true)).toBe(true);
+      expect(existsResults.every((exists) => exists)).toBe(true);
     });
 
     it('should handle mixed operations concurrently', async () => {
