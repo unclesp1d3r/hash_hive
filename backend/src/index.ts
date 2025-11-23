@@ -2,7 +2,7 @@ import 'express-async-errors';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import lusca from 'lusca';
+import csrf from 'csrf';
 import pinoHttp from 'pino-http';
 import { config } from './config';
 import { logger } from './utils/logger';
@@ -109,14 +109,112 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // because agent API uses token-based authentication (not cookie-based), making it
 // immune to CSRF attacks. CSRF protection only applies to browser-based requests
 // to /api/v1/web that rely on cookie-based sessions.
-const csrfMiddleware = lusca.csrf();
+const Csrf = csrf;
+const csrfProtection = new Csrf();
+const CSRF_COOKIE_NAME = '_csrf';
+const CSRF_HEADER_NAME = 'x-csrf-token';
+const HOURS_PER_DAY = 24;
+const MINUTES_PER_HOUR = 60;
+const SECONDS_PER_MINUTE = 60;
+const MS_PER_SECOND = 1000;
+const CSRF_COOKIE_MAX_AGE_MS =
+  HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND; // 24 hours
+const HTTP_STATUS_FORBIDDEN = 403;
+
+function handleGetRequest(
+  _req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): void {
+  // Generate and set CSRF token cookie for GET requests
+  const secret = csrfProtection.secretSync();
+  const token = csrfProtection.create(secret);
+  res.cookie(CSRF_COOKIE_NAME, secret, {
+    httpOnly: true,
+    secure: config.server.isProduction,
+    sameSite: 'lax',
+    maxAge: CSRF_COOKIE_MAX_AGE_MS,
+  });
+  // Make token available to client via response (for forms/headers)
+  // eslint-disable-next-line no-param-reassign -- res.locals is the standard Express pattern for response data
+  res.locals['csrfToken'] = token;
+  next();
+}
+
+function getCsrfSecret(cookies: express.Request['cookies']): string | null {
+  if (typeof cookies !== 'object') {
+    return null;
+  }
+  const { [CSRF_COOKIE_NAME]: secret } = cookies as Record<string, unknown>;
+  return typeof secret === 'string' && secret !== '' ? secret : null;
+}
+
+function isBodyWithCsrf(body: unknown): body is { _csrf: unknown } {
+  return typeof body === 'object' && body !== null && '_csrf' in body;
+}
+
+function getCsrfTokenFromRequest(req: express.Request): string | null {
+  // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- CSRF_HEADER_NAME is dynamic
+  const headerToken = req.headers[CSRF_HEADER_NAME];
+  if (typeof headerToken === 'string' && headerToken !== '') {
+    return headerToken;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/prefer-destructuring, @typescript-eslint/no-unsafe-assignment -- req.body is typed as any by Express
+  const body = req.body;
+  if (isBodyWithCsrf(body)) {
+    // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- accessing _csrf property after type guard
+    const bodyToken = body._csrf;
+    return typeof bodyToken === 'string' && bodyToken !== '' ? bodyToken : null;
+  }
+
+  return null;
+}
+
+function sendCsrfError(res: express.Response, code: string, message: string): void {
+  res.status(HTTP_STATUS_FORBIDDEN).json({
+    error: {
+      code,
+      message,
+    },
+  });
+}
+
+function validateCsrfToken(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): void {
+  // For state-changing requests, validate CSRF token
+  const secret = getCsrfSecret(req.cookies);
+  if (secret === null) {
+    sendCsrfError(res, 'CSRF_TOKEN_MISSING', 'CSRF token missing');
+    return;
+  }
+
+  const token = getCsrfTokenFromRequest(req);
+  if (token === null || !csrfProtection.verify(secret, token)) {
+    sendCsrfError(res, 'CSRF_TOKEN_INVALID', 'Invalid CSRF token');
+    return;
+  }
+
+  next();
+}
+
 app.use((req, res, next) => {
   // Skip CSRF protection for agent API endpoints
   if (req.path.startsWith('/api/v1/agent')) {
     next();
     return;
   }
-  csrfMiddleware(req, res, next);
+
+  // Skip CSRF for GET, HEAD, and OPTIONS requests
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    handleGetRequest(req, res, next);
+    return;
+  }
+
+  validateCsrfToken(req, res, next);
 });
 
 // Health check endpoint

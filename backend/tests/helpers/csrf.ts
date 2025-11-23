@@ -1,10 +1,11 @@
 import request from 'supertest';
 import { Express } from 'express';
+import csrf from 'csrf';
 
 /**
  * Helper function to get a CSRF token from the server.
- * Makes a GET request to obtain the CSRF cookie, which is required for
- * state-changing requests (POST, PUT, DELETE, PATCH) to /api/v1/web endpoints.
+ * Makes a GET request to obtain the CSRF cookie (which contains the secret),
+ * then generates a token from that secret for use in state-changing requests.
  *
  * @param app - Express application instance
  * @returns Object containing the CSRF token and cookie string for use in requests
@@ -30,13 +31,17 @@ export async function getCsrfToken(app: Express): Promise<{
     throw new Error('CSRF cookie not found in response');
   }
 
-  // Extract the token value from the cookie string (format: _csrf=token; Path=/; ...)
-  const tokenMatch = csrfCookie.match(/^_csrf=([^;]+)/);
-  if (!tokenMatch || !tokenMatch[1]) {
-    throw new Error('Failed to extract CSRF token from cookie');
+  // Extract the secret value from the cookie string (format: _csrf=secret; Path=/; ...)
+  const secretMatch = csrfCookie.match(/^_csrf=([^;]+)/);
+  if (!secretMatch || !secretMatch[1]) {
+    throw new Error('Failed to extract CSRF secret from cookie');
   }
 
-  const token = tokenMatch[1];
+  const secret = secretMatch[1];
+
+  // Generate a token from the secret using the csrf package
+  const csrfProtection = new csrf();
+  const token = csrfProtection.create(secret);
 
   // Return both the token (for headers) and the full cookie string (for Cookie header)
   return {
