@@ -8,29 +8,32 @@ let redisContainer: StartedRedisContainer;
 let originalEnv: NodeJS.ProcessEnv;
 
 describe('Express Server Integration', () => {
-  beforeAll(async () => {
-    // Preserve original environment for isolation across test suites
-    originalEnv = { ...process.env };
+  beforeAll(
+    async () => {
+      // Preserve original environment for isolation across test suites
+      originalEnv = { ...process.env };
 
-    // Start Redis in a disposable Testcontainers-managed container via community module
-    redisContainer = await new RedisContainer('redis:7-alpine').start();
+      // Start Redis container
+      redisContainer = await new RedisContainer('redis:7-alpine').start();
+      const redisHost = redisContainer.getHost();
+      const redisPort = redisContainer.getPort();
 
-    const redisHost = redisContainer.getHost();
-    const redisPort = redisContainer.getPort();
+      process.env['REDIS_HOST'] = redisHost;
+      process.env['REDIS_PORT'] = redisPort.toString();
+      process.env['REDIS_PASSWORD'] = '';
 
-    process.env['REDIS_HOST'] = redisHost;
-    process.env['REDIS_PORT'] = redisPort.toString();
-    process.env['REDIS_PASSWORD'] = '';
-
-    await connectRedis();
-    initializeQueues();
-  });
+      await connectRedis();
+      initializeQueues();
+    },
+    60000 // 60 second timeout for container startup
+  );
 
   afterAll(async () => {
+    // Cleanup order: services first, then containers
     await closeQueues();
     await disconnectRedis();
 
-    if (redisContainer !== undefined) {
+    if (redisContainer) {
       await redisContainer.stop();
     }
 

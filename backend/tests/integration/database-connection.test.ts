@@ -1,3 +1,4 @@
+import { MongoDBContainer, StartedMongoDBContainer } from '@testcontainers/mongodb';
 import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
 import mongoose from 'mongoose';
 import request from 'supertest';
@@ -6,36 +7,48 @@ import { closeQueues, initializeQueues } from '../../src/config/queue';
 import { connectRedis, disconnectRedis } from '../../src/config/redis';
 import { app } from '../../src/index';
 
+let mongoContainer: StartedMongoDBContainer;
 let redisContainer: StartedRedisContainer;
 let originalEnv: NodeJS.ProcessEnv;
 
 describe('Database Connection Integration', () => {
-  beforeAll(async () => {
-    // Preserve original environment for isolation across test suites
-    originalEnv = { ...process.env };
+  beforeAll(
+    async () => {
+      // Preserve original environment for isolation across test suites
+      originalEnv = { ...process.env };
 
-    // Start Redis in a disposable Testcontainers-managed container via community module
-    redisContainer = await new RedisContainer('redis:7-alpine').start();
+      // Start MongoDB container
+      mongoContainer = await new MongoDBContainer('mongo:7').start();
+      // Use getConnectionString() directly - directConnection: true in database.ts handles container hostname
+      process.env['MONGODB_URI'] = mongoContainer.getConnectionString();
 
-    const redisHost = redisContainer.getHost();
-    const redisPort = redisContainer.getPort();
+      // Start Redis container
+      redisContainer = await new RedisContainer('redis:7-alpine').start();
+      const redisHost = redisContainer.getHost();
+      const redisPort = redisContainer.getPort();
 
-    process.env['REDIS_HOST'] = redisHost;
-    process.env['REDIS_PORT'] = redisPort.toString();
-    process.env['REDIS_PASSWORD'] = '';
+      process.env['REDIS_HOST'] = redisHost;
+      process.env['REDIS_PORT'] = redisPort.toString();
+      process.env['REDIS_PASSWORD'] = '';
 
-    await connectDatabase();
-    await connectRedis();
-    initializeQueues();
-  });
+      await connectDatabase();
+      await connectRedis();
+      initializeQueues();
+    },
+    120000 // 120 second timeout for container startup
+  );
 
   afterAll(async () => {
+    // Cleanup order: services first, then containers
     await closeQueues();
     await disconnectRedis();
     await disconnectDatabase();
 
-    if (redisContainer !== undefined) {
+    if (redisContainer) {
       await redisContainer.stop();
+    }
+    if (mongoContainer) {
+      await mongoContainer.stop();
     }
 
     // Restore original environment variables

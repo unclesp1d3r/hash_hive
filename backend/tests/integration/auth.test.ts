@@ -2,7 +2,7 @@ import request from 'supertest';
 import { MongoDBContainer, StartedMongoDBContainer } from '@testcontainers/mongodb';
 import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
 import { app } from '../../src/index';
-import { connectDatabase, disconnectDatabase } from '../../src/db';
+import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 import { connectRedis, disconnectRedis } from '../../src/db/redis';
 import { User } from '../../src/models/user.model';
 import { Project } from '../../src/models/project.model';
@@ -19,6 +19,7 @@ describe('Authentication Integration Tests', () => {
 
       // Start MongoDB container
       mongoContainer = await new MongoDBContainer('mongo:7').start();
+      // Use getConnectionString() directly - directConnection: true in database.ts handles container hostname
       process.env['MONGODB_URI'] = mongoContainer.getConnectionString();
 
       // Start Redis container
@@ -35,14 +36,15 @@ describe('Authentication Integration Tests', () => {
   );
 
   afterAll(async () => {
+    // Cleanup order: services first, then containers
     await disconnectDatabase();
     await disconnectRedis();
 
-    if (mongoContainer) {
-      await mongoContainer.stop();
-    }
     if (redisContainer) {
       await redisContainer.stop();
+    }
+    if (mongoContainer) {
+      await mongoContainer.stop();
     }
 
     process.env = originalEnv;

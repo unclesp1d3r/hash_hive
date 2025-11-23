@@ -76,7 +76,9 @@ projectSchema.index({ created_by: 1 });
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
   }
-  next();
+  if (typeof next === 'function') {
+    next();
+  }
 });
 
 export const Project = model<IProject>('Project', projectSchema);

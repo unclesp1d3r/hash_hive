@@ -18,33 +18,39 @@ describe('BullMQ Queue Integration Tests', () => {
   let redisContainer: StartedRedisContainer;
   let originalEnv: NodeJS.ProcessEnv;
 
-  beforeAll(async () => {
-    // Save original environment
-    originalEnv = { ...process.env };
+  beforeAll(
+    async () => {
+      // Save original environment
+      originalEnv = { ...process.env };
 
-    // Start Redis container via community module
-    redisContainer = await new RedisContainer('redis:7-alpine').start();
+      // Start Redis container
+      redisContainer = await new RedisContainer('redis:7-alpine').start();
+      const redisHost = redisContainer.getHost();
+      const redisPort = redisContainer.getPort();
 
-    const redisHost = redisContainer.getHost();
-    const redisPort = redisContainer.getPort();
+      // Update environment for tests
+      process.env['REDIS_HOST'] = redisHost;
+      process.env['REDIS_PORT'] = redisPort.toString();
+      process.env['REDIS_PASSWORD'] = '';
 
-    // Update environment for tests
-    process.env['REDIS_HOST'] = redisHost;
-    process.env['REDIS_PORT'] = redisPort.toString();
-    process.env['REDIS_PASSWORD'] = '';
-
-    // Connect to Redis
-    await connectRedis();
-  }, 60000);
+      // Connect to Redis
+      await connectRedis();
+    },
+    60000 // 60 second timeout for container startup
+  );
 
   afterAll(async () => {
+    // Cleanup order: services first, then containers
     await closeQueues();
     await disconnectRedis();
-    await redisContainer.stop();
+
+    if (redisContainer) {
+      await redisContainer.stop();
+    }
 
     // Restore original environment
     process.env = originalEnv;
-  }, 30000);
+  });
 
   afterEach(async () => {
     // Close all queues and workers between tests to avoid cross-test interference
