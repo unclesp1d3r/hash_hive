@@ -43,4 +43,4 @@ temp/
 
 # Test results
 frontend/test-results/
-frontend/playwright-report/index.html
+frontend/playwright-report/

@@ -87,7 +87,13 @@ app.use(
           : config.server.baseUrl,
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'x-agent-api-version', 'x-request-id'],
+        allowedHeaders: [
+          'Content-Type',
+          'Authorization',
+          'x-agent-api-version',
+          'x-request-id',
+          'x-csrf-token',
+        ],
         exposedHeaders: ['x-request-id', 'x-csrf-token'],
       });
     }
@@ -214,7 +220,19 @@ app.use((req, res, next) => {
     return;
   }
 
-  // Skip CSRF for GET, HEAD, and OPTIONS requests
+  // Skip CSRF validation for health check endpoints, but still generate tokens for GET requests
+  if (req.path.startsWith('/health')) {
+    // For GET/HEAD/OPTIONS, generate CSRF token but don't validate
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+      handleGetRequest(req, res, next);
+      return;
+    }
+    // For other methods (POST, PUT, DELETE), skip CSRF entirely
+    next();
+    return;
+  }
+
+  // Skip CSRF validation for GET, HEAD, and OPTIONS requests (but generate tokens)
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
     handleGetRequest(req, res, next);
     return;

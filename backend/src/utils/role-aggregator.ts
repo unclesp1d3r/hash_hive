@@ -6,15 +6,14 @@ import { ProjectService } from '../services/project.service';
  */
 export async function aggregateUserRoles(userId: string): Promise<string[]> {
   const projects = await ProjectService.getUserProjects(userId);
-  const allRoles: string[] = [];
 
-  // Collect roles from all projects (must await sequentially to avoid race conditions)
-  for (const project of projects) {
-    // eslint-disable-next-line no-await-in-loop -- Need to await each project's roles before continuing
-    const roles = await ProjectService.getUserRolesInProject(userId, project._id.toString());
-    allRoles.push(...roles);
-  }
+  // Collect roles from all projects in parallel
+  const roleArrays = await Promise.all(
+    projects.map(
+      async (project) => await ProjectService.getUserRolesInProject(userId, project._id.toString())
+    )
+  );
 
-  // De-duplicate roles
-  return Array.from(new Set(allRoles));
+  // Flatten and de-duplicate roles
+  return Array.from(new Set(roleArrays.flat()));
 }
