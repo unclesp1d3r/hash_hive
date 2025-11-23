@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { logger } from '../utils/logger';
 import { Project, type IProject } from '../models/project.model';
 import { ProjectUser } from '../models/project-user.model';
@@ -49,7 +50,8 @@ export class ProjectService {
    * Get all projects for a user
    */
   static async getUserProjects(userId: string): Promise<IProject[]> {
-    const projectUsers = await ProjectUser.find({ user_id: userId }).populate('project_id');
+    const userIdObjectId = new Types.ObjectId(userId);
+    const projectUsers = await ProjectUser.find({ user_id: userIdObjectId }).populate('project_id');
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- populate returns IProject
     return projectUsers.map((pu) => pu.project_id as IProject);
   }

@@ -16,23 +16,26 @@ let redisContainer: StartedRedisContainer;
 let originalEnv: NodeJS.ProcessEnv;
 
 describe('RBAC Integration Tests', () => {
-  beforeAll(async () => {
-    originalEnv = { ...process.env };
+  beforeAll(
+    async () => {
+      originalEnv = { ...process.env };
 
-    // Start MongoDB container
-    mongoContainer = await new MongoDBContainer('mongo:7').start();
-    process.env['MONGODB_URI'] = mongoContainer.getConnectionString();
+      // Start MongoDB container
+      mongoContainer = await new MongoDBContainer('mongo:7').start();
+      process.env['MONGODB_URI'] = mongoContainer.getConnectionString();
 
-    // Start Redis container
-    redisContainer = await new RedisContainer('redis:7-alpine').start();
-    process.env['REDIS_HOST'] = redisContainer.getHost();
-    process.env['REDIS_PORT'] = redisContainer.getPort().toString();
-    process.env['REDIS_PASSWORD'] = '';
+      // Start Redis container
+      redisContainer = await new RedisContainer('redis:7-alpine').start();
+      process.env['REDIS_HOST'] = redisContainer.getHost();
+      process.env['REDIS_PORT'] = redisContainer.getPort().toString();
+      process.env['REDIS_PASSWORD'] = '';
 
-    // Connect to databases
-    await connectDatabase();
-    await connectRedis();
-  });
+      // Connect to databases
+      await connectDatabase();
+      await connectRedis();
+    },
+    120000 // 120 second timeout for container startup
+  );
 
   afterAll(async () => {
     await disconnectDatabase();

@@ -42,7 +42,7 @@ describe('ProjectService', () => {
   describe('getUserProjects', () => {
     it('should return all projects for user', async () => {
       const mockProject = {
-        _id: { toString: () => 'project123' },
+        _id: { toString: () => '507f1f77bcf86cd799439011' },
         name: 'Test Project',
       };
 
@@ -54,7 +54,7 @@ describe('ProjectService', () => {
         populate: jest.fn().mockResolvedValue([mockProjectUser]),
       });
 
-      const projects = await ProjectService.getUserProjects('user123');
+      const projects = await ProjectService.getUserProjects('507f1f77bcf86cd799439012');
 
       expect(projects).toHaveLength(1);
       expect(projects[0]).toBe(mockProject);

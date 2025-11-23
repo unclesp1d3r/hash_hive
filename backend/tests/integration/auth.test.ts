@@ -13,23 +13,26 @@ let redisContainer: StartedRedisContainer;
 let originalEnv: NodeJS.ProcessEnv;
 
 describe('Authentication Integration Tests', () => {
-  beforeAll(async () => {
-    originalEnv = { ...process.env };
+  beforeAll(
+    async () => {
+      originalEnv = { ...process.env };
 
-    // Start MongoDB container
-    mongoContainer = await new MongoDBContainer('mongo:7').start();
-    process.env['MONGODB_URI'] = mongoContainer.getConnectionString();
+      // Start MongoDB container
+      mongoContainer = await new MongoDBContainer('mongo:7').start();
+      process.env['MONGODB_URI'] = mongoContainer.getConnectionString();
 
-    // Start Redis container
-    redisContainer = await new RedisContainer('redis:7-alpine').start();
-    process.env['REDIS_HOST'] = redisContainer.getHost();
-    process.env['REDIS_PORT'] = redisContainer.getPort().toString();
-    process.env['REDIS_PASSWORD'] = '';
+      // Start Redis container
+      redisContainer = await new RedisContainer('redis:7-alpine').start();
+      process.env['REDIS_HOST'] = redisContainer.getHost();
+      process.env['REDIS_PORT'] = redisContainer.getPort().toString();
+      process.env['REDIS_PASSWORD'] = '';
 
-    // Connect to databases
-    await connectDatabase();
-    await connectRedis();
-  });
+      // Connect to databases
+      await connectDatabase();
+      await connectRedis();
+    },
+    120000 // 120 second timeout for container startup
+  );
 
   afterAll(async () => {
     await disconnectDatabase();
@@ -57,7 +60,7 @@ describe('Authentication Integration Tests', () => {
       // Create test user
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- User.hashPassword is a static method defined via bracket notation
       const hashedPassword = await (User as any).hashPassword('password123');
-      const user = await User.create({
+      await User.create({
         email: 'test@example.com',
         password_hash: hashedPassword,
         name: 'Test User',
@@ -135,9 +138,10 @@ describe('Authentication Integration Tests', () => {
       });
 
       const cookies = loginResponse.headers['set-cookie'];
+      const cookieHeader = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
 
       // Get current user
-      const response = await request(app).get('/api/v1/web/auth/me').set('Cookie', cookies);
+      const response = await request(app).get('/api/v1/web/auth/me').set('Cookie', cookieHeader);
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('user');
@@ -160,7 +164,7 @@ describe('Authentication Integration Tests', () => {
       // Create test user
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- User.hashPassword is a static method defined via bracket notation
       const hashedPassword = await (User as any).hashPassword('password123');
-      const user = await User.create({
+      await User.create({
         email: 'test@example.com',
         password_hash: hashedPassword,
         name: 'Test User',
@@ -174,15 +178,18 @@ describe('Authentication Integration Tests', () => {
       });
 
       const cookies = loginResponse.headers['set-cookie'];
+      const cookieHeader = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
 
       // Logout
-      const response = await request(app).post('/api/v1/web/auth/logout').set('Cookie', cookies);
+      const response = await request(app)
+        .post('/api/v1/web/auth/logout')
+        .set('Cookie', cookieHeader);
 
       expect(response.status).toBe(200);
       expect(response.body.message).toBe('Logged out successfully');
 
       // Verify session is cleared by trying to access /me
-      const meResponse = await request(app).get('/api/v1/web/auth/me').set('Cookie', cookies);
+      const meResponse = await request(app).get('/api/v1/web/auth/me').set('Cookie', cookieHeader);
 
       expect(meResponse.status).toBe(401);
     });

@@ -2,11 +2,13 @@ import { AuthService } from '../../src/services/auth.service';
 import { User } from '../../src/models/user.model';
 import { Session } from '../../src/models/session.model';
 import { getRedisClient } from '../../src/db/redis';
+import { ProjectService } from '../../src/services/project.service';
 
 // Mock dependencies
 jest.mock('../../src/models/user.model');
 jest.mock('../../src/models/session.model');
 jest.mock('../../src/db/redis');
+jest.mock('../../src/services/project.service');
 
 describe('AuthService', () => {
   beforeEach(() => {
@@ -16,7 +18,7 @@ describe('AuthService', () => {
   describe('login', () => {
     it('should return user and token with valid credentials', async () => {
       const mockUser = {
-        _id: { toString: () => 'user123' },
+        _id: { toString: () => '507f1f77bcf86cd799439011' },
         email: 'test@example.com',
         name: 'Test User',
         status: 'active',
@@ -31,6 +33,7 @@ describe('AuthService', () => {
       (User.findOne as jest.Mock).mockReturnValue({
         select: jest.fn().mockResolvedValue(mockUser),
       });
+      (ProjectService.getUserProjects as jest.Mock).mockResolvedValue([]);
 
       const result = await AuthService.login('test@example.com', 'password123');
 
@@ -52,7 +55,7 @@ describe('AuthService', () => {
 
     it('should throw error with invalid password', async () => {
       const mockUser = {
-        _id: { toString: () => 'user123' },
+        _id: { toString: () => '507f1f77bcf86cd799439011' },
         email: 'test@example.com',
         comparePassword: jest.fn().mockResolvedValue(false),
       };
