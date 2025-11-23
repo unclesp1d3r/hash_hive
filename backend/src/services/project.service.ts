@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { logger } from '../utils/logger';
+import { mongoose } from '../db';
 import { Project, type IProject } from '../models/project.model';
 import { ProjectUser } from '../models/project-user.model';
 import type { UserRole } from '../../../shared/src/types';
@@ -12,6 +13,8 @@ const NO_DELETED_COUNT = 0;
 export class ProjectService {
   /**
    * Create a new project and add creator as admin
+   * Uses MongoDB transactions to ensure atomicity - both project and project user
+   * are created together or both fail together
    */
   static async createProject(
     userId: string,
@@ -21,29 +24,44 @@ export class ProjectService {
       settings?: { default_priority?: number; max_agents?: number };
     }
   ): Promise<IProject> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Project.create accepts string for ObjectId fields, type assertion needed
-    const project = await Project.create({
-      name: data.name,
-      description: data.description,
-      settings: {
-        default_priority: data.settings?.default_priority ?? DEFAULT_PRIORITY,
-        max_agents: data.settings?.max_agents ?? DEFAULT_MAX_AGENTS,
-      },
-      created_by: userId,
-      // eslint-disable-next-line @typescript-eslint/no-magic-numbers -- Array index 0 for Parameters type
-    } as unknown as Parameters<typeof Project.create>[0]);
+    const session = await mongoose.startSession();
 
-    // Add creator as admin
-    await ProjectUser.create({
-      user_id: userId,
-      project_id: project._id,
-      roles: ['admin'],
-    });
+    try {
+      session.startTransaction();
 
-    const projectIdString = project._id.toString();
-    logger.info({ userId, projectId: projectIdString }, 'Project created');
+      // Create project within transaction
+      const project = new Project({
+        name: data.name,
+        description: data.description,
+        settings: {
+          default_priority: data.settings?.default_priority ?? DEFAULT_PRIORITY,
+          max_agents: data.settings?.max_agents ?? DEFAULT_MAX_AGENTS,
+        },
+        created_by: userId,
+      });
+      await project.save({ session });
 
-    return project;
+      // Add creator as admin within transaction
+      const projectUser = new ProjectUser({
+        user_id: userId,
+        project_id: project._id,
+        roles: ['admin'],
+      });
+      await projectUser.save({ session });
+
+      await session.commitTransaction();
+
+      const projectIdString = project._id.toString();
+      logger.info({ userId, projectId: projectIdString }, 'Project created');
+
+      return project;
+    } catch (error) {
+      await session.abortTransaction();
+      logger.error({ error, userId }, 'Failed to create project, transaction aborted');
+      throw error;
+    } finally {
+      void session.endSession();
+    }
   }
 
   /**

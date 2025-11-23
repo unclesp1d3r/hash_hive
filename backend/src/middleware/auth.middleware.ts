@@ -195,8 +195,12 @@ export const optionalAuth = async (
 
     // No authentication found, continue without user
     next();
-  } catch {
-    // Ignore errors and continue without authentication
+  } catch (error) {
+    // Log authentication errors at debug level and continue without authentication
+    logger.debug(
+      { error, requestId: req.id },
+      'Optional auth middleware error, proceeding unauthenticated'
+    );
     next();
   }
 };

@@ -88,7 +88,7 @@ app.use(
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'x-agent-api-version', 'x-request-id'],
-        exposedHeaders: ['x-request-id'],
+        exposedHeaders: ['x-request-id', 'x-csrf-token'],
       });
     }
   })
@@ -122,22 +122,28 @@ const CSRF_COOKIE_MAX_AGE_MS =
 const HTTP_STATUS_FORBIDDEN = 403;
 
 function handleGetRequest(
-  _req: express.Request,
+  req: express.Request,
   res: express.Response,
   next: express.NextFunction
 ): void {
-  // Generate and set CSRF token cookie for GET requests
-  const secret = csrfProtection.secretSync();
+  // Reuse existing CSRF secret from cookie if present, otherwise generate a new one
+  // This ensures tokens remain valid across concurrent GET requests
+  const existingSecret = getCsrfSecret(req.cookies);
+  const secret = existingSecret ?? csrfProtection.secretSync();
+
+  // Generate token from the secret (tokens can be regenerated from the same secret)
   const token = csrfProtection.create(secret);
+
+  // Set/refresh the CSRF cookie with the secret (refreshes maxAge)
   res.cookie(CSRF_COOKIE_NAME, secret, {
     httpOnly: true,
     secure: config.server.isProduction,
     sameSite: 'lax',
     maxAge: CSRF_COOKIE_MAX_AGE_MS,
   });
-  // Make token available to client via response (for forms/headers)
-  // eslint-disable-next-line no-param-reassign -- res.locals is the standard Express pattern for response data
-  res.locals['csrfToken'] = token;
+
+  // Make token available to client via response header (for forms/headers)
+  res.setHeader(CSRF_HEADER_NAME, token);
   next();
 }
 

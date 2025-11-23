@@ -5,6 +5,11 @@ import { ProjectUser } from '../../src/models/project-user.model';
 // Mock dependencies
 jest.mock('../../src/models/project.model');
 jest.mock('../../src/models/project-user.model');
+jest.mock('../../src/db', () => ({
+  mongoose: {
+    startSession: jest.fn(),
+  },
+}));
 
 describe('ProjectService', () => {
   beforeEach(() => {
@@ -19,10 +24,25 @@ describe('ProjectService', () => {
         description: 'Test Description',
         slug: 'test-project',
         created_by: 'user123',
+        save: jest.fn().mockResolvedValue(undefined),
       };
 
-      (Project.create as jest.Mock).mockResolvedValue(mockProject);
-      (ProjectUser.create as jest.Mock).mockResolvedValue({});
+      const mockProjectUser = {
+        save: jest.fn().mockResolvedValue(undefined),
+      };
+
+      const mockSession = {
+        startTransaction: jest.fn(),
+        commitTransaction: jest.fn().mockResolvedValue(undefined),
+        abortTransaction: jest.fn().mockResolvedValue(undefined),
+        endSession: jest.fn().mockResolvedValue(undefined),
+      };
+
+      const { mongoose } = await import('../../src/db');
+      (mongoose.startSession as jest.Mock).mockResolvedValue(mockSession);
+
+      (Project as unknown as jest.Mock).mockImplementation(() => mockProject);
+      (ProjectUser as unknown as jest.Mock).mockImplementation(() => mockProjectUser);
 
       const result = await ProjectService.createProject('user123', {
         name: 'Test Project',
@@ -30,12 +50,12 @@ describe('ProjectService', () => {
       });
 
       expect(result).toBe(mockProject);
-      expect(Project.create).toHaveBeenCalled();
-      expect(ProjectUser.create).toHaveBeenCalledWith({
-        user_id: 'user123',
-        project_id: mockProject._id,
-        roles: ['admin'],
-      });
+      expect(mongoose.startSession).toHaveBeenCalled();
+      expect(mockSession.startTransaction).toHaveBeenCalled();
+      expect(mockProject.save).toHaveBeenCalledWith({ session: mockSession });
+      expect(mockProjectUser.save).toHaveBeenCalledWith({ session: mockSession });
+      expect(mockSession.commitTransaction).toHaveBeenCalled();
+      expect(mockSession.endSession).toHaveBeenCalled();
     });
   });
 
