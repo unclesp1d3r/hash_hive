@@ -32,18 +32,20 @@ repos:
       - id: check-xml
       - id: check-yaml
 
-  # Format code with Prettier
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v4.0.0-alpha.8
-    hooks:
-      - id: prettier
-        # Only run Prettier on code/config files, not Markdown or JSONC
-        types_or: [javascript, jsx, ts, tsx, json, yaml]
-        exclude: ^(node_modules/|dist/|\.next/|coverage/|\.git/|package-lock\.json|.*\.md$|.*\.jsonc$)
-
   # Local hooks for npm scripts
   - repo: local
     hooks:
+      # Format code with Prettier
+      # Use local hook to ensure same Prettier version and config as npm scripts
+      - id: prettier
+        name: Prettier
+        entry: bash -c 'npm run format'
+        language: system
+        types: [file]
+        types_or: [javascript, jsx, ts, tsx, json, yaml]
+        pass_filenames: false
+        always_run: true
+
       # ESLint linting
       # Note: Using local hook to respect project's ESLint config
       # Alternative: https://github.com/pre-commit/mirrors-eslint (requires additional setup)
