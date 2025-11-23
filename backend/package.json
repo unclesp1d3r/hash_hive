@@ -31,7 +31,8 @@
     "mongoose": "^9.0.0",
     "pino": "^10.1.0",
     "pino-http": "^11.0.0",
-    "zod": "^4.1.12"
+    "zod": "^4.1.12",
+    "express-rate-limit": "^8.2.1"
   },
   "devDependencies": {
     "@testcontainers/minio": "^11.8.1",

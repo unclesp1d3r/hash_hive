@@ -6,8 +6,20 @@ import { authenticateSession } from '../middleware/auth.middleware';
 import { aggregateUserRoles } from '../utils/role-aggregator';
 import { config } from '../config';
 import { AppError } from '../middleware/error-handler';
+import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
+
+// Apply rate limiting to sensitive auth endpoints
+const loginRateLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 5, // limit each IP to 5 requests per windowMs
+  message: {
+    error: 'Too many login attempts, please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const HTTP_UNAUTHORIZED = 401;
 const MIN_PASSWORD_LENGTH = 1;
@@ -23,7 +35,7 @@ const loginSchema = z.object({
  * POST /auth/login
  * Login with email and password
  */
-router.post('/login', async (req, res, next) => {
+router.post('/login', loginRateLimiter, async (req, res, next) => {
   try {
     const { email, password } = loginSchema.parse(req.body);
     const { user, token } = await AuthService.login(email, password);
