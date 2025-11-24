@@ -30,7 +30,7 @@ const projectSchema = new Schema<IProject>(
     slug: {
       type: String,
       required: true,
-      unique: true,
+      unique: true, // unique field ensures index; removed explicit schema.index to avoid duplication
       lowercase: true,
     },
     settings: {
@@ -52,9 +52,7 @@ const projectSchema = new Schema<IProject>(
   baseSchemaOptions
 );
 
-// Unique index on slug
-// eslint-disable-next-line @typescript-eslint/no-magic-numbers -- Mongoose index direction (1 = ascending)
-projectSchema.index({ slug: 1 }, { unique: true });
+// NOTE: unique: true on slug creates the unique index; removed redundant projectSchema.index to prevent duplicate warnings.
 
 // Index on created_by
 // eslint-disable-next-line @typescript-eslint/no-magic-numbers -- Mongoose index direction (1 = ascending)

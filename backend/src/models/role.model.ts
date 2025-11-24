@@ -31,8 +31,6 @@ const roleSchema = new Schema<IRole>(
   baseSchemaOptions
 );
 
-// Unique index on name
-// eslint-disable-next-line @typescript-eslint/no-magic-numbers -- Mongoose index direction (1 = ascending)
-roleSchema.index({ name: 1 }, { unique: true });
+// NOTE: unique: true on name creates the index; removed redundant roleSchema.index to prevent duplicate warning.
 
 export const Role = model<IRole>('Role', roleSchema);

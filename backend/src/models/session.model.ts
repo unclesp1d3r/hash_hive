@@ -16,7 +16,6 @@ const sessionSchema = new Schema<ISession>(
       type: String,
       required: true,
       unique: true,
-      index: true,
     },
     user_id: {
       type: Schema.Types.ObjectId,
@@ -30,7 +29,6 @@ const sessionSchema = new Schema<ISession>(
     expires_at: {
       type: Date,
       required: true,
-      index: true,
     },
   },
   {
@@ -42,12 +40,10 @@ const sessionSchema = new Schema<ISession>(
   }
 );
 
-// TTL index on expires_at to automatically delete expired sessions
+// TTL index on expires_at to automatically delete expired sessions. Field-level index flag removed to avoid duplication.
 // eslint-disable-next-line @typescript-eslint/no-magic-numbers -- Mongoose index direction (1 = ascending) and TTL (0 = immediate expiration)
 sessionSchema.index({ expires_at: 1 }, { expireAfterSeconds: 0 });
 
-// Index on session_id for fast lookups
-// eslint-disable-next-line @typescript-eslint/no-magic-numbers -- Mongoose index direction (1 = ascending)
-sessionSchema.index({ session_id: 1 });
+// unique: true on session_id already creates an index; removed redundant explicit index.
 
 export const Session = model<ISession>('Session', sessionSchema);

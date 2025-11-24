@@ -23,7 +23,6 @@ const userSchema = new Schema<IUser>(
       unique: true,
       lowercase: true,
       trim: true,
-      index: true,
     },
     password_hash: {
       type: String,
@@ -47,9 +46,8 @@ const userSchema = new Schema<IUser>(
   baseSchemaOptions
 );
 
-// Compound index on email for fast lookups
-// eslint-disable-next-line @typescript-eslint/no-magic-numbers -- Mongoose index direction (1 = ascending)
-userSchema.index({ email: 1 });
+// NOTE: unique: true on the email field already creates the necessary unique index.
+// Removed redundant explicit index declaration to prevent duplicate index warnings.
 
 // Instance method to compare password
 userSchema.methods['comparePassword'] = async function (
