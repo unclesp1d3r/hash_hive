@@ -38,29 +38,29 @@
     - Add presigned URL generation for secure downloads
     - _Requirements: 1.4, 7.1_
 
-- [ ] 3. Authentication and authorization system
-  - [ ] 3.1 Implement user model and authentication service
+- [x] 3. Authentication and authorization system
+  - [x] 3.1 Implement user model and authentication service
     - Create User Mongoose model with password hashing
     - Implement AuthService with login, logout, and token generation
     - Add JWT token generation and validation
     - Implement session management with HttpOnly cookies
     - _Requirements: 2.1, 2.2, 2.5_
 
-  - [ ] 3.2 Create authentication middleware
+  - [x] 3.2 Create authentication middleware
     - Implement JWT validation middleware for API routes
     - Create session validation middleware for web routes
     - Add request user context injection
     - Implement token refresh logic
     - _Requirements: 2.1, 2.2_
 
-  - [ ] 3.3 Implement role-based access control
+  - [x] 3.3 Implement role-based access control
     - Create Role and ProjectUser models
     - Implement authorization middleware with role checking
     - Add project-scoped permission validation
     - Create permission helper utilities
     - _Requirements: 2.3, 2.4_
 
-  - [ ] 3.4 Write authentication tests
+  - [x] 3.4 Write authentication tests
     - Test login flow with valid and invalid credentials
     - Test JWT token generation and validation
     - Test session cookie management

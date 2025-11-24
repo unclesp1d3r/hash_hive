@@ -521,7 +521,7 @@ redis-cli:
 # This relies on Jest + Testcontainers to provision MongoDB, Redis, and MinIO
 
 # for the backend test suites, so no docker-compose step is required.
-ci-check: lint format-check type-check test-backend test-integration test-frontend test-e2e coverage
+ci-check: lint format-check build-shared type-check test-backend test-integration test-frontend test-e2e coverage
 
 # -----------------------------
 # 📚 Documentation

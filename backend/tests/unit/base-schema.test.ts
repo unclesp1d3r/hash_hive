@@ -3,8 +3,8 @@ import {
   createBaseSchema,
   addCommonIndexes,
   isSoftDeleteDocument,
-  BaseDocument,
-  SoftDeleteDocument,
+  type BaseDocument,
+  type SoftDeleteDocument,
 } from '../../src/models/base.schema';
 import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 
@@ -19,7 +19,7 @@ describe('Base Schema', () => {
 
   afterEach(async () => {
     // Clean up all collections after each test
-    const db = mongoose.connection.db;
+    const { db } = mongoose.connection;
     if (db !== undefined) {
       const collections = await db.collections();
       for (const collection of collections) {

@@ -1,16 +1,20 @@
 import 'express-async-errors';
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import csrf from 'csrf';
 import pinoHttp from 'pino-http';
+import * as crypto from 'node:crypto';
 import { config } from './config';
 import { logger } from './utils/logger';
-import { connectDatabase, disconnectDatabase } from './config/database';
-import { connectRedis, disconnectRedis } from './config/redis';
+import { connectDatabase, disconnectDatabase } from './db';
+import { connectRedis, disconnectRedis } from './db/redis';
 import { initializeQueues, closeQueues } from './config/queue';
 import { requestIdMiddleware } from './middleware/request-id';
 import { securityHeadersMiddleware } from './middleware/security-headers';
 import { errorHandler } from './middleware/error-handler';
 import { healthRouter } from './routes/health';
+import { webRouter } from './routes';
 
 // HTTP status / exit code constants to avoid magic numbers
 const HTTP_STATUS_SERVER_ERROR_THRESHOLD = 500;
@@ -84,8 +88,14 @@ app.use(
           : config.server.baseUrl,
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'x-agent-api-version', 'x-request-id'],
-        exposedHeaders: ['x-request-id'],
+        allowedHeaders: [
+          'Content-Type',
+          'Authorization',
+          'x-agent-api-version',
+          'x-request-id',
+          'x-csrf-token',
+        ],
+        exposedHeaders: ['x-request-id', 'x-csrf-token'],
       });
     }
   })
@@ -94,15 +104,276 @@ app.use(
 // Security headers
 app.use(securityHeadersMiddleware);
 
+// Cookie parsing middleware
+app.use(cookieParser());
+
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// CSRF protection middleware
+// Note: CSRF protection is NOT required for agent API endpoints (/api/v1/agent)
+// because agent API uses token-based authentication (not cookie-based), making it
+// immune to CSRF attacks. CSRF protection only applies to browser-based requests
+// to /api/v1/web that rely on cookie-based sessions.
+const Csrf = csrf;
+const csrfProtection = new Csrf();
+const CSRF_COOKIE_NAME = '_csrf';
+const CSRF_HEADER_NAME = 'x-csrf-token';
+const HOURS_PER_DAY = 24;
+const MINUTES_PER_HOUR = 60;
+const SECONDS_PER_MINUTE = 60;
+const MS_PER_SECOND = 1000;
+const CSRF_COOKIE_MAX_AGE_MS =
+  HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND; // 24 hours
+const HTTP_STATUS_FORBIDDEN = 403;
+
+// CSRF secret encryption configuration
+const CSRF_ENCRYPTION_ALGORITHM = 'aes-256-gcm';
+const CSRF_IV_LENGTH = 16; // 128 bits for GCM
+const CSRF_AUTH_TAG_LENGTH = 16; // 128 bits for GCM authentication tag
+const CSRF_PBKDF2_ITERATIONS = 100000;
+const CSRF_KEY_LENGTH = 32; // 256 bits
+const CSRF_ENCRYPTED_PARTS_COUNT = 3; // iv:authTag:encrypted
+
+/**
+ * Derives an encryption key from SESSION_SECRET using PBKDF2
+ * Key is derived once at module load time and cached for performance
+ * (PBKDF2 with 100,000 iterations is expensive to compute on every request)
+ */
+function deriveCsrfEncryptionKey(): Buffer {
+  // Use a fixed salt derived from the secret itself for consistency
+  // In production, the SESSION_SECRET should be unique per deployment
+  const salt = crypto
+    .createHash('sha256')
+    .update(config.auth.sessionSecret)
+    .update('csrf-encryption-salt')
+    .digest();
+
+  return crypto.pbkdf2Sync(
+    config.auth.sessionSecret,
+    salt,
+    CSRF_PBKDF2_ITERATIONS,
+    CSRF_KEY_LENGTH,
+    'sha256'
+  );
+}
+
+// Derive and cache the CSRF encryption key once at application startup
+// This avoids expensive PBKDF2 computation (100,000 iterations) on every request
+const CSRF_ENCRYPTION_KEY = deriveCsrfEncryptionKey();
+
+/**
+ * Encrypts a CSRF secret before storing it in a cookie
+ */
+function encryptCsrfSecret(secret: string): string {
+  try {
+    const iv = crypto.randomBytes(CSRF_IV_LENGTH);
+    const cipher = crypto.createCipheriv(CSRF_ENCRYPTION_ALGORITHM, CSRF_ENCRYPTION_KEY, iv);
+
+    let encrypted = cipher.update(secret, 'utf8');
+    encrypted = Buffer.concat([encrypted, cipher.final()]);
+    const authTag = cipher.getAuthTag();
+
+    // Format: iv:authTag:encrypted (all base64 encoded)
+    const ivBase64 = iv.toString('base64');
+    const authTagBase64 = authTag.toString('base64');
+    const encryptedBase64 = encrypted.toString('base64');
+
+    return `${ivBase64}:${authTagBase64}:${encryptedBase64}`;
+  } catch (error) {
+    logger.error({ error }, 'Failed to encrypt CSRF secret');
+    throw new Error('Failed to encrypt CSRF secret', { cause: error });
+  }
+}
+
+/**
+ * Validates and parses encrypted CSRF secret parts
+ */
+function parseEncryptedParts(encryptedValue: string): {
+  iv: Buffer;
+  authTag: Buffer;
+  encrypted: Buffer;
+} | null {
+  const parts = encryptedValue.split(':');
+  if (parts.length !== CSRF_ENCRYPTED_PARTS_COUNT) {
+    return null;
+  }
+
+  const [ivBase64, authTagBase64, encryptedBase64] = parts;
+  if (
+    ivBase64 === undefined ||
+    ivBase64 === '' ||
+    authTagBase64 === undefined ||
+    authTagBase64 === '' ||
+    encryptedBase64 === undefined ||
+    encryptedBase64 === ''
+  ) {
+    return null;
+  }
+
+  const iv = Buffer.from(ivBase64, 'base64');
+  const authTag = Buffer.from(authTagBase64, 'base64');
+  const encrypted = Buffer.from(encryptedBase64, 'base64');
+
+  if (iv.length !== CSRF_IV_LENGTH || authTag.length !== CSRF_AUTH_TAG_LENGTH) {
+    return null;
+  }
+
+  return { iv, authTag, encrypted };
+}
+
+/**
+ * Decrypts a CSRF secret from a cookie
+ */
+function decryptCsrfSecret(encryptedValue: string): string | null {
+  try {
+    const parsed = parseEncryptedParts(encryptedValue);
+    if (parsed === null) {
+      return null;
+    }
+
+    const { iv, authTag, encrypted } = parsed;
+    const decipher = crypto.createDecipheriv(CSRF_ENCRYPTION_ALGORITHM, CSRF_ENCRYPTION_KEY, iv);
+    decipher.setAuthTag(authTag);
+
+    let decrypted = decipher.update(encrypted);
+    decrypted = Buffer.concat([decrypted, decipher.final()]);
+
+    return decrypted.toString('utf8');
+  } catch (error) {
+    logger.warn({ error }, 'Failed to decrypt CSRF secret - may be invalid or corrupted');
+    return null;
+  }
+}
+
+function handleGetRequest(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): void {
+  // Reuse existing CSRF secret from cookie if present, otherwise generate a new one
+  // This ensures tokens remain valid across concurrent GET requests
+  const existingSecret = getCsrfSecret(req.cookies);
+  const secret = existingSecret ?? csrfProtection.secretSync();
+
+  // Generate token from the secret (tokens can be regenerated from the same secret)
+  const token = csrfProtection.create(secret);
+
+  // Encrypt the secret before storing in cookie to protect sensitive information
+  const encryptedSecret = encryptCsrfSecret(secret);
+
+  // Set/refresh the CSRF cookie with the encrypted secret (refreshes maxAge)
+  res.cookie(CSRF_COOKIE_NAME, encryptedSecret, {
+    httpOnly: true,
+    secure: config.server.isProduction,
+    sameSite: 'lax',
+    maxAge: CSRF_COOKIE_MAX_AGE_MS,
+  });
+
+  // Make token available to client via response header (for forms/headers)
+  res.setHeader(CSRF_HEADER_NAME, token);
+  next();
+}
+
+function getCsrfSecret(cookies: express.Request['cookies']): string | null {
+  if (typeof cookies !== 'object') {
+    return null;
+  }
+  const { [CSRF_COOKIE_NAME]: encryptedValue } = cookies as Record<string, unknown>;
+  if (typeof encryptedValue !== 'string' || encryptedValue === '') {
+    return null;
+  }
+
+  // Decrypt the secret from the cookie
+  // If decryption fails (e.g., corrupted or legacy unencrypted cookie),
+  // return null to trigger generation of a new encrypted secret
+  return decryptCsrfSecret(encryptedValue);
+}
+
+function isBodyWithCsrf(body: unknown): body is { _csrf: unknown } {
+  return typeof body === 'object' && body !== null && '_csrf' in body;
+}
+
+function getCsrfTokenFromRequest(req: express.Request): string | null {
+  // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- CSRF_HEADER_NAME is dynamic
+  const headerToken = req.headers[CSRF_HEADER_NAME];
+  if (typeof headerToken === 'string' && headerToken !== '') {
+    return headerToken;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/prefer-destructuring, @typescript-eslint/no-unsafe-assignment -- req.body is typed as any by Express
+  const body = req.body;
+  if (isBodyWithCsrf(body)) {
+    // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- accessing _csrf property after type guard
+    const bodyToken = body._csrf;
+    return typeof bodyToken === 'string' && bodyToken !== '' ? bodyToken : null;
+  }
+
+  return null;
+}
+
+function sendCsrfError(res: express.Response, code: string, message: string): void {
+  res.status(HTTP_STATUS_FORBIDDEN).json({
+    error: {
+      code,
+      message,
+    },
+  });
+}
+
+function validateCsrfToken(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): void {
+  // For state-changing requests, validate CSRF token
+  const secret = getCsrfSecret(req.cookies);
+  if (secret === null) {
+    sendCsrfError(res, 'CSRF_TOKEN_MISSING', 'CSRF token missing');
+    return;
+  }
+
+  const token = getCsrfTokenFromRequest(req);
+  if (token === null || !csrfProtection.verify(secret, token)) {
+    sendCsrfError(res, 'CSRF_TOKEN_INVALID', 'Invalid CSRF token');
+    return;
+  }
+
+  next();
+}
+
+app.use((req, res, next) => {
+  // Skip CSRF protection for agent API endpoints
+  if (req.path.startsWith('/api/v1/agent')) {
+    next();
+    return;
+  }
+
+  // Health check endpoints: generate CSRF tokens for GET/HEAD/OPTIONS, skip CSRF for other methods
+  if (req.path.startsWith('/health')) {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+      handleGetRequest(req, res, next);
+    } else {
+      next();
+    }
+    return;
+  }
+
+  // For non-health, non-agent endpoints: generate CSRF tokens for GET/HEAD/OPTIONS
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    handleGetRequest(req, res, next);
+    return;
+  }
+
+  validateCsrfToken(req, res, next);
+});
+
 // Health check endpoint
 app.use('/health', healthRouter);
 
-// API routes will be added here in subsequent tasks
-// app.use('/api/v1/web', webRouter);
+// API routes
+app.use('/api/v1/web', webRouter);
 // app.use('/api/v1/agent', agentRouter);
 // app.use('/api/v1/control', controlRouter);
 

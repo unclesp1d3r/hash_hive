@@ -1,14 +1,11 @@
-name: CI
+name: Copilot Setup
 'on':
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 jobs:
-  ci-check:
+  setup:
     runs-on: ubuntu-latest
     env:
-      # Testcontainers configuration for GitHub Actions
+      # Testcontainers configuration for GitHub Copilot
       # Ryuk is a container that cleans up resources; enable it for proper cleanup
       TESTCONTAINERS_RYUK_DISABLED: false
       # Use the local Docker daemon
@@ -24,8 +21,17 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v1
 
-      - name: Install dependencies
+      - name: Install root dependencies
         run: npm install
+
+      - name: Install workspace dependencies
+        run: npm install --workspaces
+
+      - name: Build shared package
+        run: npm run build -w shared
+
+      - name: Run type checking
+        run: npm run type-check --workspaces
 
       - name: Verify Docker is available for Testcontainers
         run: |
@@ -43,10 +49,8 @@ jobs:
           wait
           echo "All images pulled successfully"
 
-      - name: Run Just CI check (Jest + Testcontainers)
-        run: just ci-check
+      - name: Validate setup
+        run: just validate
 
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Display environment info
+        run: just info
