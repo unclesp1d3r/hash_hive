@@ -58,9 +58,10 @@ const projectSchema = new Schema<IProject>(
 // eslint-disable-next-line @typescript-eslint/no-magic-numbers -- Mongoose index direction (1 = ascending)
 projectSchema.index({ created_by: 1 });
 
-// Pre-save hook to auto-generate slug from name if not provided
+// Pre-validate hook to auto-generate slug from name if not provided
+// Runs before validation so required: true on slug field can be satisfied
 // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion -- Mongoose pre hook typing
-(projectSchema as any).pre('save', function (this: any, next: () => void) {
+(projectSchema as any).pre('validate', function (this: any, next: () => void) {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-type-assertion -- Mongoose document context
   const slug = this.slug as string | undefined;
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-type-assertion -- Mongoose document context

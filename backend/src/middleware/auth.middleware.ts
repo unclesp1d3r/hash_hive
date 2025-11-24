@@ -4,10 +4,30 @@ import { logger } from '../utils/logger';
 import { AuthService } from '../services/auth.service';
 import { aggregateUserRoles } from '../utils/role-aggregator';
 import { AuthTokenExpiredError, AuthTokenInvalidError } from '../utils/auth-errors';
-import { User as UserModel } from '../models/user.model';
+import { User as UserModel, type IUser } from '../models/user.model';
+import type { User } from '../../../shared/src/types';
 
 const HTTP_UNAUTHORIZED = 401;
 const BEARER_PREFIX_LENGTH = 7;
+
+/**
+ * Maps a Mongoose IUser document to a User object for request context
+ * @param user - The Mongoose user document
+ * @param roles - Array of user roles
+ * @returns User object for request context
+ */
+function mapUserToRequestUser(user: IUser, roles: string[]): User {
+  return {
+    id: user._id.toString(),
+    email: user.email,
+    name: user.name,
+    status: user.status,
+    last_login_at: user.last_login_at ?? null,
+    created_at: user.created_at,
+    updated_at: user.updated_at,
+    roles,
+  };
+}
 
 /**
  * Authenticate JWT token from Authorization header
@@ -44,16 +64,7 @@ export const authenticateJWT = async (
 
     // Attach user to request with roles from JWT token
     // eslint-disable-next-line no-param-reassign -- Express middleware pattern requires mutating req
-    req.user = {
-      id: user._id.toString(),
-      email: user.email,
-      name: user.name,
-      status: user.status,
-      last_login_at: user.last_login_at ?? null,
-      created_at: user.created_at,
-      updated_at: user.updated_at,
-      roles: payload.roles,
-    };
+    req.user = mapUserToRequestUser(user, payload.roles);
 
     logger.info(
       { userId: user._id.toString(), requestId: req.id },
@@ -108,16 +119,7 @@ export const authenticateSession = async (
 
     // Attach user to request with roles
     // eslint-disable-next-line no-param-reassign -- Express middleware pattern requires mutating req
-    req.user = {
-      id: user._id.toString(),
-      email: user.email,
-      name: user.name,
-      status: user.status,
-      last_login_at: user.last_login_at ?? null,
-      created_at: user.created_at,
-      updated_at: user.updated_at,
-      roles,
-    };
+    req.user = mapUserToRequestUser(user, roles);
 
     logger.info(
       { userId: user._id.toString(), requestId: req.id },
@@ -141,7 +143,6 @@ export const optionalAuth = async (
   req: Request,
   _res: Response,
   next: NextFunction
-  // eslint-disable-next-line complexity -- This function handles multiple authentication paths which increases complexity
 ): Promise<void> => {
   try {
     // Try session first
@@ -152,16 +153,7 @@ export const optionalAuth = async (
       if (user !== null) {
         const roles = await aggregateUserRoles(user._id.toString());
         // eslint-disable-next-line no-param-reassign -- Express middleware pattern requires mutating req
-        req.user = {
-          id: user._id.toString(),
-          email: user.email,
-          name: user.name,
-          status: user.status,
-          last_login_at: user.last_login_at ?? null,
-          created_at: user.created_at,
-          updated_at: user.updated_at,
-          roles,
-        };
+        req.user = mapUserToRequestUser(user, roles);
         next();
         return;
       }
@@ -177,16 +169,7 @@ export const optionalAuth = async (
       const user = await UserModel.findById(payload.userId);
       if (user !== null && user.status === 'active') {
         // eslint-disable-next-line no-param-reassign -- Express middleware pattern requires mutating req
-        req.user = {
-          id: user._id.toString(),
-          email: user.email,
-          name: user.name,
-          status: user.status,
-          last_login_at: user.last_login_at ?? null,
-          created_at: user.created_at,
-          updated_at: user.updated_at,
-          roles: payload.roles,
-        };
+        req.user = mapUserToRequestUser(user, payload.roles);
         next();
         return;
       }

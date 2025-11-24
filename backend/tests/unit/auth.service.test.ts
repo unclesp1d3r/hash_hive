@@ -3,6 +3,8 @@ import { User } from '../../src/models/user.model';
 import { Session } from '../../src/models/session.model';
 import { getRedisClient } from '../../src/db/redis';
 import { ProjectService } from '../../src/services/project.service';
+import { AuthTokenExpiredError, AuthTokenInvalidError } from '../../src/utils/auth-errors';
+import jwt from 'jsonwebtoken';
 
 // Mock dependencies
 jest.mock('../../src/models/user.model');
@@ -146,6 +148,22 @@ describe('AuthService', () => {
   });
 
   describe('validateToken', () => {
+    let verifySpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      // Restore original verify implementation for tests that need real JWT functionality
+      if (verifySpy) {
+        verifySpy.mockRestore();
+      }
+    });
+
+    afterEach(() => {
+      if (verifySpy) {
+        verifySpy.mockRestore();
+      }
+    });
+
     it('should return payload with valid token', () => {
       const token = AuthService.generateToken('user123', ['admin']);
       const payload = AuthService.validateToken(token);
@@ -154,21 +172,32 @@ describe('AuthService', () => {
       expect(payload.roles).toEqual(['admin']);
     });
 
-    it('should throw error with expired token', () => {
-      // Create a token that expires immediately
-      // Manually expire it by manipulating the payload (simplified test)
-      // In real scenario, would need to wait or manipulate time
+    it('should throw AuthTokenExpiredError when token is expired', () => {
+      const expiredError = new jwt.TokenExpiredError('Token expired', new Date());
+      verifySpy = jest.spyOn(jwt, 'verify').mockImplementation(() => {
+        throw expiredError;
+      });
 
-      // This test would need more sophisticated mocking of jwt.verify
       expect(() => {
-        AuthService.validateToken('invalid_token');
-      }).toThrow();
+        AuthService.validateToken('expired_token');
+      }).toThrow(AuthTokenExpiredError);
+      expect(() => {
+        AuthService.validateToken('expired_token');
+      }).toThrow('Token expired');
     });
 
-    it('should throw error with invalid token', () => {
+    it('should throw AuthTokenInvalidError when token is invalid', () => {
+      const invalidError = new jwt.JsonWebTokenError('Invalid token');
+      verifySpy = jest.spyOn(jwt, 'verify').mockImplementation(() => {
+        throw invalidError;
+      });
+
       expect(() => {
         AuthService.validateToken('invalid_token');
-      }).toThrow();
+      }).toThrow(AuthTokenInvalidError);
+      expect(() => {
+        AuthService.validateToken('invalid_token');
+      }).toThrow('Invalid token');
     });
   });
 

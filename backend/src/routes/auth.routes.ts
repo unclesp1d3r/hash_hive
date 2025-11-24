@@ -30,10 +30,8 @@ const loginRateLimiter = rateLimit({
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_FORBIDDEN = 403;
 // Minimum password length allowed for login. Set to 8 to permit legacy accounts
-// with weaker passwords while encouraging upgrade to STRONG_MIN_PASSWORD_LENGTH.
+// with weaker passwords while encouraging upgrade to strong minimum length (12 characters).
 const MIN_PASSWORD_LENGTH = 8;
-// Strong minimum length enforced for new password creation/update (future endpoints)
-export const STRONG_MIN_PASSWORD_LENGTH = 12;
 
 const loginSchema = z.object({
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().email() is the correct Zod v3 syntax

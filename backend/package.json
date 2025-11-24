@@ -13,6 +13,7 @@
     "test:coverage": "jest --coverage",
     "test:integration": "jest --config jest.integration.config.js",
     "lint": "npx eslint \"src/**/*.{ts,tsx,js,jsx}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
