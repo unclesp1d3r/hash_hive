@@ -302,12 +302,22 @@ describe('Authentication Integration Tests', () => {
         });
 
       const cookies = loginResponse.headers['set-cookie'];
-      const cookieHeader = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
+      const cookieArray = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
+      // Extract just the key=value part from Set-Cookie headers (supertest needs key=value, not full Set-Cookie strings)
+      const sessionCookieStrings: string[] = [];
+      for (const cookie of cookieArray) {
+        if (typeof cookie === 'string' && cookie !== '') {
+          const cookieValue = cookie.split(';')[0];
+          if (cookieValue !== undefined) {
+            sessionCookieStrings.push(cookieValue);
+          }
+        }
+      }
 
       // Get CSRF token with session for refresh request
       const { token: refreshCsrfToken, cookies: refreshCookies } = await getCsrfTokenWithSession(
         app,
-        cookieHeader
+        sessionCookieStrings
       );
 
       // Refresh token
@@ -322,9 +332,16 @@ describe('Authentication Integration Tests', () => {
     });
 
     it('should return 401 without session', async () => {
-      const response = await request(app).post('/api/v1/web/auth/refresh');
+      // Get CSRF token to pass CSRF validation, then authentication will fail with 401
+      const { token: csrfToken, cookie: csrfCookie } = await getCsrfToken(app);
+
+      const response = await request(app)
+        .post('/api/v1/web/auth/refresh')
+        .set('Cookie', csrfCookie)
+        .set('X-CSRF-Token', csrfToken);
 
       expect(response.status).toBe(401);
+      expect(response.body.error.code).toBe('AUTH_SESSION_INVALID');
     });
   });
 });

@@ -25,6 +25,15 @@ const loginRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  // Use request ID as key generator in tests to avoid rate limit collisions between tests
+  // In production, this will use IP address (default behavior)
+  keyGenerator: (req: express.Request): string => {
+    // In test environments, use request ID to ensure each test gets its own rate limit bucket
+    if (config.server.isTest) {
+      return req.id;
+    }
+    return req.ip ?? 'unknown';
+  },
 });
 
 const HTTP_UNAUTHORIZED = 401;
