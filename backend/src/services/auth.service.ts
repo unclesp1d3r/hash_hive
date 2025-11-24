@@ -49,7 +49,7 @@ export class AuthService {
       user.password_requires_upgrade = true;
       await user.save();
       logger.warn(
-        { userId: user._id.toString(), email, length: password.length },
+        { userId: user._id.toString(), email },
         'User logged in with weak password; flagged for upgrade'
       );
     }

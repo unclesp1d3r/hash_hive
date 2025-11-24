@@ -88,10 +88,10 @@ describe('Authentication Integration Tests', () => {
       expect(response.body.user.email).toBe('test@example.com');
       expect(response.headers['set-cookie']).toBeDefined();
 
+      // Normalize set-cookie header to array (can be string or string[])
       const cookies = response.headers['set-cookie'];
-      const sessionCookie = Array.isArray(cookies)
-        ? cookies.find((cookie: string) => cookie.startsWith('sessionId='))
-        : undefined;
+      const cookieArray = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
+      const sessionCookie = cookieArray.find((cookie: string) => cookie.startsWith('sessionId='));
       expect(sessionCookie).toBeDefined();
       expect(sessionCookie).toContain('HttpOnly');
     });

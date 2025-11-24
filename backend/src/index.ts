@@ -4,6 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import csrf from 'csrf';
 import pinoHttp from 'pino-http';
+import * as crypto from 'node:crypto';
 import { config } from './config';
 import { logger } from './utils/logger';
 import { connectDatabase, disconnectDatabase } from './db';
@@ -127,6 +128,121 @@ const CSRF_COOKIE_MAX_AGE_MS =
   HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND; // 24 hours
 const HTTP_STATUS_FORBIDDEN = 403;
 
+// CSRF secret encryption configuration
+const CSRF_ENCRYPTION_ALGORITHM = 'aes-256-gcm';
+const CSRF_IV_LENGTH = 16; // 128 bits for GCM
+const CSRF_AUTH_TAG_LENGTH = 16; // 128 bits for GCM authentication tag
+const CSRF_PBKDF2_ITERATIONS = 100000;
+const CSRF_KEY_LENGTH = 32; // 256 bits
+const CSRF_ENCRYPTED_PARTS_COUNT = 3; // iv:authTag:encrypted
+
+/**
+ * Derives an encryption key from SESSION_SECRET using PBKDF2
+ */
+function deriveCsrfEncryptionKey(): Buffer {
+  // Use a fixed salt derived from the secret itself for consistency
+  // In production, the SESSION_SECRET should be unique per deployment
+  const salt = crypto
+    .createHash('sha256')
+    .update(config.auth.sessionSecret)
+    .update('csrf-encryption-salt')
+    .digest();
+
+  return crypto.pbkdf2Sync(
+    config.auth.sessionSecret,
+    salt,
+    CSRF_PBKDF2_ITERATIONS,
+    CSRF_KEY_LENGTH,
+    'sha256'
+  );
+}
+
+/**
+ * Encrypts a CSRF secret before storing it in a cookie
+ */
+function encryptCsrfSecret(secret: string): string {
+  try {
+    const key = deriveCsrfEncryptionKey();
+    const iv = crypto.randomBytes(CSRF_IV_LENGTH);
+    const cipher = crypto.createCipheriv(CSRF_ENCRYPTION_ALGORITHM, key, iv);
+
+    let encrypted = cipher.update(secret, 'utf8');
+    encrypted = Buffer.concat([encrypted, cipher.final()]);
+    const authTag = cipher.getAuthTag();
+
+    // Format: iv:authTag:encrypted (all base64 encoded)
+    const ivBase64 = iv.toString('base64');
+    const authTagBase64 = authTag.toString('base64');
+    const encryptedBase64 = encrypted.toString('base64');
+
+    return `${ivBase64}:${authTagBase64}:${encryptedBase64}`;
+  } catch (error) {
+    logger.error({ error }, 'Failed to encrypt CSRF secret');
+    throw new Error('Failed to encrypt CSRF secret', { cause: error });
+  }
+}
+
+/**
+ * Validates and parses encrypted CSRF secret parts
+ */
+function parseEncryptedParts(encryptedValue: string): {
+  iv: Buffer;
+  authTag: Buffer;
+  encrypted: Buffer;
+} | null {
+  const parts = encryptedValue.split(':');
+  if (parts.length !== CSRF_ENCRYPTED_PARTS_COUNT) {
+    return null;
+  }
+
+  const [ivBase64, authTagBase64, encryptedBase64] = parts;
+  if (
+    ivBase64 === undefined ||
+    ivBase64 === '' ||
+    authTagBase64 === undefined ||
+    authTagBase64 === '' ||
+    encryptedBase64 === undefined ||
+    encryptedBase64 === ''
+  ) {
+    return null;
+  }
+
+  const iv = Buffer.from(ivBase64, 'base64');
+  const authTag = Buffer.from(authTagBase64, 'base64');
+  const encrypted = Buffer.from(encryptedBase64, 'base64');
+
+  if (iv.length !== CSRF_IV_LENGTH || authTag.length !== CSRF_AUTH_TAG_LENGTH) {
+    return null;
+  }
+
+  return { iv, authTag, encrypted };
+}
+
+/**
+ * Decrypts a CSRF secret from a cookie
+ */
+function decryptCsrfSecret(encryptedValue: string): string | null {
+  try {
+    const parsed = parseEncryptedParts(encryptedValue);
+    if (parsed === null) {
+      return null;
+    }
+
+    const { iv, authTag, encrypted } = parsed;
+    const key = deriveCsrfEncryptionKey();
+    const decipher = crypto.createDecipheriv(CSRF_ENCRYPTION_ALGORITHM, key, iv);
+    decipher.setAuthTag(authTag);
+
+    let decrypted = decipher.update(encrypted);
+    decrypted = Buffer.concat([decrypted, decipher.final()]);
+
+    return decrypted.toString('utf8');
+  } catch (error) {
+    logger.warn({ error }, 'Failed to decrypt CSRF secret - may be invalid or corrupted');
+    return null;
+  }
+}
+
 function handleGetRequest(
   req: express.Request,
   res: express.Response,
@@ -140,8 +256,11 @@ function handleGetRequest(
   // Generate token from the secret (tokens can be regenerated from the same secret)
   const token = csrfProtection.create(secret);
 
-  // Set/refresh the CSRF cookie with the secret (refreshes maxAge)
-  res.cookie(CSRF_COOKIE_NAME, secret, {
+  // Encrypt the secret before storing in cookie to protect sensitive information
+  const encryptedSecret = encryptCsrfSecret(secret);
+
+  // Set/refresh the CSRF cookie with the encrypted secret (refreshes maxAge)
+  res.cookie(CSRF_COOKIE_NAME, encryptedSecret, {
     httpOnly: true,
     secure: config.server.isProduction,
     sameSite: 'lax',
@@ -157,8 +276,15 @@ function getCsrfSecret(cookies: express.Request['cookies']): string | null {
   if (typeof cookies !== 'object') {
     return null;
   }
-  const { [CSRF_COOKIE_NAME]: secret } = cookies as Record<string, unknown>;
-  return typeof secret === 'string' && secret !== '' ? secret : null;
+  const { [CSRF_COOKIE_NAME]: encryptedValue } = cookies as Record<string, unknown>;
+  if (typeof encryptedValue !== 'string' || encryptedValue === '') {
+    return null;
+  }
+
+  // Decrypt the secret from the cookie
+  // If decryption fails (e.g., corrupted or legacy unencrypted cookie),
+  // return null to trigger generation of a new encrypted secret
+  return decryptCsrfSecret(encryptedValue);
 }
 
 function isBodyWithCsrf(body: unknown): body is { _csrf: unknown } {

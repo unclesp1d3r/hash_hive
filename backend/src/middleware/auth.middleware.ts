@@ -4,6 +4,7 @@ import { logger } from '../utils/logger';
 import { AuthService } from '../services/auth.service';
 import { aggregateUserRoles } from '../utils/role-aggregator';
 import { AuthTokenExpiredError, AuthTokenInvalidError } from '../utils/auth-errors';
+import { User as UserModel } from '../models/user.model';
 
 const HTTP_UNAUTHORIZED = 401;
 const BEARER_PREFIX_LENGTH = 7;
@@ -32,7 +33,6 @@ export const authenticateJWT = async (
     const payload = AuthService.validateToken(token);
 
     // Get user from database
-    const { User: UserModel } = await import('../models/user.model');
     const user = await UserModel.findById(payload.userId);
 
     if (user === null) {
@@ -174,7 +174,6 @@ export const optionalAuth = async (
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.substring(BEARER_PREFIX_LENGTH);
       const payload = AuthService.validateToken(token);
-      const { User: UserModel } = await import('../models/user.model');
       const user = await UserModel.findById(payload.userId);
       if (user !== null && user.status === 'active') {
         // eslint-disable-next-line no-param-reassign -- Express middleware pattern requires mutating req
