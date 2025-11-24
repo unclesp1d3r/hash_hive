@@ -31,8 +31,6 @@ const HTTP_UNAUTHORIZED = 401;
 const MIN_PASSWORD_LENGTH = 1;
 
 const loginSchema = z.object({
-  // Note: z.string().email() is the recommended approach, z.email() is deprecated
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().email() is the correct API
   email: z.string().email(),
   password: z.string().min(MIN_PASSWORD_LENGTH),
 });
