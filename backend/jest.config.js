@@ -36,12 +36,6 @@ module.exports = {
     './src/routes/health.ts': {
       branches: 50,
     },
-    './src/db/index.ts': {
-      branches: 0,
-      functions: 0,
-      lines: 0,
-      statements: 0,
-    },
     './src/services/auth.service.ts': {
       statements: 79,
       lines: 79,
@@ -55,6 +49,7 @@ module.exports = {
       lines: 50,
       functions: 60,
     },
+    // Barrel files (re-export only) - 0% coverage is acceptable
     './src/services/index.ts': {
       functions: 0,
     },

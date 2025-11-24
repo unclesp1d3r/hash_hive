@@ -28,7 +28,11 @@ const loginRateLimiter = rateLimit({
 });
 
 const HTTP_UNAUTHORIZED = 401;
-const MIN_PASSWORD_LENGTH = 1;
+// Minimum password length allowed for login. Set to 8 to permit legacy accounts
+// with weaker passwords while encouraging upgrade to STRONG_MIN_PASSWORD_LENGTH.
+const MIN_PASSWORD_LENGTH = 8;
+// Strong minimum length enforced for new password creation/update (future endpoints)
+export const STRONG_MIN_PASSWORD_LENGTH = 12;
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -64,6 +68,7 @@ router.post('/login', loginRateLimiter, async (req, res, next) => {
         last_login_at: user.last_login_at,
         created_at: user.created_at,
         updated_at: user.updated_at,
+        password_requires_upgrade: user.password_requires_upgrade === true,
       },
       token,
     });

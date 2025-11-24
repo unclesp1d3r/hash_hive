@@ -15,6 +15,7 @@ const SECONDS_PER_MINUTE = 60;
 const MINUTES_PER_HOUR = 60;
 const HOURS_PER_DAY = 24;
 const DEFAULT_TOKEN_EXPIRATION_DAYS = 7;
+const ARRAY_INDEX_ZERO = 0;
 
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Service class pattern for static methods
 export class AuthService {
@@ -22,7 +23,9 @@ export class AuthService {
    * Login user with email and password
    */
   static async login(email: string, password: string): Promise<{ user: IUser; token: string }> {
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password_hash');
+    const user = await User.findOne({ email: email.toLowerCase() }).select(
+      '+password_hash +password_requires_upgrade'
+    );
 
     if (user === null) {
       logger.warn({ email }, 'Login attempt with invalid email');
@@ -40,15 +43,26 @@ export class AuthService {
       throw new Error('Account is disabled');
     }
 
-    // Update last login timestamp
-    user.last_login_at = new Date();
-    await user.save();
+    // Flag weak passwords for upgrade (does not block login). Strong threshold distinct from minimum login length.
+    const STRONG_MIN_PASSWORD_LENGTH = 12;
+    if (password.length < STRONG_MIN_PASSWORD_LENGTH && user.password_requires_upgrade !== true) {
+      user.password_requires_upgrade = true;
+      await user.save();
+      logger.warn(
+        { userId: user._id.toString(), email, length: password.length },
+        'User logged in with weak password; flagged for upgrade'
+      );
+    }
 
     // Get user roles from projects across all projects
     const roles = await aggregateUserRoles(user._id.toString());
 
     // Generate JWT token
     const token = this.generateToken(user._id.toString(), roles);
+
+    // Update last login timestamp only after successful role aggregation and token generation
+    user.last_login_at = new Date();
+    await user.save();
 
     logger.info({ email, userId: user._id.toString() }, 'User logged in successfully');
 
@@ -106,13 +120,37 @@ export class AuthService {
       expires_at: expiresAt,
     });
 
-    // Store in Redis
-    const redis = getRedisClient();
-    await redis.setex(
-      `session:${sessionId}`,
-      Math.floor(config.auth.sessionMaxAge / MILLISECONDS_PER_SECOND),
-      userId
-    );
+    // Store in Redis with rollback on failure
+    try {
+      const redis = getRedisClient();
+      await redis.setex(
+        `session:${sessionId}`,
+        Math.floor(config.auth.sessionMaxAge / MILLISECONDS_PER_SECOND),
+        userId
+      );
+    } catch (redisError) {
+      logger.error(
+        { error: redisError, userId, sessionId },
+        'Failed to store session in Redis, rolling back MongoDB session'
+      );
+
+      // Rollback: Delete the MongoDB session
+      try {
+        await Session.deleteOne({ session_id: sessionId });
+        logger.info({ sessionId }, 'Successfully rolled back MongoDB session after Redis failure');
+      } catch (rollbackError) {
+        logger.error(
+          { error: rollbackError, sessionId },
+          'Failed to rollback MongoDB session after Redis failure - orphaned session may exist'
+        );
+      }
+
+      // Re-throw the original Redis error
+      const errorMessage = redisError instanceof Error ? redisError.message : 'Redis error';
+      const sessionError = new Error(`Failed to create session: ${errorMessage}`);
+      sessionError.cause = redisError;
+      throw sessionError;
+    }
 
     logger.info({ userId, sessionId }, 'Session created');
 
@@ -178,28 +216,81 @@ export class AuthService {
   }
 
   /**
+   * Parse and validate expiration time string
+   */
+  private static parseExpirationString(expiresIn: string): { value: number; unit: string } | null {
+    const RADIX = 10;
+    const normalized = expiresIn.trim().toLowerCase();
+
+    if (normalized.length === ARRAY_INDEX_ZERO) {
+      return null;
+    }
+
+    const match = /^(\d+)([dhms])$/.exec(normalized);
+    if (match === null) {
+      return null;
+    }
+
+    const [, numericPart, unit] = match;
+
+    if (numericPart === undefined || unit === undefined) {
+      return null;
+    }
+    const value = parseInt(numericPart, RADIX);
+
+    if (isNaN(value) || value <= ARRAY_INDEX_ZERO) {
+      return null;
+    }
+
+    return { value, unit };
+  }
+
+  /**
+   * Calculate seconds from time value and unit
+   */
+  private static calculateSeconds(value: number, unit: string): number {
+    switch (unit) {
+      case 'd':
+        return value * HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE;
+      case 'h':
+        return value * MINUTES_PER_HOUR * SECONDS_PER_MINUTE;
+      case 'm':
+        return value * SECONDS_PER_MINUTE;
+      case 's':
+        return value;
+      default:
+        return (
+          DEFAULT_TOKEN_EXPIRATION_DAYS * HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE
+        );
+    }
+  }
+
+  /**
    * Get token expiration in seconds
    */
   private static getTokenExpirationSeconds(): number {
+    const DEFAULT_SECONDS =
+      DEFAULT_TOKEN_EXPIRATION_DAYS * HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE;
+
     // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- Direct property access is clearer here
     const expiresIn = config.auth.jwtExpiresIn;
-    const SLICE_END_INDEX = -1;
-    const RADIX = 10;
-    const SLICE_START_INDEX = 0;
 
-    if (expiresIn.endsWith('d')) {
-      const days = parseInt(expiresIn.slice(SLICE_START_INDEX, SLICE_END_INDEX), RADIX);
-      return days * HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE;
+    // Validate and normalize input
+    if (expiresIn.length === ARRAY_INDEX_ZERO || typeof expiresIn !== 'string') {
+      logger.warn({ expiresIn }, 'JWT expiration config is missing or not a string, using default');
+      return DEFAULT_SECONDS;
     }
-    if (expiresIn.endsWith('h')) {
-      const hours = parseInt(expiresIn.slice(SLICE_START_INDEX, SLICE_END_INDEX), RADIX);
-      return hours * MINUTES_PER_HOUR * SECONDS_PER_MINUTE;
+
+    const parsed = this.parseExpirationString(expiresIn);
+
+    if (parsed === null) {
+      logger.warn(
+        { expiresIn },
+        'JWT expiration config has invalid format (expected: <number><unit> where unit is d/h/m/s), using default'
+      );
+      return DEFAULT_SECONDS;
     }
-    if (expiresIn.endsWith('m')) {
-      const minutes = parseInt(expiresIn.slice(SLICE_START_INDEX, SLICE_END_INDEX), RADIX);
-      return minutes * SECONDS_PER_MINUTE;
-    }
-    // Default to 7 days
-    return DEFAULT_TOKEN_EXPIRATION_DAYS * HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE;
+
+    return this.calculateSeconds(parsed.value, parsed.unit);
   }
 }

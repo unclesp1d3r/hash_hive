@@ -4,10 +4,13 @@ import { mongoose } from '../db';
 import { Project, type IProject } from '../models/project.model';
 import { ProjectUser } from '../models/project-user.model';
 import type { UserRole } from '../../../shared/src/types';
+import { AppError } from '../middleware/error-handler';
 
 const DEFAULT_PRIORITY = 5;
 const DEFAULT_MAX_AGENTS = 100;
 const NO_DELETED_COUNT = 0;
+const HTTP_NOT_FOUND = 404;
+const HTTP_CONFLICT = 409;
 
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Service class pattern for static methods
 export class ProjectService {
@@ -84,7 +87,11 @@ export class ProjectService {
   ): Promise<void> {
     const existing = await ProjectUser.findOne({ user_id: userId, project_id: projectId });
     if (existing !== null) {
-      throw new Error('User is already a member of this project');
+      throw new AppError(
+        'PROJECT_USER_ALREADY_EXISTS',
+        'User is already a member of this project',
+        HTTP_CONFLICT
+      );
     }
 
     await ProjectUser.create({
@@ -102,7 +109,11 @@ export class ProjectService {
   static async removeUserFromProject(projectId: string, userId: string): Promise<void> {
     const result = await ProjectUser.deleteOne({ user_id: userId, project_id: projectId });
     if (result.deletedCount === NO_DELETED_COUNT) {
-      throw new Error('User is not a member of this project');
+      throw new AppError(
+        'PROJECT_USER_NOT_FOUND',
+        'User is not a member of this project',
+        HTTP_NOT_FOUND
+      );
     }
 
     logger.info({ userId, projectId }, 'User removed from project');

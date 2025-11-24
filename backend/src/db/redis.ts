@@ -103,7 +103,9 @@ export function getRedisClient(): Redis {
     throw new Error('Redis client not initialized. Call connectRedis() first.');
   }
   if (redisClient.status !== 'ready') {
-    throw new Error('Redis client not initialized. Call connectRedis() first.');
+    throw new Error(
+      `Redis client not ready: current status is "${redisClient.status}". Expected "ready".`
+    );
   }
   return redisClient;
 }

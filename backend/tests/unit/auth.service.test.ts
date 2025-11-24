@@ -16,13 +16,14 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
-    it('should return user and token with valid credentials', async () => {
+    it('should return user and token with strong password credentials (no upgrade flag)', async () => {
       const mockUser = {
         _id: { toString: () => '507f1f77bcf86cd799439011' },
         email: 'test@example.com',
         name: 'Test User',
         status: 'active',
         password_hash: 'hashed_password',
+        password_requires_upgrade: false,
         last_login_at: null,
         created_at: new Date(),
         updated_at: new Date(),
@@ -35,12 +36,73 @@ describe('AuthService', () => {
       });
       (ProjectService.getUserProjects as jest.Mock).mockResolvedValue([]);
 
-      const result = await AuthService.login('test@example.com', 'password123');
+      const strongPassword = 'VeryStrongPassword123!'; // length > 12
+      const result = await AuthService.login('test@example.com', strongPassword);
 
       expect(result.user).toBe(mockUser);
       expect(result.token).toBeDefined();
-      expect(mockUser.comparePassword).toHaveBeenCalledWith('password123');
-      expect(mockUser.save).toHaveBeenCalled();
+      expect(mockUser.comparePassword).toHaveBeenCalledWith(strongPassword);
+      // Only saved once (last_login_at update) because no flag added
+      expect(mockUser.save).toHaveBeenCalledTimes(1);
+      expect(mockUser.password_requires_upgrade).toBe(false);
+    });
+
+    it('should flag user with weak password (<12 chars) for upgrade', async () => {
+      const mockUser = {
+        _id: { toString: () => '507f1f77bcf86cd799439012' },
+        email: 'weak@example.com',
+        name: 'Weak User',
+        status: 'active',
+        password_hash: 'hashed_password',
+        password_requires_upgrade: false,
+        last_login_at: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+        comparePassword: jest.fn().mockResolvedValue(true),
+        save: jest.fn().mockResolvedValue(true),
+      };
+
+      (User.findOne as jest.Mock).mockReturnValue({
+        select: jest.fn().mockResolvedValue(mockUser),
+      });
+      (ProjectService.getUserProjects as jest.Mock).mockResolvedValue([]);
+
+      const weakPassword = 'weakpass'; // length 8
+      const result = await AuthService.login('weak@example.com', weakPassword);
+
+      expect(result.user).toBe(mockUser);
+      expect(mockUser.comparePassword).toHaveBeenCalledWith(weakPassword);
+      // Saved twice: once for flagging, once for last_login_at update
+      expect(mockUser.save).toHaveBeenCalledTimes(2);
+      expect(mockUser.password_requires_upgrade).toBe(true);
+    });
+
+    it('should not duplicate save when user already flagged for upgrade', async () => {
+      const mockUser = {
+        _id: { toString: () => '507f1f77bcf86cd799439013' },
+        email: 'flagged@example.com',
+        name: 'Flagged User',
+        status: 'active',
+        password_hash: 'hashed_password',
+        password_requires_upgrade: true,
+        last_login_at: null,
+        created_at: new Date(),
+        updated_at: new Date(),
+        comparePassword: jest.fn().mockResolvedValue(true),
+        save: jest.fn().mockResolvedValue(true),
+      };
+
+      (User.findOne as jest.Mock).mockReturnValue({
+        select: jest.fn().mockResolvedValue(mockUser),
+      });
+      (ProjectService.getUserProjects as jest.Mock).mockResolvedValue([]);
+
+      const weakPassword = 'weakpass';
+      const result = await AuthService.login('flagged@example.com', weakPassword);
+
+      expect(result.user).toBe(mockUser);
+      expect(mockUser.save).toHaveBeenCalledTimes(1); // only last_login_at update
+      expect(mockUser.password_requires_upgrade).toBe(true);
     });
 
     it('should throw error with invalid email', async () => {
@@ -132,6 +194,56 @@ describe('AuthService', () => {
       expect(sessionId).toBeDefined();
       expect(Session.create).toHaveBeenCalled();
       expect(mockRedis.setex).toHaveBeenCalled();
+    });
+
+    it('should rollback MongoDB session if Redis fails', async () => {
+      const mockSession = {
+        _id: 'session123',
+        session_id: 'session123',
+        user_id: 'user123',
+        data: {},
+        expires_at: new Date(),
+      };
+
+      (Session.create as jest.Mock).mockResolvedValue(mockSession);
+      (Session.deleteOne as jest.Mock).mockResolvedValue({ deletedCount: 1 });
+
+      const mockRedis = {
+        setex: jest.fn().mockRejectedValue(new Error('Redis connection failed')),
+      };
+      (getRedisClient as jest.Mock).mockReturnValue(mockRedis);
+
+      await expect(AuthService.createSession('user123')).rejects.toThrow(
+        'Failed to create session'
+      );
+
+      expect(Session.create).toHaveBeenCalled();
+      expect(Session.deleteOne).toHaveBeenCalled();
+    });
+
+    it('should log error if rollback also fails', async () => {
+      const mockSession = {
+        _id: 'session123',
+        session_id: 'session123',
+        user_id: 'user123',
+        data: {},
+        expires_at: new Date(),
+      };
+
+      (Session.create as jest.Mock).mockResolvedValue(mockSession);
+      (Session.deleteOne as jest.Mock).mockRejectedValue(new Error('Rollback failed'));
+
+      const mockRedis = {
+        setex: jest.fn().mockRejectedValue(new Error('Redis connection failed')),
+      };
+      (getRedisClient as jest.Mock).mockReturnValue(mockRedis);
+
+      await expect(AuthService.createSession('user123')).rejects.toThrow(
+        'Failed to create session'
+      );
+
+      expect(Session.create).toHaveBeenCalled();
+      expect(Session.deleteOne).toHaveBeenCalled();
     });
   });
 
