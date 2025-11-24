@@ -232,4 +232,99 @@ describe('Authentication Integration Tests', () => {
       expect(meResponse.status).toBe(401);
     });
   });
+
+  describe('POST /api/v1/web/auth/login - additional error cases', () => {
+    it('should return 400 with invalid email format', async () => {
+      const { token: csrfToken, cookie: csrfCookie } = await getCsrfToken(app);
+
+      const response = await request(app)
+        .post('/api/v1/web/auth/login')
+        .set('Cookie', csrfCookie)
+        .set('X-CSRF-Token', csrfToken)
+        .send({
+          email: 'not-an-email',
+          password: 'password123',
+        });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 403 when account is disabled', async () => {
+      // Create disabled test user
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- User.hashPassword is a static method defined via bracket notation
+      const hashedPassword = await (User as any).hashPassword('password123');
+      await User.create({
+        email: 'disabled@example.com',
+        password_hash: hashedPassword,
+        name: 'Disabled User',
+        status: 'disabled',
+      });
+
+      const { token: csrfToken, cookie: csrfCookie } = await getCsrfToken(app);
+
+      const response = await request(app)
+        .post('/api/v1/web/auth/login')
+        .set('Cookie', csrfCookie)
+        .set('X-CSRF-Token', csrfToken)
+        .send({
+          email: 'disabled@example.com',
+          password: 'password123',
+        });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe('AUTH_ACCOUNT_DISABLED');
+    });
+  });
+
+  describe('POST /api/v1/web/auth/refresh', () => {
+    it('should refresh token when authenticated', async () => {
+      // Create test user
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- User.hashPassword is a static method defined via bracket notation
+      const hashedPassword = await (User as any).hashPassword('password123');
+      await User.create({
+        email: 'test@example.com',
+        password_hash: hashedPassword,
+        name: 'Test User',
+        status: 'active',
+      });
+
+      // Get CSRF token for login request
+      const { token: loginCsrfToken, cookie: loginCsrfCookie } = await getCsrfToken(app);
+
+      // Login to get session
+      const loginResponse = await request(app)
+        .post('/api/v1/web/auth/login')
+        .set('Cookie', loginCsrfCookie)
+        .set('X-CSRF-Token', loginCsrfToken)
+        .send({
+          email: 'test@example.com',
+          password: 'password123',
+        });
+
+      const cookies = loginResponse.headers['set-cookie'];
+      const cookieHeader = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
+
+      // Get CSRF token with session for refresh request
+      const { token: refreshCsrfToken, cookies: refreshCookies } = await getCsrfTokenWithSession(
+        app,
+        cookieHeader
+      );
+
+      // Refresh token
+      const response = await request(app)
+        .post('/api/v1/web/auth/refresh')
+        .set('Cookie', refreshCookies)
+        .set('X-CSRF-Token', refreshCsrfToken);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('token');
+      expect(typeof response.body.token).toBe('string');
+    });
+
+    it('should return 401 without session', async () => {
+      const response = await request(app).post('/api/v1/web/auth/refresh');
+
+      expect(response.status).toBe(401);
+    });
+  });
 });
