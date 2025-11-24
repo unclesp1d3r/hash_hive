@@ -148,6 +148,8 @@ Updates are generally non-destructive, relying on explicit status fields and met
 
 ## Development and runtime commands (planned)
 
+> Before committing any changes, always run `just ci-check` and ensure all checks and tests pass; a task is not complete until `just ci-check` succeeds.
+
 At the time of writing, this repository primarily contains design documents; actual `package.json` scripts and Docker configurations may not yet exist. The commands below are taken from `.kiro/steering/tech.md` and represent the intended interface once backend and frontend packages are in place.
 
 ### Backend (inside `backend/`)

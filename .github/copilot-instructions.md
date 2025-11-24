@@ -34,6 +34,8 @@ HashHive is a greenfield MERN (MongoDB, Express, React, Node.js) platform orches
 
 ## Development Workflow
 
+> Before committing any changes, always run `just ci-check` and ensure all checks and tests pass; a task is not complete until `just ci-check` succeeds.
+
 ```bash
 # Quick start
 npm install                    # Install all workspace deps
