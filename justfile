@@ -356,9 +356,9 @@ restart service:
 # 🧹 Linting, Typing, Dep Check
 # -----------------------------
 
-# Lint all code
+# Lint all code (NX-powered)
 lint:
-    npm run lint
+    npx nx run-many --target=lint --all
 
 # Format all code
 format:
@@ -368,33 +368,33 @@ format:
 format-check:
     npm run format:check
 
-# Run TypeScript type checking across all workspaces
+# Run TypeScript type checking across all workspaces (NX-powered)
 type-check:
-    npm run type-check --workspaces
+    npx nx run-many --target=type-check --all
 
 # -----------------------------
 # 🧪 Testing & Coverage
 # -----------------------------
 
-# Run all tests
+# Run all tests (NX-powered)
 test:
-    npm test
+    npx nx run-many --target=test --all
 
 # Run backend tests
 test-backend:
-    npm run test -w backend
+    npx nx run backend:test
 
 # Run frontend tests
 test-frontend:
-    npm run test -w frontend
+    npx nx run frontend:test
 
 # Run integration tests
 test-integration:
-    npm run test:integration -w backend
+    npx nx run backend:test:integration
 
 # Run E2E tests
 test-e2e:
-    npm run test:e2e -w frontend
+    npx nx run frontend:test:e2e
 
 # Run tests in watch mode
 test-watch:
@@ -402,25 +402,25 @@ test-watch:
 
 # Generate coverage report
 coverage:
-    npm run test:coverage -w backend
+    npx nx run backend:test:coverage
 
 # -----------------------------
 # 📦 Build & Clean
 # -----------------------------
 
-# Build all packages
+# Build all packages (NX-powered)
 build:
-    npm run build
+    npx nx run-many --target=build --all
 
 # Build specific package
 build-backend:
-    npm run build -w backend
+    npx nx run backend:build
 
 build-frontend:
-    npm run build -w frontend
+    npx nx run frontend:build
 
 build-shared:
-    npm run build -w shared
+    npx nx run shared:build
 
 # Clean build artifacts and dependencies
 [unix]
@@ -517,11 +517,26 @@ redis-cli:
 # -----------------------------
 # 🤖 CI Workflow
 # -----------------------------
-# Run the full CI check locally or in GitHub Actions.
+# Run the full CI check locally or in GitHub Actions (NX-powered).
 # This relies on Jest + Testcontainers to provision MongoDB, Redis, and MinIO
 
 # for the backend test suites, so no docker-compose step is required.
-ci-check: lint format-check build-shared type-check test-backend test-integration test-frontend test-e2e coverage
+ci-check:
+    npx nx run-many --target=lint,type-check,test,test:integration,test:e2e,test:coverage --parallel=3
+    npm run format:check
+
+# NX-specific commands
+affected-test:
+    npx nx affected --target=test
+
+affected-build:
+    npx nx affected --target=build
+
+graph:
+    npx nx graph
+
+reset-cache:
+    npx nx reset
 
 # -----------------------------
 # 📚 Documentation

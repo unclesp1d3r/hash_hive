@@ -1,0 +1,46 @@
+{
+  "name": "shared",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "shared/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc",
+        "cwd": "shared"
+      },
+      "cache": true,
+      "inputs": ["default", "^default"],
+      "outputs": ["{projectRoot}/dist/**"]
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx eslint \"src/**/*.{ts,tsx,js,jsx}\"",
+        "cwd": "shared"
+      },
+      "cache": true,
+      "inputs": ["default", "^default", "{projectRoot}/**/*.{ts,tsx,js,jsx}"]
+    },
+    "type-check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit",
+        "cwd": "shared"
+      },
+      "cache": true,
+      "inputs": ["default", "^default", "{projectRoot}/**/*.{ts,tsx}"]
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "echo 'No tests yet' && exit 0",
+        "cwd": "shared"
+      },
+      "cache": false,
+      "outputs": []
+    }
+  },
+  "tags": []
+}

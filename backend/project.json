@@ -1,0 +1,95 @@
+{
+  "name": "backend",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "backend/src",
+  "projectType": "application",
+  "implicitDependencies": ["shared"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc",
+        "cwd": "backend"
+      },
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["default", "^default"],
+      "outputs": ["{projectRoot}/dist/**"]
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx watch src/index.ts",
+        "cwd": "backend"
+      },
+      "cache": false
+    },
+    "start": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node dist/index.js",
+        "cwd": "backend"
+      },
+      "cache": false
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "jest",
+        "cwd": "backend"
+      },
+      "cache": true,
+      "inputs": ["default", "^default", "{projectRoot}/**/*.test.{ts,tsx,js,jsx}"],
+      "outputs": ["{projectRoot}/coverage/**"]
+    },
+    "test:integration": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "jest --config jest.integration.config.js",
+        "cwd": "backend"
+      },
+      "cache": true,
+      "inputs": ["default", "^default"],
+      "outputs": ["{projectRoot}/coverage/**"]
+    },
+    "test:coverage": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "jest --coverage",
+        "cwd": "backend"
+      },
+      "cache": true,
+      "inputs": ["default", "^default"],
+      "outputs": ["{projectRoot}/coverage/**"]
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx eslint \"src/**/*.{ts,tsx,js,jsx}\"",
+        "cwd": "backend"
+      },
+      "cache": true,
+      "inputs": ["default", "^default", "{projectRoot}/**/*.{ts,tsx,js,jsx}"]
+    },
+    "type-check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit",
+        "cwd": "backend"
+      },
+      "cache": true,
+      "inputs": ["default", "^default", "{projectRoot}/**/*.{ts,tsx}"]
+    },
+    "docker-build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker build -t hashhive-backend:latest .",
+        "cwd": "backend"
+      },
+      "cache": false,
+      "dependsOn": ["build"],
+      "inputs": ["default", "^default", "{projectRoot}/Dockerfile", "{projectRoot}/.dockerignore"]
+    }
+  },
+  "tags": []
+}

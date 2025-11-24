@@ -1,0 +1,82 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "targetDefaults": {
+    "build": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["default", "^default"],
+      "outputs": ["{projectRoot}/dist/**", "{projectRoot}/.next/**"]
+    },
+    "test": {
+      "cache": true,
+      "inputs": ["default", "^default", "{projectRoot}/**/*.test.{ts,tsx,js,jsx}"],
+      "outputs": ["{projectRoot}/coverage/**"]
+    },
+    "test:integration": {
+      "cache": true,
+      "inputs": ["default", "^default"],
+      "outputs": ["{projectRoot}/coverage/**"]
+    },
+    "test:e2e": {
+      "cache": true,
+      "inputs": ["default", "^default"]
+    },
+    "test:coverage": {
+      "cache": true,
+      "inputs": ["default", "^default"],
+      "outputs": ["{projectRoot}/coverage/**"]
+    },
+    "lint": {
+      "cache": true,
+      "inputs": ["default", "^default", "{projectRoot}/**/*.{ts,tsx,js,jsx}"]
+    },
+    "type-check": {
+      "cache": true,
+      "inputs": ["default", "^default", "{projectRoot}/**/*.{ts,tsx}"]
+    }
+  },
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "production": [
+      "default",
+      "!{projectRoot}/**/*.spec.ts",
+      "!{projectRoot}/**/*.test.{ts,tsx,js,jsx}",
+      "!{projectRoot}/**/*.spec.{ts,tsx,js,jsx}",
+      "!{projectRoot}/tsconfig.spec.json",
+      "!{projectRoot}/jest.config.*",
+      "!{projectRoot}/.eslintrc.json",
+      "!{projectRoot}/.eslintrc.js"
+    ],
+    "testing": [
+      "default",
+      "{projectRoot}/**/*.test.{ts,tsx,js,jsx}",
+      "{projectRoot}/**/*.spec.{ts,tsx,js,jsx}",
+      "{projectRoot}/jest.config.*",
+      "{projectRoot}/tsconfig.spec.json"
+    ],
+    "sharedGlobals": []
+  },
+  "tasksRunnerOptions": {
+    "default": {
+      "runner": "nx/tasks-runners/default",
+      "options": {
+        "cacheableOperations": [
+          "build",
+          "test",
+          "lint",
+          "type-check",
+          "test:integration",
+          "test:e2e",
+          "test:coverage"
+        ],
+        "cacheDirectory": ".nx/cache",
+        "parallel": 3
+      }
+    }
+  },
+  "defaultBase": "main",
+  "workspaceLayout": {
+    "appsDir": "",
+    "libsDir": ""
+  }
+}

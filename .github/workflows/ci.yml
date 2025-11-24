@@ -27,6 +27,17 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Reset NX cache (first run)
+        run: nx reset
+
+      - name: Cache NX
+        uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: nx-${{ runner.os }}-${{ hashFiles('**/nx.json', '**/project.json', '**/package-lock.json') }}
+          restore-keys: |
+            nx-${{ runner.os }}-
+
       - name: Verify Docker is available for Testcontainers
         run: |
           docker --version
@@ -43,8 +54,20 @@ jobs:
           wait
           echo "All images pulled successfully"
 
-      - name: Run Just CI check (Jest + Testcontainers)
-        run: just ci-check
+      - name: Run CI check (NX-powered)
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            nx affected --target=lint --parallel=3
+            nx affected --target=type-check --parallel=3
+            nx affected --target=test --parallel=3
+            nx affected --target=test:integration --parallel=3
+            nx affected --target=test:e2e --parallel=3
+            nx affected --target=test:coverage --parallel=3
+            npm run format:check
+          else
+            nx run-many --target=lint,type-check,test,test:integration,test:e2e,test:coverage --parallel=3
+            npm run format:check
+          fi
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
