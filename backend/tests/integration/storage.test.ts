@@ -1,44 +1,47 @@
-import { MinioContainer, StartedMinioContainer } from '@testcontainers/minio';
+import { MinioContainer, type StartedMinioContainer } from '@testcontainers/minio';
 import { ListBucketsCommand } from '@aws-sdk/client-s3';
-import { StorageService } from '../../src/services/storage.service';
-import { Readable } from 'stream';
+import type { StorageService } from '../../src/services/storage.service';
+import { Readable } from 'node:stream';
 
 describe('StorageService Integration', () => {
   let minioContainer: StartedMinioContainer;
   let storageService: StorageService;
   let originalEnv: NodeJS.ProcessEnv;
 
-  beforeAll(async () => {
-    // Save original environment
-    originalEnv = { ...process.env };
+  beforeAll(
+    async () => {
+      // Save original environment
+      originalEnv = { ...process.env };
 
-    // Start MinIO container via community module
-    minioContainer = await new MinioContainer('minio/minio:latest').start();
+      // Start MinIO container
+      minioContainer = await new MinioContainer('minio/minio:latest').start();
+      const minioHost = minioContainer.getHost();
+      const minioPort = minioContainer.getPort();
+      const minioEndpoint = `http://${minioHost}:${minioPort}`;
 
-    const minioHost = minioContainer.getHost();
-    const minioPort = minioContainer.getPort();
-    const minioEndpoint = `http://${minioHost}:${minioPort}`;
+      // Update environment for test
+      process.env['S3_ENDPOINT'] = minioEndpoint;
+      process.env['S3_ACCESS_KEY_ID'] = 'minioadmin';
+      process.env['S3_SECRET_ACCESS_KEY'] = 'minioadmin';
+      process.env['S3_BUCKET_NAME'] = 'test-bucket';
+      process.env['S3_REGION'] = 'us-east-1';
+      process.env['S3_FORCE_PATH_STYLE'] = 'true';
 
-    // Update environment for test
-    process.env['S3_ENDPOINT'] = minioEndpoint;
-    process.env['S3_ACCESS_KEY_ID'] = 'minioadmin';
-    process.env['S3_SECRET_ACCESS_KEY'] = 'minioadmin';
-    process.env['S3_BUCKET_NAME'] = 'test-bucket';
-    process.env['S3_REGION'] = 'us-east-1';
-    process.env['S3_FORCE_PATH_STYLE'] = 'true';
+      // Reload config module to pick up new environment
+      jest.resetModules();
+      const { StorageService: ReloadedStorageService } = await import(
+        '../../src/services/storage.service'
+      );
+      storageService = new ReloadedStorageService();
 
-    // Reload config module to pick up new environment
-    jest.resetModules();
-    const { StorageService: ReloadedStorageService } = await import(
-      '../../src/services/storage.service'
-    );
-    storageService = new ReloadedStorageService();
-
-    // Initialize the service (creates bucket)
-    await storageService.initialize();
-  }, 60000);
+      // Initialize the service (creates bucket)
+      await storageService.initialize();
+    },
+    60000 // 60 second timeout for container startup
+  );
 
   afterAll(async () => {
+    // Cleanup order: services first, then containers
     if (minioContainer) {
       await minioContainer.stop();
     }
@@ -302,11 +305,13 @@ describe('StorageService Integration', () => {
 
   describe('Concurrent Operations', () => {
     it('should handle multiple uploads concurrently', async () => {
-      const uploads = Array.from({ length: 10 }, (_, i) =>
-        storageService.upload({
-          key: `test-files/concurrent-${i}.txt`,
-          body: Buffer.from(`Content ${i}`),
-        })
+      const uploads = Array.from(
+        { length: 10 },
+        async (_, i) =>
+          await storageService.upload({
+            key: `test-files/concurrent-${i}.txt`,
+            body: Buffer.from(`Content ${i}`),
+          })
       );
 
       const results = await Promise.all(uploads);
@@ -317,10 +322,10 @@ describe('StorageService Integration', () => {
       });
 
       // Verify all files exist
-      const existsChecks = results.map((key) => storageService.exists(key));
+      const existsChecks = results.map(async (key) => await storageService.exists(key));
       const existsResults = await Promise.all(existsChecks);
 
-      expect(existsResults.every((exists) => exists === true)).toBe(true);
+      expect(existsResults.every((exists) => exists)).toBe(true);
     });
 
     it('should handle mixed operations concurrently', async () => {

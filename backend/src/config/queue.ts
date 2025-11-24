@@ -125,52 +125,58 @@ export const createQueue = (name: QueueName): Queue => {
     logger.error({ queueName: name, error }, 'Queue error');
   });
 
-  // Set up queue event listeners for monitoring
-  const events = new QueueEvents(name, { connection: getConnectionOptions() });
+  // Queue events are helpful for observability, but can introduce noisy
+  // connection-close errors in test environments due to rapid setup/teardown.
+  // Skip creating QueueEvents during tests to keep CI stable.
+  if (!config.server.isTest) {
+    // Set up queue event listeners for monitoring
+    const events = new QueueEvents(name, { connection: getConnectionOptions() });
 
-  // Ensure we always handle error events so they don't crash the process or
-  // surface as unhandled errors in tests when connections are closed as part
-  // of normal shutdown.
-  events.on('error', (error: Error & { context?: Error }) => {
-    // Suppress expected "Connection is closed" errors during shutdown
-    // BullMQ may wrap errors as "Unhandled error. (Error: Connection is closed...)"
-    // and may put the actual error in the context property
-    if (isConnectionClosedError(error)) {
-      logger.debug(
-        { queueName: name },
-        'Queue events connection closed (expected during shutdown)'
-      );
-      return;
-    }
-    logger.error({ queueName: name, error }, 'Queue events error');
-  });
+    // Ensure we always handle error events so they don't crash the process or
+    // surface as unhandled errors in tests when connections are closed as part
+    // of normal shutdown.
+    events.on('error', (error: Error & { context?: Error }) => {
+      // Suppress expected "Connection is closed" errors during shutdown
+      // BullMQ may wrap errors as "Unhandled error. (Error: Connection is closed...)"
+      // and may put the actual error in the context property
+      if (isConnectionClosedError(error)) {
+        logger.debug(
+          { queueName: name },
+          'Queue events connection closed (expected during shutdown)'
+        );
+        return;
+      }
+      logger.error({ queueName: name, error }, 'Queue events error');
+    });
 
-  events.on('waiting', ({ jobId }) => {
-    logger.debug({ queueName: name, jobId }, 'Job waiting');
-  });
+    events.on('waiting', ({ jobId }) => {
+      logger.debug({ queueName: name, jobId }, 'Job waiting');
+    });
 
-  events.on('active', ({ jobId }) => {
-    logger.debug({ queueName: name, jobId }, 'Job active');
-  });
+    events.on('active', ({ jobId }) => {
+      logger.debug({ queueName: name, jobId }, 'Job active');
+    });
 
-  events.on('completed', ({ jobId, returnvalue }) => {
-    logger.info({ queueName: name, jobId, returnvalue }, 'Job completed');
-  });
+    events.on('completed', ({ jobId, returnvalue }) => {
+      logger.info({ queueName: name, jobId, returnvalue }, 'Job completed');
+    });
 
-  events.on('failed', ({ jobId, failedReason }) => {
-    logger.error({ queueName: name, jobId, failedReason }, 'Job failed');
-  });
+    events.on('failed', ({ jobId, failedReason }) => {
+      logger.error({ queueName: name, jobId, failedReason }, 'Job failed');
+    });
 
-  events.on('progress', ({ jobId, data }) => {
-    logger.debug({ queueName: name, jobId, progress: data }, 'Job progress');
-  });
+    events.on('progress', ({ jobId, data }) => {
+      logger.debug({ queueName: name, jobId, progress: data }, 'Job progress');
+    });
 
-  events.on('stalled', ({ jobId }) => {
-    logger.warn({ queueName: name, jobId }, 'Job stalled');
-  });
+    events.on('stalled', ({ jobId }) => {
+      logger.warn({ queueName: name, jobId }, 'Job stalled');
+    });
+
+    queueEvents.set(name, events);
+  }
 
   queues.set(name, queue);
-  queueEvents.set(name, events);
 
   return queue;
 };
@@ -400,21 +406,17 @@ export const closeQueues = async (): Promise<void> => {
   await Promise.all(workerClosePromises);
   workers.clear();
 
-  // Close all queue events - close first, then remove listeners
-  // Keep error handler active during close to catch connection errors
+  // Close all queue events - keep error handlers attached during and after close
   const eventsClosePromises = Array.from(queueEvents.entries()).map(async ([queueName, events]) => {
     try {
-      // Close first while error handler is still active
+      // Close while error handler is still active; do not remove listeners to avoid
+      // emitting unhandled 'error' events after close resolves.
       await events.close();
-      // Remove listeners after close completes
-      events.removeAllListeners();
     } catch (error) {
       // Ignore connection closed errors during shutdown as they're expected
       if (error instanceof Error && !error.message.includes('Connection is closed')) {
         logger.error({ queueName, error }, 'Error closing queue events');
       }
-      // Ensure listeners are removed even if close fails
-      events.removeAllListeners();
     }
   });
 

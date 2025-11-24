@@ -11,3 +11,6 @@ export type {
   FileMetadata,
   PresignedUrlOptions,
 } from './storage.service';
+
+export { AuthService } from './auth.service';
+export { ProjectService } from './project.service';

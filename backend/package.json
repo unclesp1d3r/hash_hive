@@ -12,7 +12,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:integration": "jest --config jest.integration.config.js",
-    "lint": "eslint \"src/**/*.{ts,tsx,js,jsx}\"",
+    "lint": "npx eslint \"src/**/*.{ts,tsx,js,jsx}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -20,7 +21,9 @@
     "@aws-sdk/s3-request-presigner": "^3.937.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.64.1",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "csrf": "^3.1.0",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-async-errors": "^3.1.1",
@@ -29,24 +32,26 @@
     "mongoose": "^9.0.0",
     "pino": "^10.1.0",
     "pino-http": "^11.0.0",
-    "zod": "^4.1.12"
+    "zod": "^4.1.12",
+    "express-rate-limit": "^8.2.1"
   },
   "devDependencies": {
+    "@testcontainers/minio": "^11.8.1",
+    "@testcontainers/mongodb": "^11.8.1",
+    "@testcontainers/redis": "^11.8.1",
     "@types/bcrypt": "^6.0.0",
-    "@types/cors": "^2.8.17",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.5",
     "@types/jest": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^24.10.1",
-    "@types/supertest": "^6.0.2",
+    "@types/supertest": "^6.0.3",
     "aws-sdk-client-mock": "^4.1.0",
     "jest": "^30.2.0",
     "pino-pretty": "^13.1.2",
     "supertest": "^7.1.4",
     "testcontainers": "^11.8.1",
-    "@testcontainers/mongodb": "^11.8.1",
-    "@testcontainers/redis": "^11.8.1",
-    "@testcontainers/minio": "^11.8.1",
     "ts-jest": "^29.4.5",
     "tsx": "^4.20.6"
   }

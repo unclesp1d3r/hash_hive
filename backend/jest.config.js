@@ -36,6 +36,29 @@ module.exports = {
     './src/routes/health.ts': {
       branches: 50,
     },
+    './src/services/auth.service.ts': {
+      statements: 79,
+      lines: 79,
+    },
+    './src/routes/auth.routes.ts': {
+      statements: 78,
+      lines: 78,
+    },
+    './src/utils/permission-helpers.ts': {
+      statements: 50,
+      lines: 50,
+      functions: 60,
+    },
+    // Barrel files (re-export only) - 0% coverage is acceptable
+    './src/services/index.ts': {
+      functions: 0,
+    },
+    './src/middleware/index.ts': {
+      functions: 0,
+    },
+    './src/models/index.ts': {
+      functions: 0,
+    },
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
 };
