@@ -138,6 +138,8 @@ const CSRF_ENCRYPTED_PARTS_COUNT = 3; // iv:authTag:encrypted
 
 /**
  * Derives an encryption key from SESSION_SECRET using PBKDF2
+ * Key is derived once at module load time and cached for performance
+ * (PBKDF2 with 100,000 iterations is expensive to compute on every request)
  */
 function deriveCsrfEncryptionKey(): Buffer {
   // Use a fixed salt derived from the secret itself for consistency
@@ -157,14 +159,17 @@ function deriveCsrfEncryptionKey(): Buffer {
   );
 }
 
+// Derive and cache the CSRF encryption key once at application startup
+// This avoids expensive PBKDF2 computation (100,000 iterations) on every request
+const CSRF_ENCRYPTION_KEY = deriveCsrfEncryptionKey();
+
 /**
  * Encrypts a CSRF secret before storing it in a cookie
  */
 function encryptCsrfSecret(secret: string): string {
   try {
-    const key = deriveCsrfEncryptionKey();
     const iv = crypto.randomBytes(CSRF_IV_LENGTH);
-    const cipher = crypto.createCipheriv(CSRF_ENCRYPTION_ALGORITHM, key, iv);
+    const cipher = crypto.createCipheriv(CSRF_ENCRYPTION_ALGORITHM, CSRF_ENCRYPTION_KEY, iv);
 
     let encrypted = cipher.update(secret, 'utf8');
     encrypted = Buffer.concat([encrypted, cipher.final()]);
@@ -229,8 +234,7 @@ function decryptCsrfSecret(encryptedValue: string): string | null {
     }
 
     const { iv, authTag, encrypted } = parsed;
-    const key = deriveCsrfEncryptionKey();
-    const decipher = crypto.createDecipheriv(CSRF_ENCRYPTION_ALGORITHM, key, iv);
+    const decipher = crypto.createDecipheriv(CSRF_ENCRYPTION_ALGORITHM, CSRF_ENCRYPTION_KEY, iv);
     decipher.setAuthTag(authTag);
 
     let decrypted = decipher.update(encrypted);

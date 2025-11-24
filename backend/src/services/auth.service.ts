@@ -276,7 +276,8 @@ export class AuthService {
     const expiresIn = config.auth.jwtExpiresIn;
 
     // Validate and normalize input
-    if (expiresIn.length === ARRAY_INDEX_ZERO || typeof expiresIn !== 'string') {
+    // Check type first to avoid accessing .length on undefined/non-string values
+    if (typeof expiresIn !== 'string' || expiresIn.length === ARRAY_INDEX_ZERO) {
       logger.warn({ expiresIn }, 'JWT expiration config is missing or not a string, using default');
       return DEFAULT_SECONDS;
     }
