@@ -524,7 +524,7 @@ redis-cli:
 
 # for the backend test suites, so no docker-compose step is required.
 ci-check:
-    npx nx run-many --target=lint,type-check,test,test:integration,test:e2e,test:coverage --parallel=3
+    npx nx run-many --target=lint,type-check,test,test:integration,test:e2e,test:coverage --all --parallel=3
     npm run format:check
 
 # NX-specific commands

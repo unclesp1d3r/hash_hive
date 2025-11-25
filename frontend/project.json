@@ -53,7 +53,7 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "npx eslint \"**/*.{ts,tsx,js,jsx}\"",
+        "command": "npx eslint \"app/**/*.{ts,tsx,js,jsx}\" \"lib/**/*.{ts,tsx,js,jsx}\"",
         "cwd": "frontend"
       },
       "cache": true,

@@ -1,5 +1,5 @@
 node_modules/
-.openapi/
+openapi/
 .kiro/
 .cursor/
 !**/project.json

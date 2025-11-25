@@ -21,7 +21,7 @@
     "affected:build": "nx affected --target=build",
     "graph": "nx graph",
     "reset": "nx reset",
-    "validate": "nx run-many --target=type-check,lint,test,test:integration,test:e2e --parallel=3 && npm run format:check",
+    "validate": "nx run-many --target=type-check,lint,test,test:integration,test:e2e,test:coverage --all --parallel=3 && npm run format:check",
     "validate:build": "nx run-many --target=build --all",
     "validate:cache": "nx reset && npm run build && npm run build",
     "validate:affected": "nx affected --target=test",
