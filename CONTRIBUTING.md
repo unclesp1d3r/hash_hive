@@ -354,7 +354,7 @@ npx nx run-many --target=test --all --parallel=8
 
 Retry configuration is handled in test frameworks, not NX:
 
-- **Backend integration tests**: Configure `testRetries` in `backend/jest.integration.config.js` (currently: 2 retries)
+- **Backend integration tests**: Configure `jest.retryTimes(2)` in `backend/tests/jest.integration.setup.ts` (currently: 2 retries)
 - **Frontend E2E tests**: Configure `retries` in `frontend/playwright.config.ts` (CI: 2, local: 1)
 
 **Best practice:** Fix flaky tests rather than relying on retries. Retries should be a temporary mitigation.
@@ -368,7 +368,7 @@ Enable Docker BuildKit caching for faster Docker builds:
 just docker-build-cached
 ```
 
-NX caches Docker build targets, but Docker layer caching provides additional performance benefits. See [`docs/NX_SETUP.md`](docs/NX_SETUP.md#docker-build-caching) for details.
+Docker builds use Docker BuildKit layer caching (not NX task caching). The `docker-build` target has `cache: false` to rely on Docker's native layer caching mechanism. See [`docs/NX_SETUP.md`](docs/NX_SETUP.md#docker-build-caching) for details.
 
 #### NX Cloud for Teams
 

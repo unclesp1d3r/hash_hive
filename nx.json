@@ -56,7 +56,6 @@
       "{projectRoot}/.dockerignore",
       "{workspaceRoot}/docker-compose.yml"
     ],
-    "environment": ["{projectRoot}/.env.example", "{projectRoot}/.env.local", "{projectRoot}/.env"],
     "production": [
       "dependencies",
       "configuration",

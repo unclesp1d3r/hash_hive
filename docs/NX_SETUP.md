@@ -408,7 +408,6 @@ NX uses a sophisticated `namedInputs` system to determine when to invalidate cac
 - **`dependencies`**: Package files (`package.json`, `package-lock.json`) that affect dependency resolution
 - **`configuration`**: Build and tool configuration files (TypeScript, ESLint, Jest, Prettier configs)
 - **`docker`**: Docker-related files (`Dockerfile`, `.dockerignore`, `docker-compose.yml`)
-- **`environment`**: Environment variable files (`.env.example`, `.env.local`, `.env`)
 - **`production`**: Production build inputs (excludes test files and test configs)
 - **`testing`**: Test-specific inputs (includes test files and test configs)
 - **`sharedGlobals`**: Root-level files that affect all projects (workspace `package.json`, `tsconfig.base.json`, `eslint.config.mjs`, `nx.json`)
@@ -553,15 +552,15 @@ NX doesn't have built-in retry logic (by design), but test frameworks can be con
 
 **Jest (Backend Integration Tests):**
 
-Integration tests use Jest's `testRetries` option configured in `backend/jest.integration.config.js`:
+Integration tests use Jest's `jest.retryTimes()` function configured in `backend/tests/jest.integration.setup.ts`:
 
-```javascript
-// backend/jest.integration.config.js
-module.exports = {
-  testRetries: 2, // Retry failed tests up to 2 times
-  // ... other config
-};
+```typescript
+// backend/tests/jest.integration.setup.ts
+// Enable retries for all integration tests
+jest.retryTimes(2);
 ```
+
+This setup file is referenced in `backend/jest.integration.config.js` via the `setupFilesAfterEnv` array.
 
 **When to Use Retries:**
 
@@ -601,11 +600,7 @@ npx playwright test --repeat-each=10 e2e/home.spec.ts
 
 ### Docker Build Caching
 
-NX caches Docker build targets, but Docker layer caching provides additional performance benefits:
-
-**NX Task Caching:**
-
-NX caches the entire Docker build command. If inputs haven't changed, the build is skipped entirely.
+The `docker-build` target is not cached by NX (it has `cache: false` in `backend/project.json`). Docker builds rely on Docker BuildKit layer caching for performance optimization:
 
 **Docker BuildKit Layer Caching:**
 
@@ -642,11 +637,18 @@ DOCKER_BUILDKIT=1 docker build \
 
 NX Cloud can distribute Docker layer cache across team members and CI runners. See [NX Cloud Integration](#nx-cloud-integration) section.
 
+**Why NX doesn't cache Docker builds:**
+
+Docker builds are not cached by NX because:
+- Docker has its own sophisticated layer caching mechanism via BuildKit
+- Docker layer caching is more granular (layer-by-layer) than NX task caching
+- Docker builds are typically run less frequently than other targets
+- The `docker-build` target has `cache: false` to rely on Docker's native caching
+
 **Trade-offs:**
 
-- **NX Task Caching**: Fast when inputs unchanged (skips entire build)
 - **Docker Layer Caching**: Fast when only some layers changed (reuses unchanged layers)
-- **Combined**: Best of both worlds (NX skips if possible, Docker optimizes if needed)
+- **NX Task Caching** (if enabled): Would skip entire build if inputs unchanged, but less granular than Docker's layer caching
 
 ### NX Cloud Integration
 
