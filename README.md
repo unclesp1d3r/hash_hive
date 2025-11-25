@@ -150,6 +150,30 @@ npm run reset
 
 All standard commands (`build`, `test`, `lint`, `type-check`) are now NX-powered and benefit from caching and dependency-aware execution. The `just` recipes and npm scripts have been updated to use NX under the hood.
 
+### CI/CD Integration
+
+[![CI](https://github.com/unclesp1d3r/hash_hive/workflows/CI/badge.svg)](https://github.com/unclesp1d3r/hash_hive/actions/workflows/ci.yml)
+
+The CI/CD pipeline leverages NX for intelligent task orchestration:
+
+- **Affected Detection for PRs**: Only runs tests for projects that changed, saving significant time
+- **Conditional Execution**: Skips Docker pulls and integration tests when backend is unaffected
+- **Smart Caching**: Uses both NX cache and GitHub Actions cache for faster runs
+
+**Example:**
+```bash
+# See what would run in CI for your changes
+just affected-ci-preview
+
+# Run affected tests locally (simulates PR CI)
+just ci-affected
+
+# Check if backend is affected
+just affected-backend-check
+```
+
+For detailed CI/CD documentation, see [docs/NX_SETUP.md](docs/NX_SETUP.md#cicd-integration).
+
 ## Architecture
 
 HashHive follows a monorepo structure with:
@@ -184,6 +208,11 @@ HashHive follows a monorepo structure with:
 # Run all tests
 npm test
 
+# Run affected tests (only changed projects - what CI does for PRs)
+just affected-test
+# or
+npm run affected:test
+
 # Backend unit tests
 npm run test -w backend
 
@@ -196,6 +225,8 @@ npm run test -w frontend
 # E2E tests
 npm run test:e2e -w frontend
 ```
+
+**CI Integration**: The CI workflow uses NX affected detection to only run tests for changed projects in pull requests. See `just affected-ci-preview` to preview what would run in CI, or `just ci-affected` to simulate PR CI behavior locally.
 
 ## Documentation
 

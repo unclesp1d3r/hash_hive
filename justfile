@@ -518,6 +518,8 @@ redis-cli:
 # 🤖 CI Workflow
 # -----------------------------
 # Run the full CI check locally or in GitHub Actions (NX-powered).
+# This runs ALL targets (not affected-only) - useful for pre-commit or main branch CI.
+# For PR simulation, use 'just ci-affected' which runs only affected targets.
 # This relies on Jest + Testcontainers to provision MongoDB, Redis, and MinIO
 
 # for the backend test suites, so no docker-compose step is required.
@@ -537,6 +539,78 @@ graph:
 
 reset-cache:
     npx nx reset
+
+# -----------------------------
+# 🔍 NX Affected Detection
+# -----------------------------
+# Commands to help developers understand what would run in CI
+
+# Show which projects are affected compared to main branch
+[unix]
+affected-projects:
+    npx nx show projects --affected --base=origin/main
+
+[windows]
+affected-projects:
+    npx nx show projects --affected --base=origin/main
+
+# Preview what CI would run for current changes
+affected-ci-preview:
+    npx nx affected --target=lint,type-check,test --base=origin/main --dry-run
+
+# Check if backend is affected (useful for conditional logic)
+[unix]
+affected-backend-check:
+    #!/usr/bin/env bash
+    if npx nx show projects --affected --base=origin/main | grep -q "backend"; then
+        echo "Backend is affected"
+        exit 0
+    else
+        echo "Backend is not affected"
+        exit 1
+    fi
+
+[windows]
+affected-backend-check:
+    #!pwsh.exe
+    $affected = npx nx show projects --affected --base=origin/main
+    if ($affected -match "backend") {
+        Write-Output "Backend is affected"
+        exit 0
+    } else {
+        Write-Output "Backend is not affected"
+        exit 1
+    fi
+
+# Simulate full CI workflow locally (runs affected targets)
+ci-affected:
+    npx nx affected --target=lint,type-check,test,test:integration,test:e2e --base=origin/main --parallel=3
+    npm run format:check
+
+# Validate NX caching behavior with timing
+[unix]
+validate-cache:
+    #!/usr/bin/env bash
+    npx nx reset
+    echo "First build (cache miss):"
+    time npm run build
+    echo "Second build (cache hit):"
+    time npm run build
+
+[windows]
+validate-cache:
+    #!pwsh.exe
+    npx nx reset
+    Write-Output "First build (cache miss):"
+    $start1 = Get-Date
+    npm run build
+    $end1 = Get-Date
+    Write-Output "Duration: $(($end1 - $start1).TotalSeconds) seconds"
+    Write-Output "Second build (cache hit):"
+    $start2 = Get-Date
+    npm run build
+    $end2 = Get-Date
+    Write-Output "Duration: $(($end2 - $start2).TotalSeconds) seconds"
 
 # -----------------------------
 # 📚 Documentation
