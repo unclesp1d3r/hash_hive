@@ -10,13 +10,23 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev -w backend\" \"npm run dev -w frontend\"",
-    "build": "npm run build -w shared && npm run build -w backend && npm run build -w frontend",
-    "lint": "npm run lint --workspaces",
+    "build": "nx run-many --target=build --all",
+    "lint": "nx run-many --target=lint --all",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
-    "type-check": "npm run type-check --workspaces",
-    "test": "npm run test --workspaces",
-    "pre-push": "npm run type-check && npm run test -- --silent"
+    "type-check": "nx run-many --target=type-check --all",
+    "test": "nx run-many --target=test --all",
+    "pre-push": "npm run type-check && npm run test -- --silent",
+    "affected:test": "nx affected --target=test",
+    "affected:build": "nx affected --target=build",
+    "graph": "nx graph",
+    "reset": "nx reset",
+    "validate": "nx run-many --targets=lint,type-check,test --all --parallel=3 && nx run backend:test:integration && nx run backend:test:coverage && nx run frontend:test:e2e && npm run format:check",
+    "validate:build": "nx run-many --target=build --all",
+    "validate:cache": "nx reset && npm run build && npm run build",
+    "validate:affected": "nx affected --target=test",
+    "validate:nx": "npx nx graph --file=.nx/nx-graph.json && npx nx show projects --affected --base=main && npm run build && npm run build && npx nx reset",
+    "ci-check": "just ci-check"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -27,6 +37,7 @@
     "eslint-config-love": "^134.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
+    "nx": "^20.0.0",
     "prettier": "^3.6.2",
     "typescript": "^5.9.3"
   },

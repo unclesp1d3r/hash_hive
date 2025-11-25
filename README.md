@@ -77,19 +77,19 @@ just dev                 # Start all services
 just dev-backend         # Start backend only
 just dev-frontend        # Start frontend only
 
-# Building
+# Building (NX-powered)
 just build               # Build all packages
 just build-backend       # Build backend only
 just build-frontend      # Build frontend only
 
-# Testing
+# Testing (NX-powered)
 just test                # Run all tests
 just test-backend        # Backend tests
 just test-frontend       # Frontend tests
 just test-integration    # Integration tests
 just test-e2e            # E2E tests
 
-# Code Quality
+# Code Quality (NX-powered)
 just lint                # Lint all packages
 just format              # Format code with Prettier
 just type-check          # TypeScript type checking
@@ -101,8 +101,8 @@ just docker-logs         # View logs
 
 # Or use npm scripts directly
 npm run dev              # Start all services
-npm run build            # Build all packages
-npm run test             # Run all tests
+npm run build            # Build all packages (NX-powered)
+npm run test             # Run all tests (NX-powered)
 ```
 
 ### Project Configuration
@@ -112,6 +112,106 @@ npm run test             # Run all tests
 - **Prettier**: Automated code formatting (TypeScript, JavaScript, JSON, Markdown, YAML)
 - **Jest**: Unit and integration testing
 - **Playwright**: E2E testing for frontend
+- **NX**: Monorepo tooling with intelligent caching and task orchestration
+
+## NX Monorepo Tooling
+
+HashHive uses [NX](https://nx.dev) for enhanced monorepo management, providing:
+
+- **Intelligent Caching**: Build, test, and lint results are cached locally, dramatically speeding up repeated runs
+- **Affected Detection**: Only run tasks for projects that changed since the last commit
+- **Dependency Graph**: Visualize project dependencies with `nx graph`
+- **Automatic Task Ordering**: NX automatically determines the correct execution order based on project dependencies
+- **Parallel Execution**: Tasks run in parallel when possible (configurable parallelism)
+
+### NX Commands
+
+```bash
+# Run affected tests (only changed projects)
+just affected-test
+# or
+npm run affected:test
+
+# Run affected builds
+just affected-build
+# or
+npm run affected:build
+
+# Visualize project graph
+just graph
+# or
+npm run graph
+
+# Reset NX cache
+just reset-cache
+# or
+npm run reset
+```
+
+All standard commands (`build`, `test`, `lint`, `type-check`) are now NX-powered and benefit from caching and dependency-aware execution. The `just` recipes and npm scripts have been updated to use NX under the hood.
+
+### Advanced Features
+
+HashHive uses advanced NX features for optimal performance:
+
+- **Fine-grained cache invalidation** based on dependencies, configuration, and source files
+- **Intelligent task pipeline** with automatic dependency ordering
+- **Configurable parallel execution** (default: 3, CI: 5)
+- **Retry logic** for flaky integration and E2E tests
+- **Docker build caching** with BuildKit support
+
+See [docs/NX_SETUP.md](docs/NX_SETUP.md#advanced-features) for detailed documentation.
+
+> **Performance Tips**
+> - Use `just affected-test` instead of `just test` when working on a specific feature
+> - Run `just benchmark-cache` to verify cache is working correctly
+> - Increase parallelism on powerful machines: `just test-parallel 8`
+> - See `just cache-stats` to monitor cache size and effectiveness
+
+### CI/CD Integration
+
+[![CI](https://github.com/unclesp1d3r/hash_hive/workflows/CI/badge.svg)](https://github.com/unclesp1d3r/hash_hive/actions/workflows/ci.yml)
+
+The CI/CD pipeline leverages NX for intelligent task orchestration:
+
+- **Affected Detection for PRs**: Only runs tests for projects that changed, saving significant time
+- **Conditional Execution**: Skips Docker pulls and integration tests when backend is unaffected
+- **Smart Caching**: Uses both NX cache and GitHub Actions cache for faster runs
+
+**Example:**
+```bash
+# See what would run in CI for your changes
+just affected-ci-preview
+
+# Run affected tests locally (simulates PR CI)
+just ci-affected
+
+# Check if backend is affected
+just affected-backend-check
+```
+
+For detailed CI/CD documentation, see [docs/NX_SETUP.md](docs/NX_SETUP.md#cicd-integration).
+
+### Validation
+
+After setting up the project or making major changes, run through the [validation checklist](docs/NX_VALIDATION_CHECKLIST.md) to ensure all NX features are working correctly. The checklist provides step-by-step instructions for verifying dependency graphs, caching, affected detection, and more.
+
+**Quick validation commands:**
+```bash
+# Run full CI check
+just ci-check
+
+# Benchmark cache performance
+just benchmark-cache
+
+# Check affected projects
+just affected-projects
+
+# Visualize dependency graph
+just graph
+```
+
+For comprehensive validation instructions, see [docs/NX_VALIDATION_CHECKLIST.md](docs/NX_VALIDATION_CHECKLIST.md). For optimization best practices and advanced configuration, see [docs/NX_OPTIMIZATION_GUIDE.md](docs/NX_OPTIMIZATION_GUIDE.md).
 
 ## Architecture
 
@@ -147,6 +247,11 @@ HashHive follows a monorepo structure with:
 # Run all tests
 npm test
 
+# Run affected tests (only changed projects - what CI does for PRs)
+just affected-test
+# or
+npm run affected:test
+
 # Backend unit tests
 npm run test -w backend
 
@@ -159,6 +264,8 @@ npm run test -w frontend
 # E2E tests
 npm run test:e2e -w frontend
 ```
+
+**CI Integration**: The CI workflow uses NX affected detection to only run tests for changed projects in pull requests. See `just affected-ci-preview` to preview what would run in CI, or `just ci-affected` to simulate PR CI behavior locally.
 
 ## Documentation
 

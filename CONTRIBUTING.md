@@ -148,6 +148,269 @@ npm run build -w frontend
 npm run build -w shared
 ```
 
+## NX Monorepo Tooling
+
+HashHive uses [NX](https://nx.dev) for intelligent caching, affected detection, and task orchestration to dramatically improve developer productivity. NX automatically determines which projects need to be rebuilt, tested, or linted based on your changes, and caches results to make repeated runs nearly instantaneous.
+
+### Understanding Affected Detection
+
+NX's "affected detection" identifies only the projects that have changed compared to a base branch (typically `main`). This means you can run tests, builds, and linting only for what actually changed, saving significant time during development.
+
+**See which projects are affected:**
+
+```bash
+# Using just
+just affected-projects
+
+# Or npm directly
+npx nx show projects --affected --base=origin/main
+```
+
+**When to use affected vs. all:**
+
+- **Use affected commands** (`just affected-test`, `just affected-build`) during feature development for fast feedback
+- **Use all commands** (`just test`, `just build`) before committing to ensure everything passes
+
+**Examples:**
+
+- Changing `shared/src/types/index.ts` affects all projects (backend, frontend, shared) because both backend and frontend depend on shared
+- Changing `backend/src/routes/auth.routes.ts` affects only backend
+- Changing `frontend/app/page.tsx` affects only frontend
+
+### Leveraging Caching
+
+NX caches build, test, and lint outputs based on input files. If you run the same command twice without changing any source files, the second run will use cached results and complete almost instantly.
+
+**Verify caching behavior:**
+
+```bash
+# First run (cache miss - actual execution)
+just build-backend
+# Output: Builds backend, takes ~5-10 seconds
+
+# Second run (cache hit - instant)
+just build-backend
+# Output: [existing outputs match the cache, left as is] - completes in <1 second
+```
+
+**Cache location:** `.nx/cache/` (gitignored, local to your machine)
+
+**Cache invalidation:** Automatic when source files change. NX compares file hashes to determine if inputs have changed.
+
+### Affected Commands for Fast Iteration
+
+Use affected commands during development to get fast feedback on your changes:
+
+```bash
+# See what changed
+just affected-projects
+
+# Run affected tests (much faster than all tests)
+just affected-test
+# or
+npm run affected:test
+
+# Run affected builds
+just affected-build
+# or
+npm run affected:build
+
+# Preview what CI would run
+just affected-ci-preview
+```
+
+**Time savings example:**
+
+- Running all tests: ~2 minutes
+- Running affected tests (only backend changed): ~10 seconds
+
+This workflow is especially valuable when iterating on a feature in a single project.
+
+### Visualizing Dependencies
+
+NX can generate a visual dependency graph showing how projects depend on each other:
+
+```bash
+# Open dependency graph in browser
+just graph
+# or
+npm run graph
+```
+
+**What the graph shows:**
+
+- Project dependencies (e.g., backend and frontend both depend on shared)
+- Task dependencies (e.g., build tasks depend on upstream builds)
+- Affected projects highlighted when comparing to a base branch
+
+**Use cases:**
+
+- Understanding the impact of changes before making them
+- Debugging dependency issues
+- Planning architectural changes
+
+### Simulating CI Locally
+
+Before creating a pull request, simulate what CI will run to catch failures early:
+
+```bash
+# See what CI would run for your changes
+just affected-ci-preview
+
+# Run affected targets (simulates PR CI)
+just ci-affected
+
+# Check if backend is affected (useful for conditional logic)
+just affected-backend-check
+```
+
+**Benefits:**
+
+- Catch CI failures before pushing
+- Understand which projects will be tested in CI
+- Verify affected detection is working correctly
+
+The CI workflow uses affected detection for pull requests, so running `just ci-affected` locally closely simulates what will happen in CI.
+
+### Troubleshooting NX
+
+**Cache issues:**
+
+If builds seem stale or tests fail unexpectedly, clear the cache:
+
+```bash
+just reset-cache
+# or
+npm run reset
+```
+
+**Task not running:**
+
+- Verify the task exists in the project's `project.json` file
+- Check that the task name matches exactly (e.g., `test:integration` not `test-integration`)
+
+**Affected detection seems wrong:**
+
+- Ensure you're comparing against the correct base branch (`origin/main`)
+- Verify your changes are actually in the projects you expect
+- Use `just affected-projects` to see what NX detected
+
+**Performance:**
+
+- NX runs tasks in parallel (default: 3 jobs)
+- Adjust parallelism in `nx.json` if needed
+- Cache hits are always fast regardless of parallelism
+
+For detailed troubleshooting and advanced configuration, see [`docs/NX_SETUP.md`](docs/NX_SETUP.md).
+
+### Best Practices
+
+1. **During development:** Use affected commands (`just affected-test`, `just affected-build`) for fast feedback
+2. **Before committing:** Run full `just ci-check` to ensure everything passes
+3. **Cache issues:** Clear cache (`just reset-cache`) if you suspect cache corruption
+4. **Architectural changes:** Use `just graph` to understand project dependencies before making changes
+5. **Impact analysis:** Check affected projects (`just affected-projects`) to understand the scope of your changes
+
+### Advanced NX Features
+
+HashHive uses advanced NX features for optimal performance. See [`docs/NX_SETUP.md`](docs/NX_SETUP.md#advanced-features) for comprehensive documentation.
+
+#### Cache Optimization
+
+NX uses fine-grained cache invalidation based on dependencies, configuration files, and source files. Inspect cache configuration for your changes:
+
+```bash
+# Show cache configuration for a project
+just cache-config backend
+
+# Show what inputs affect a specific target
+just cache-inputs backend build
+
+# Debug cache misses
+just debug-cache backend build
+```
+
+**When cache is invalidated:**
+- Dependencies change (`package.json`, `package-lock.json`)
+- Configuration changes (`tsconfig.json`, `eslint.config.mjs`, `jest.config.js`)
+- Source files change (obvious cache miss)
+- Shared globals change (affects all projects: `tsconfig.base.json`, workspace `package.json`)
+
+#### Parallel Execution Tuning
+
+The default parallel setting is 3 tasks. Override for powerful machines:
+
+```bash
+# Run tests with custom parallelism
+just test-parallel 8
+
+# Or use NX directly
+npx nx run-many --target=test --all --parallel=8
+```
+
+**Trade-offs:** More parallelism = faster but more memory/CPU usage. Default (3) is optimal for most machines.
+
+#### Handling Flaky Tests
+
+Retry configuration is handled in test frameworks, not NX:
+
+- **Backend integration tests**: Configure `jest.retryTimes(2)` in `backend/tests/jest.integration.setup.ts` (currently: 2 retries)
+- **Frontend E2E tests**: Configure `retries` in `frontend/playwright.config.ts` (CI: 2, local: 1)
+
+**Best practice:** Fix flaky tests rather than relying on retries. Retries should be a temporary mitigation.
+
+#### Docker Build Optimization
+
+Enable Docker BuildKit caching for faster Docker builds:
+
+```bash
+# Build with BuildKit caching
+just docker-build-cached
+```
+
+Docker builds use Docker BuildKit layer caching (not NX task caching). The `docker-build` target has `cache: false` to rely on Docker's native layer caching mechanism. See [`docs/NX_SETUP.md`](docs/NX_SETUP.md#docker-build-caching) for details.
+
+#### NX Cloud for Teams
+
+NX Cloud provides distributed caching and shared cache across team members:
+
+```bash
+# Check NX Cloud status
+just nx-cloud-status
+
+# Connect to NX Cloud (interactive)
+just nx-cloud-connect
+```
+
+**When to consider:** Team size 5+, CI time >5 minutes, cache hit rate <50%. See [`docs/NX_SETUP.md`](docs/NX_SETUP.md#nx-cloud-integration) for details.
+
+#### Performance Benchmarking
+
+Benchmark cache performance to verify caching is working:
+
+```bash
+# Run build twice and compare (cache miss vs cache hit)
+just benchmark-cache
+```
+
+**Expected results:** Second run should be 10-100x faster (milliseconds vs seconds).
+
+### Validation and Optimization
+
+After setting up the project or making major changes, use the validation checklist to verify all NX features work correctly:
+
+- **[`docs/NX_VALIDATION_CHECKLIST.md`](docs/NX_VALIDATION_CHECKLIST.md)**: Step-by-step validation guide for verifying NX setup, caching, affected detection, and performance. Use this after initial setup, after major changes, or when troubleshooting NX-related issues. The checklist includes a results template for tracking validation outcomes.
+
+For understanding best practices and performance tuning:
+
+- **[`docs/NX_OPTIMIZATION_GUIDE.md`](docs/NX_OPTIMIZATION_GUIDE.md)**: Comprehensive guide covering package.json scripts optimization, ESLint configuration, TypeScript project references, cache optimization strategies, parallel execution tuning, CI/CD optimization, Docker build optimization, NX Cloud considerations, monitoring and metrics, scaling strategies, and common anti-patterns.
+
+### Additional Resources
+
+- **[`docs/NX_SETUP.md`](docs/NX_SETUP.md)**: Comprehensive NX documentation including CI/CD integration, advanced configuration, and detailed examples
+- **[`README.md`](README.md#nx-monorepo-tooling)**: Quick reference for NX commands and features
+- **[NX Official Docs](https://nx.dev)**: Complete NX documentation and guides
+
 ## Coding Standards
 
 ### TypeScript

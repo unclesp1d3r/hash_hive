@@ -1,9 +1,41 @@
+# NX-Powered CI Workflow
+#
+# This workflow uses NX for intelligent task orchestration with:
+# - Affected detection: Only runs tasks for projects that changed
+# - Conditional execution: Skips Docker pulls and integration tests when backend is unaffected
+# - Caching: Leverages NX cache and GitHub Actions cache for faster runs
+# - Parallelism: Runs tasks in parallel (configurable via --parallel flag)
+#
+# Strategy:
+# - For PRs: Uses affected detection with PR base SHA to run only changed projects
+# - For pushes to main: Runs all targets to ensure full coverage
+# - Conditional Docker pulls: Only when backend is affected (saves ~30-60s)
+# - Conditional tests: Integration tests only when backend affected, E2E only when frontend affected
+#
+# Example scenarios:
+# - Frontend-only PR: Runs frontend lint/type-check/test/e2e, skips backend tests and Docker pulls
+# - Backend-only PR: Runs backend lint/type-check/test/integration, pulls Docker images
+# - Shared-only PR: Runs all projects (due to implicit dependencies)
+# - Docs-only PR: Runs only format:check (docs not tracked by NX)
+#
+# See docs/NX_SETUP.md for detailed documentation on CI/CD integration.
+
 name: CI
 'on':
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      base_sha:
+        description: 'Base SHA for affected detection (defaults to origin/main)'
+        required: false
+        type: string
+      force_run_all:
+        description: 'Force run all targets regardless of affected detection'
+        required: false
+        type: boolean
+        default: false
 jobs:
   ci-check:
     runs-on: ubuntu-latest
@@ -15,6 +47,8 @@ jobs:
       DOCKER_HOST: unix:///var/run/docker.sock
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # Full history needed for accurate affected detection
 
       - uses: actions/setup-node@v5
         with:
@@ -27,6 +61,109 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # Uncomment to enable NX Cloud distributed caching
+      # - name: Configure NX Cloud
+      #   run: |
+      #     echo "NX_CLOUD_ACCESS_TOKEN=${{ secrets.NX_CLOUD_ACCESS_TOKEN }}" >> $GITHUB_ENV
+      #   if: env.NX_CLOUD_ACCESS_TOKEN != ''
+
+      # Uncomment to enable verbose NX logging for debugging cache issues
+      # env:
+      #   NX_VERBOSE_LOGGING: true
+
+      - name: Reset NX cache (first run)
+        run: npx nx reset
+
+      - name: Cache NX
+        uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: nx-${{ runner.os }}-${{ hashFiles('**/nx.json', '**/project.json', '**/package-lock.json') }}
+          restore-keys: |
+            nx-${{ runner.os }}-
+
+      - name: Report NX Cache Statistics
+        if: always()
+        run: |
+          echo "## NX Cache Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -d .nx/cache ]; then
+            CACHE_SIZE=$(du -sh .nx/cache | cut -f1)
+            CACHE_FILES=$(find .nx/cache -type f | wc -l)
+            echo "- Cache size: $CACHE_SIZE" >> $GITHUB_STEP_SUMMARY
+            echo "- Cached artifacts: $CACHE_FILES" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- No cache directory found (first run)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      # Determine which projects are affected
+      # For PRs: use PR base SHA for accurate affected detection
+      # For pushes: use defaultBase (main) from nx.json
+      # This enables conditional execution of Docker pulls and tests
+      - name: Detect affected projects
+        id: affected
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          elif [ -n "${{ inputs.base_sha }}" ]; then
+            BASE_SHA="${{ inputs.base_sha }}"
+          else
+            BASE_SHA="origin/main"
+          fi
+
+          echo "BASE_SHA=$BASE_SHA" >> $GITHUB_ENV
+
+          # Get affected projects list
+          AFFECTED_PROJECTS=$(npx nx show projects --affected --base=$BASE_SHA 2>/dev/null || echo "")
+          # Use EOF delimiter for multi-line output
+          {
+            echo "affected_projects<<EOF"
+            echo "$AFFECTED_PROJECTS"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+          # Set boolean flags for conditional execution
+          # Set variables in current shell first, then write to $GITHUB_ENV
+          if echo "$AFFECTED_PROJECTS" | grep -q "backend"; then
+            BACKEND_AFFECTED="true"
+          else
+            BACKEND_AFFECTED="false"
+          fi
+          export BACKEND_AFFECTED
+          echo "BACKEND_AFFECTED=$BACKEND_AFFECTED" >> $GITHUB_ENV
+
+          if echo "$AFFECTED_PROJECTS" | grep -q "frontend"; then
+            FRONTEND_AFFECTED="true"
+          else
+            FRONTEND_AFFECTED="false"
+          fi
+          export FRONTEND_AFFECTED
+          echo "FRONTEND_AFFECTED=$FRONTEND_AFFECTED" >> $GITHUB_ENV
+
+          if echo "$AFFECTED_PROJECTS" | grep -q "shared"; then
+            SHARED_AFFECTED="true"
+          else
+            SHARED_AFFECTED="false"
+          fi
+          export SHARED_AFFECTED
+          echo "SHARED_AFFECTED=$SHARED_AFFECTED" >> $GITHUB_ENV
+
+          # Print summary for debugging
+          echo "Affected projects: $AFFECTED_PROJECTS"
+          echo "Backend affected: $BACKEND_AFFECTED"
+          echo "Frontend affected: $FRONTEND_AFFECTED"
+          echo "Shared affected: $SHARED_AFFECTED"
+
+      - name: Print affected projects summary
+        run: |
+          echo "## Affected Projects Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Backend**: ${{ env.BACKEND_AFFECTED }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Frontend**: ${{ env.FRONTEND_AFFECTED }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Shared**: ${{ env.SHARED_AFFECTED }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Base SHA: ${{ env.BASE_SHA }}" >> $GITHUB_STEP_SUMMARY
+
       - name: Verify Docker is available for Testcontainers
         run: |
           docker --version
@@ -34,7 +171,14 @@ jobs:
           echo "Docker socket permissions:"
           ls -la /var/run/docker.sock
 
+      # Only pull Docker images when backend is affected
+      # Backend integration tests require MongoDB, Redis, and MinIO
+      # This saves ~30-60 seconds on frontend-only or docs-only changes
+      # Enable BuildKit for faster Docker builds with layer caching
       - name: Pre-pull Docker images for Testcontainers
+        if: env.BACKEND_AFFECTED == 'true' || github.event_name == 'push' || inputs.force_run_all == true
+        env:
+          DOCKER_BUILDKIT: 1
         run: |
           echo "Pulling Docker images used by integration tests..."
           docker pull mongo:7 &
@@ -43,10 +187,56 @@ jobs:
           wait
           echo "All images pulled successfully"
 
-      - name: Run Just CI check (Jest + Testcontainers)
-        run: just ci-check
+      # Run CI checks using NX affected detection for PRs
+      # For PRs: Only runs targets for affected projects
+      # For pushes: Runs all targets to ensure full coverage
+      - name: Run CI check (NX-powered)
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ] && [ "${{ inputs.force_run_all }}" != "true" ]; then
+            # PR workflow: Use affected detection with PR base SHA
+            BASE_SHA="${{ env.BASE_SHA }}"
+            echo "Running affected targets for PR (base: $BASE_SHA)"
 
+            # CI runners have 2-4 cores, so we use parallel=5 for optimal throughput
+            npx nx affected --target=lint --base=$BASE_SHA --parallel=5
+            npx nx affected --target=type-check --base=$BASE_SHA --parallel=5
+            npx nx affected --target=test --base=$BASE_SHA --parallel=5
+
+            # Only run integration tests if backend is affected
+            if [ "${{ env.BACKEND_AFFECTED }}" == "true" ]; then
+              echo "Backend is affected, running integration tests"
+              npx nx affected --target=test:integration --base=$BASE_SHA --parallel=5
+              npx nx affected --target=test:coverage --base=$BASE_SHA --parallel=5
+            else
+              echo "Backend not affected, skipping integration tests"
+            fi
+
+            # Only run E2E tests if frontend is affected
+            if [ "${{ env.FRONTEND_AFFECTED }}" == "true" ]; then
+              echo "Frontend is affected, running E2E tests"
+              npx nx affected --target=test:e2e --base=$BASE_SHA --parallel=5
+            else
+              echo "Frontend not affected, skipping E2E tests"
+            fi
+
+            npm run format:check
+          else
+            # Push to main or force run all: Run all targets
+            # CI runners have 2-4 cores, so we use parallel=5 for optimal throughput
+            echo "Running all targets (push to main or force_run_all enabled)"
+            npx nx run-many --targets=lint,type-check,test --all --parallel=5
+            npx nx run backend:test:integration
+            npx nx run backend:test:coverage
+            npx nx run frontend:test:e2e
+            npm run format:check
+          fi
+
+      # Upload coverage only if tests ran and coverage directory exists
+      # Use if: always() to ensure upload even if tests fail
       - name: Upload coverage reports to Codecov
+        if: always() && (env.BACKEND_AFFECTED == 'true' || github.event_name == 'push' || inputs.force_run_all == true)
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: backend/coverage/**/*.lcov
+          fail_ci_if_error: false

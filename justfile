@@ -356,9 +356,9 @@ restart service:
 # 🧹 Linting, Typing, Dep Check
 # -----------------------------
 
-# Lint all code
+# Lint all code (NX-powered)
 lint:
-    npm run lint
+    npx nx run-many --target=lint --all
 
 # Format all code
 format:
@@ -368,33 +368,33 @@ format:
 format-check:
     npm run format:check
 
-# Run TypeScript type checking across all workspaces
+# Run TypeScript type checking across all workspaces (NX-powered)
 type-check:
-    npm run type-check --workspaces
+    npx nx run-many --target=type-check --all
 
 # -----------------------------
 # 🧪 Testing & Coverage
 # -----------------------------
 
-# Run all tests
+# Run all tests (NX-powered)
 test:
-    npm test
+    npx nx run-many --target=test --all
 
 # Run backend tests
 test-backend:
-    npm run test -w backend
+    npx nx run backend:test
 
 # Run frontend tests
 test-frontend:
-    npm run test -w frontend
+    npx nx run frontend:test
 
 # Run integration tests
 test-integration:
-    npm run test:integration -w backend
+    npx nx run backend:test:integration
 
 # Run E2E tests
 test-e2e:
-    npm run test:e2e -w frontend
+    npx nx run frontend:test:e2e
 
 # Run tests in watch mode
 test-watch:
@@ -402,25 +402,25 @@ test-watch:
 
 # Generate coverage report
 coverage:
-    npm run test:coverage -w backend
+    npx nx run backend:test:coverage
 
 # -----------------------------
 # 📦 Build & Clean
 # -----------------------------
 
-# Build all packages
+# Build all packages (NX-powered)
 build:
-    npm run build
+    npx nx run-many --target=build --all
 
 # Build specific package
 build-backend:
-    npm run build -w backend
+    npx nx run backend:build
 
 build-frontend:
-    npm run build -w frontend
+    npx nx run frontend:build
 
 build-shared:
-    npm run build -w shared
+    npx nx run shared:build
 
 # Clean build artifacts and dependencies
 [unix]
@@ -517,11 +517,234 @@ redis-cli:
 # -----------------------------
 # 🤖 CI Workflow
 # -----------------------------
-# Run the full CI check locally or in GitHub Actions.
+# Run the full CI check locally or in GitHub Actions (NX-powered).
+# This runs ALL targets (not affected-only) - useful for pre-commit or main branch CI.
+# For PR simulation, use 'just ci-affected' which runs only affected targets.
 # This relies on Jest + Testcontainers to provision MongoDB, Redis, and MinIO
 
 # for the backend test suites, so no docker-compose step is required.
-ci-check: lint format-check build-shared type-check test-backend test-integration test-frontend test-e2e coverage
+ci-check:
+    npx nx run-many --targets=lint,type-check,test --all --parallel=3
+    npx nx run backend:test:integration
+    npx nx run backend:test:coverage
+    npx nx run frontend:test:e2e
+    npm run format:check
+
+# NX-specific commands
+affected-test:
+    npx nx affected --target=test
+
+affected-build:
+    npx nx affected --target=build
+
+graph:
+    npx nx graph
+
+reset-cache:
+    npx nx reset
+
+# -----------------------------
+# 🔍 NX Affected Detection
+# -----------------------------
+# Commands to help developers understand what would run in CI
+
+# Show which projects are affected compared to main branch
+[unix]
+affected-projects:
+    npx nx show projects --affected --base=origin/main
+
+[windows]
+affected-projects:
+    npx nx show projects --affected --base=origin/main
+
+# Preview what CI would run for current changes
+affected-ci-preview:
+    npx nx affected --targets=lint,type-check,test --base=origin/main --dry-run
+
+# Check if backend is affected (useful for conditional logic)
+[unix]
+affected-backend-check:
+    #!/usr/bin/env bash
+    if npx nx show projects --affected --base=origin/main | grep -q "backend"; then
+        echo "Backend is affected"
+        exit 0
+    else
+        echo "Backend is not affected"
+        exit 1
+    fi
+
+[windows]
+affected-backend-check:
+    #!pwsh.exe
+    $affected = npx nx show projects --affected --base=origin/main
+    if ($affected -match "backend") {
+        Write-Output "Backend is affected"
+        exit 0
+    } else {
+        Write-Output "Backend is not affected"
+        exit 1
+    fi
+
+# Simulate full CI workflow locally (runs affected targets)
+ci-affected:
+    npx nx affected --targets=lint,type-check,test --base=origin/main --parallel=3
+    npx nx affected --target=test:integration --base=origin/main --parallel=3
+    npx nx affected --target=test:coverage --base=origin/main --parallel=3
+    npx nx affected --target=test:e2e --base=origin/main --parallel=3
+    npm run format:check
+
+# Validate NX caching behavior with timing
+[unix]
+validate-cache:
+    #!/usr/bin/env bash
+    npx nx reset
+    echo "First build (cache miss):"
+    time npm run build
+    echo "Second build (cache hit):"
+    time npm run build
+
+[windows]
+validate-cache:
+    #!pwsh.exe
+    npx nx reset
+    Write-Output "First build (cache miss):"
+    $start1 = Get-Date
+    npm run build
+    $end1 = Get-Date
+    Write-Output "Duration: $(($end1 - $start1).TotalSeconds) seconds"
+    Write-Output "Second build (cache hit):"
+    $start2 = Get-Date
+    npm run build
+    $end2 = Get-Date
+    Write-Output "Duration: $(($end2 - $start2).TotalSeconds) seconds"
+
+# -----------------------------
+# 🔧 Advanced NX Features
+# -----------------------------
+# Commands for inspecting, debugging, and optimizing NX caching behavior
+
+# Show cache configuration for a project
+cache-config project:
+    npx nx show project {{project}} --json | jq '.targets'
+
+# Show what inputs affect a specific target
+cache-inputs project target:
+    npx nx show project {{project}} --json | jq '.targets.{{target}}.inputs'
+
+# Run tests with custom parallelism (useful for powerful machines)
+test-parallel count:
+    npx nx run-many --target=test --all --parallel={{count}}
+
+# Run builds with maximum parallelism
+build-max-parallel:
+    npx nx run-many --target=build --all --parallel=10
+
+# Run a target with verbose logging to debug cache misses
+debug-cache project target:
+    NX_VERBOSE_LOGGING=true npx nx run {{project}}:{{target}}
+
+# Show cache statistics
+cache-stats:
+    @echo "NX Cache Directory:"
+    @du -sh .nx/cache 2>/dev/null || echo "No cache yet"
+    @echo ""
+    @echo "Cached projects:"
+    @ls -la .nx/cache 2>/dev/null | tail -n +4 || echo "No cache yet"
+
+# Build backend Docker image with BuildKit caching
+docker-build-cached:
+    DOCKER_BUILDKIT=1 docker build --cache-from hashhive-backend:latest -t hashhive-backend:latest backend/
+
+# Build with cache export for CI
+docker-build-cache-export:
+    DOCKER_BUILDKIT=1 docker build --cache-from hashhive-backend:latest --cache-to type=local,dest=.docker-cache -t hashhive-backend:latest backend/
+
+# Connect to NX Cloud (interactive)
+nx-cloud-connect:
+    npx nx connect-to-nx-cloud
+
+# Show NX Cloud status
+nx-cloud-status:
+    @if grep -q "nxCloudAccessToken" nx.json; then \
+        echo "NX Cloud: Enabled"; \
+    else \
+        echo "NX Cloud: Not configured"; \
+        echo "Run 'just nx-cloud-connect' to enable distributed caching"; \
+    fi
+
+# Benchmark cache performance (runs build twice and compares)
+[unix]
+benchmark-cache:
+    #!/usr/bin/env bash
+    npx nx reset
+    echo "=== First run (cache miss) ==="
+    time npm run build
+    echo ""
+    echo "=== Second run (cache hit) ==="
+    time npm run build
+    echo ""
+    echo "Expected: Second run should be 10-100x faster"
+
+[windows]
+benchmark-cache:
+    #!pwsh.exe
+    npx nx reset
+    Write-Output "=== First run (cache miss) ==="
+    $start1 = Get-Date
+    npm run build
+    $end1 = Get-Date
+    $duration1 = ($end1 - $start1).TotalSeconds
+    Write-Output "Duration: $duration1 seconds"
+    Write-Output ""
+    Write-Output "=== Second run (cache hit) ==="
+    $start2 = Get-Date
+    npm run build
+    $end2 = Get-Date
+    $duration2 = ($end2 - $start2).TotalSeconds
+    Write-Output "Duration: $duration2 seconds"
+    Write-Output ""
+    $speedup = [math]::Round($duration1 / $duration2, 2)
+    Write-Output "Speedup: ${speedup}x faster"
+    Write-Output "Expected: 10-100x faster"
+
+# -----------------------------
+# ✅ Validation & Optimization
+# -----------------------------
+# Commands for validating NX setup and optimizing performance
+
+# Comprehensive NX validation (runs dependency graph check, affected detection, cache verification, and displays statistics)
+validate-nx:
+    npm run validate:nx
+
+# Full validation including NX validation plus ci-check (ensures everything works end-to-end)
+validate-all:
+    npm run validate:nx
+    just ci-check
+
+# Generate a report showing cache statistics, affected projects, and performance metrics
+[unix]
+optimization-report:
+    #!/usr/bin/env bash
+    echo "=== NX Cache Statistics ==="
+    just cache-stats
+    echo ""
+    echo "=== Affected Projects ==="
+    just affected-projects
+    echo ""
+    echo "=== Recent Build Times ==="
+    echo "Run 'just benchmark-cache' to measure build performance"
+
+[windows]
+optimization-report:
+    #!pwsh.exe
+    Write-Output "=== NX Cache Statistics ==="
+    just cache-stats
+    Write-Output ""
+    Write-Output "=== Affected Projects ==="
+    just affected-projects
+    Write-Output ""
+    Write-Output "=== Recent Build Times ==="
+    Write-Output "Run 'just benchmark-cache' to measure build performance"
 
 # -----------------------------
 # 📚 Documentation

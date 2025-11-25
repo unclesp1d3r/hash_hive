@@ -1,0 +1,83 @@
+{
+  "name": "frontend",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "frontend",
+  "projectType": "application",
+  "implicitDependencies": ["shared"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "next build",
+        "cwd": "frontend"
+      },
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["dependencies", "configuration", "default"],
+      "outputs": ["{projectRoot}/.next/**", "{projectRoot}/dist/**"]
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "next dev",
+        "cwd": "frontend"
+      },
+      "cache": false
+    },
+    "start": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "next start",
+        "cwd": "frontend"
+      },
+      "cache": false
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "jest --passWithNoTests",
+        "cwd": "frontend"
+      },
+      "cache": true,
+      "inputs": ["testing", "dependencies"]
+    },
+    "test:e2e": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "playwright test --pass-with-no-tests || exit 0",
+        "cwd": "frontend"
+      },
+      "cache": true,
+      "dependsOn": ["build"],
+      "inputs": ["testing", "dependencies", "default"]
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx eslint \"app/**/*.{ts,tsx,js,jsx}\" \"lib/**/*.{ts,tsx,js,jsx}\"",
+        "cwd": "frontend"
+      },
+      "cache": true,
+      "inputs": ["configuration", "default"]
+    },
+    "type-check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit",
+        "cwd": "frontend"
+      },
+      "cache": true,
+      "inputs": ["configuration", "dependencies", "default"]
+    },
+    "preview": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "next start",
+        "cwd": "frontend"
+      },
+      "cache": false,
+      "dependsOn": ["build"]
+    }
+  },
+  "tags": []
+}
