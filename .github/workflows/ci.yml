@@ -115,7 +115,12 @@ jobs:
 
           # Get affected projects list
           AFFECTED_PROJECTS=$(npx nx show projects --affected --base=$BASE_SHA 2>/dev/null || echo "")
-          echo "affected_projects=$AFFECTED_PROJECTS" >> $GITHUB_OUTPUT
+          # Use EOF delimiter for multi-line output
+          {
+            echo "affected_projects<<EOF"
+            echo "$AFFECTED_PROJECTS"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
           # Set boolean flags for conditional execution
           # Set variables in current shell first, then write to $GITHUB_ENV
