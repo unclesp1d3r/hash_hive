@@ -311,6 +311,90 @@ For detailed troubleshooting and advanced configuration, see [`docs/NX_SETUP.md`
 4. **Architectural changes:** Use `just graph` to understand project dependencies before making changes
 5. **Impact analysis:** Check affected projects (`just affected-projects`) to understand the scope of your changes
 
+### Advanced NX Features
+
+HashHive uses advanced NX features for optimal performance. See [`docs/NX_SETUP.md`](docs/NX_SETUP.md#advanced-features) for comprehensive documentation.
+
+#### Cache Optimization
+
+NX uses fine-grained cache invalidation based on dependencies, configuration files, and source files. Inspect cache configuration for your changes:
+
+```bash
+# Show cache configuration for a project
+just cache-config backend
+
+# Show what inputs affect a specific target
+just cache-inputs backend build
+
+# Debug cache misses
+just debug-cache backend build
+```
+
+**When cache is invalidated:**
+- Dependencies change (`package.json`, `package-lock.json`)
+- Configuration changes (`tsconfig.json`, `eslint.config.mjs`, `jest.config.js`)
+- Source files change (obvious cache miss)
+- Shared globals change (affects all projects: `tsconfig.base.json`, workspace `package.json`)
+
+#### Parallel Execution Tuning
+
+The default parallel setting is 3 tasks. Override for powerful machines:
+
+```bash
+# Run tests with custom parallelism
+just test-parallel 8
+
+# Or use NX directly
+npx nx run-many --target=test --all --parallel=8
+```
+
+**Trade-offs:** More parallelism = faster but more memory/CPU usage. Default (3) is optimal for most machines.
+
+#### Handling Flaky Tests
+
+Retry configuration is handled in test frameworks, not NX:
+
+- **Backend integration tests**: Configure `testRetries` in `backend/jest.integration.config.js` (currently: 2 retries)
+- **Frontend E2E tests**: Configure `retries` in `frontend/playwright.config.ts` (CI: 2, local: 1)
+
+**Best practice:** Fix flaky tests rather than relying on retries. Retries should be a temporary mitigation.
+
+#### Docker Build Optimization
+
+Enable Docker BuildKit caching for faster Docker builds:
+
+```bash
+# Build with BuildKit caching
+just docker-build-cached
+```
+
+NX caches Docker build targets, but Docker layer caching provides additional performance benefits. See [`docs/NX_SETUP.md`](docs/NX_SETUP.md#docker-build-caching) for details.
+
+#### NX Cloud for Teams
+
+NX Cloud provides distributed caching and shared cache across team members:
+
+```bash
+# Check NX Cloud status
+just nx-cloud-status
+
+# Connect to NX Cloud (interactive)
+just nx-cloud-connect
+```
+
+**When to consider:** Team size 5+, CI time >5 minutes, cache hit rate <50%. See [`docs/NX_SETUP.md`](docs/NX_SETUP.md#nx-cloud-integration) for details.
+
+#### Performance Benchmarking
+
+Benchmark cache performance to verify caching is working:
+
+```bash
+# Run build twice and compare (cache miss vs cache hit)
+just benchmark-cache
+```
+
+**Expected results:** Second run should be 10-100x faster (milliseconds vs seconds).
+
 ### Additional Resources
 
 - **[`docs/NX_SETUP.md`](docs/NX_SETUP.md)**: Comprehensive NX documentation including CI/CD integration, advanced configuration, and detailed examples

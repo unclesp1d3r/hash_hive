@@ -61,6 +61,16 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # Uncomment to enable NX Cloud distributed caching
+      # - name: Configure NX Cloud
+      #   run: |
+      #     echo "NX_CLOUD_ACCESS_TOKEN=${{ secrets.NX_CLOUD_ACCESS_TOKEN }}" >> $GITHUB_ENV
+      #   if: env.NX_CLOUD_ACCESS_TOKEN != ''
+
+      # Uncomment to enable verbose NX logging for debugging cache issues
+      # env:
+      #   NX_VERBOSE_LOGGING: true
+
       - name: Reset NX cache (first run)
         run: npx nx reset
 
@@ -71,6 +81,20 @@ jobs:
           key: nx-${{ runner.os }}-${{ hashFiles('**/nx.json', '**/project.json', '**/package-lock.json') }}
           restore-keys: |
             nx-${{ runner.os }}-
+
+      - name: Report NX Cache Statistics
+        if: always()
+        run: |
+          echo "## NX Cache Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -d .nx/cache ]; then
+            CACHE_SIZE=$(du -sh .nx/cache | cut -f1)
+            CACHE_FILES=$(find .nx/cache -type f | wc -l)
+            echo "- Cache size: $CACHE_SIZE" >> $GITHUB_STEP_SUMMARY
+            echo "- Cached artifacts: $CACHE_FILES" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- No cache directory found (first run)" >> $GITHUB_STEP_SUMMARY
+          fi
 
       # Determine which projects are affected
       # For PRs: use PR base SHA for accurate affected detection
@@ -145,8 +169,11 @@ jobs:
       # Only pull Docker images when backend is affected
       # Backend integration tests require MongoDB, Redis, and MinIO
       # This saves ~30-60 seconds on frontend-only or docs-only changes
+      # Enable BuildKit for faster Docker builds with layer caching
       - name: Pre-pull Docker images for Testcontainers
         if: env.BACKEND_AFFECTED == 'true' || github.event_name == 'push' || inputs.force_run_all == true
+        env:
+          DOCKER_BUILDKIT: 1
         run: |
           echo "Pulling Docker images used by integration tests..."
           docker pull mongo:7 &
@@ -165,15 +192,16 @@ jobs:
             BASE_SHA="${{ env.BASE_SHA }}"
             echo "Running affected targets for PR (base: $BASE_SHA)"
 
-            npx nx affected --target=lint --base=$BASE_SHA --parallel=3
-            npx nx affected --target=type-check --base=$BASE_SHA --parallel=3
-            npx nx affected --target=test --base=$BASE_SHA --parallel=3
+            # CI runners have 2-4 cores, so we use parallel=5 for optimal throughput
+            npx nx affected --target=lint --base=$BASE_SHA --parallel=5
+            npx nx affected --target=type-check --base=$BASE_SHA --parallel=5
+            npx nx affected --target=test --base=$BASE_SHA --parallel=5
 
             # Only run integration tests if backend is affected
             if [ "${{ env.BACKEND_AFFECTED }}" == "true" ]; then
               echo "Backend is affected, running integration tests"
-              npx nx affected --target=test:integration --base=$BASE_SHA --parallel=3
-              npx nx affected --target=test:coverage --base=$BASE_SHA --parallel=3
+              npx nx affected --target=test:integration --base=$BASE_SHA --parallel=5
+              npx nx affected --target=test:coverage --base=$BASE_SHA --parallel=5
             else
               echo "Backend not affected, skipping integration tests"
             fi
@@ -181,7 +209,7 @@ jobs:
             # Only run E2E tests if frontend is affected
             if [ "${{ env.FRONTEND_AFFECTED }}" == "true" ]; then
               echo "Frontend is affected, running E2E tests"
-              npx nx affected --target=test:e2e --base=$BASE_SHA --parallel=3
+              npx nx affected --target=test:e2e --base=$BASE_SHA --parallel=5
             else
               echo "Frontend not affected, skipping E2E tests"
             fi
@@ -189,8 +217,9 @@ jobs:
             npm run format:check
           else
             # Push to main or force run all: Run all targets
+            # CI runners have 2-4 cores, so we use parallel=5 for optimal throughput
             echo "Running all targets (push to main or force_run_all enabled)"
-            npx nx run-many --targets=lint,type-check,test --all --parallel=3
+            npx nx run-many --targets=lint,type-check,test --all --parallel=5
             npx nx run backend:test:integration
             npx nx run backend:test:coverage
             npx nx run frontend:test:e2e

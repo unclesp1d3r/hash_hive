@@ -13,7 +13,7 @@
       },
       "cache": true,
       "dependsOn": ["^build"],
-      "inputs": ["default", "^default"],
+      "inputs": ["dependencies", "configuration", "default"],
       "outputs": ["{projectRoot}/dist/**"]
     },
     "dev": {
@@ -39,7 +39,7 @@
         "cwd": "backend"
       },
       "cache": true,
-      "inputs": ["default", "^default", "{projectRoot}/**/*.test.{ts,tsx,js,jsx}"],
+      "inputs": ["testing", "dependencies"],
       "outputs": ["{projectRoot}/coverage/**"]
     },
     "test:integration": {
@@ -49,7 +49,8 @@
         "cwd": "backend"
       },
       "cache": true,
-      "inputs": ["default", "^default"],
+      "dependsOn": ["build"],
+      "inputs": ["testing", "dependencies", "docker"],
       "outputs": ["{projectRoot}/coverage/**"]
     },
     "test:coverage": {
@@ -59,7 +60,8 @@
         "cwd": "backend"
       },
       "cache": true,
-      "inputs": ["default", "^default"],
+      "dependsOn": ["build"],
+      "inputs": ["testing", "dependencies"],
       "outputs": ["{projectRoot}/coverage/**"]
     },
     "lint": {
@@ -69,7 +71,7 @@
         "cwd": "backend"
       },
       "cache": true,
-      "inputs": ["default", "^default", "{projectRoot}/**/*.{ts,tsx,js,jsx}"]
+      "inputs": ["configuration", "default"]
     },
     "type-check": {
       "executor": "nx:run-commands",
@@ -78,7 +80,7 @@
         "cwd": "backend"
       },
       "cache": true,
-      "inputs": ["default", "^default", "{projectRoot}/**/*.{ts,tsx}"]
+      "inputs": ["configuration", "dependencies", "default"]
     },
     "docker-build": {
       "executor": "nx:run-commands",
@@ -88,7 +90,8 @@
       },
       "cache": false,
       "dependsOn": ["build"],
-      "inputs": ["default", "^default", "{projectRoot}/Dockerfile", "{projectRoot}/.dockerignore"]
+      "inputs": ["docker", "dependencies", "production"],
+      "outputs": ["{projectRoot}/.docker-cache/**"]
     }
   },
   "tags": []

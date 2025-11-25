@@ -619,6 +619,95 @@ validate-cache:
     Write-Output "Duration: $(($end2 - $start2).TotalSeconds) seconds"
 
 # -----------------------------
+# 🔧 Advanced NX Features
+# -----------------------------
+# Commands for inspecting, debugging, and optimizing NX caching behavior
+
+# Show cache configuration for a project
+cache-config project:
+    npx nx show project {{project}} --json | jq '.targets'
+
+# Show what inputs affect a specific target
+cache-inputs project target:
+    npx nx show project {{project}} --json | jq '.targets.{{target}}.inputs'
+
+# Run tests with custom parallelism (useful for powerful machines)
+test-parallel count:
+    npx nx run-many --target=test --all --parallel={{count}}
+
+# Run builds with maximum parallelism
+build-max-parallel:
+    npx nx run-many --target=build --all --parallel=10
+
+# Run a target with verbose logging to debug cache misses
+debug-cache project target:
+    NX_VERBOSE_LOGGING=true npx nx run {{project}}:{{target}}
+
+# Show cache statistics
+cache-stats:
+    @echo "NX Cache Directory:"
+    @du -sh .nx/cache 2>/dev/null || echo "No cache yet"
+    @echo ""
+    @echo "Cached projects:"
+    @ls -la .nx/cache 2>/dev/null | tail -n +4 || echo "No cache yet"
+
+# Build backend Docker image with BuildKit caching
+docker-build-cached:
+    DOCKER_BUILDKIT=1 docker build --cache-from hashhive-backend:latest -t hashhive-backend:latest backend/
+
+# Build with cache export for CI
+docker-build-cache-export:
+    DOCKER_BUILDKIT=1 docker build --cache-from hashhive-backend:latest --cache-to type=local,dest=.docker-cache -t hashhive-backend:latest backend/
+
+# Connect to NX Cloud (interactive)
+nx-cloud-connect:
+    npx nx connect-to-nx-cloud
+
+# Show NX Cloud status
+nx-cloud-status:
+    @if grep -q "nxCloudAccessToken" nx.json; then \
+        echo "NX Cloud: Enabled"; \
+    else \
+        echo "NX Cloud: Not configured"; \
+        echo "Run 'just nx-cloud-connect' to enable distributed caching"; \
+    fi
+
+# Benchmark cache performance (runs build twice and compares)
+[unix]
+benchmark-cache:
+    #!/usr/bin/env bash
+    npx nx reset
+    echo "=== First run (cache miss) ==="
+    time npm run build
+    echo ""
+    echo "=== Second run (cache hit) ==="
+    time npm run build
+    echo ""
+    echo "Expected: Second run should be 10-100x faster"
+
+[windows]
+benchmark-cache:
+    #!pwsh.exe
+    npx nx reset
+    Write-Output "=== First run (cache miss) ==="
+    $start1 = Get-Date
+    npm run build
+    $end1 = Get-Date
+    $duration1 = ($end1 - $start1).TotalSeconds
+    Write-Output "Duration: $duration1 seconds"
+    Write-Output ""
+    Write-Output "=== Second run (cache hit) ==="
+    $start2 = Get-Date
+    npm run build
+    $end2 = Get-Date
+    $duration2 = ($end2 - $start2).TotalSeconds
+    Write-Output "Duration: $duration2 seconds"
+    Write-Output ""
+    $speedup = [math]::Round($duration1 / $duration2, 2)
+    Write-Output "Speedup: ${speedup}x faster"
+    Write-Output "Expected: 10-100x faster"
+
+# -----------------------------
 # 📚 Documentation
 # -----------------------------
 # -----------------------------

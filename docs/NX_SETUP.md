@@ -394,3 +394,404 @@ nx run-many --target=build --all
 - **`justfile`**: Local development commands
   - All commands use NX under the hood
   - See `just affected-ci-preview` for CI simulation
+
+## Advanced Features
+
+HashHive leverages advanced NX features for optimal build performance, intelligent caching, and efficient task orchestration. This section covers fine-grained cache invalidation, task pipeline optimization, parallel execution tuning, retry strategies, Docker build caching, and NX Cloud integration.
+
+### Advanced Caching Strategies
+
+NX uses a sophisticated `namedInputs` system to determine when to invalidate caches. HashHive's configuration includes several named input patterns:
+
+**Named Inputs:**
+
+- **`dependencies`**: Package files (`package.json`, `package-lock.json`) that affect dependency resolution
+- **`configuration`**: Build and tool configuration files (TypeScript, ESLint, Jest, Prettier configs)
+- **`docker`**: Docker-related files (`Dockerfile`, `.dockerignore`, `docker-compose.yml`)
+- **`environment`**: Environment variable files (`.env.example`, `.env.local`, `.env`)
+- **`production`**: Production build inputs (excludes test files and test configs)
+- **`testing`**: Test-specific inputs (includes test files and test configs)
+- **`sharedGlobals`**: Root-level files that affect all projects (workspace `package.json`, `tsconfig.base.json`, `eslint.config.mjs`, `nx.json`)
+
+**How Cache Invalidation Works:**
+
+NX computes a hash of all input files for each target. If any input file changes, the cache is invalidated and the task re-runs. This ensures builds are only re-run when truly necessary.
+
+**Example Cache Scenarios:**
+
+```bash
+# Scenario 1: Source file change (cache miss)
+# Change: backend/src/routes/auth.routes.ts
+# Result: backend:build cache invalidated, rebuilds
+
+# Scenario 2: Dependency change (cache miss)
+# Change: backend/package.json (added new dependency)
+# Result: backend:build cache invalidated, rebuilds
+
+# Scenario 3: Config change (cache miss)
+# Change: tsconfig.json (changed compiler options)
+# Result: backend:build and backend:type-check caches invalidated
+
+# Scenario 4: Shared global change (cache miss for all projects)
+# Change: tsconfig.base.json (changed base TypeScript config)
+# Result: All projects' build and type-check caches invalidated
+
+# Scenario 5: Test file change only (cache hit for build)
+# Change: backend/tests/unit/auth.test.ts
+# Result: backend:build cache hit (test files excluded from production input)
+#         backend:test cache miss (test files included in testing input)
+```
+
+**Debugging Cache Configuration:**
+
+```bash
+# Show all targets for a project
+just cache-config backend
+
+# Show inputs for a specific target
+just cache-inputs backend build
+
+# Or use NX directly
+npx nx show project backend --json | jq '.targets.build.inputs'
+```
+
+**Cache Statistics:**
+
+```bash
+# View cache directory size and contents
+just cache-stats
+
+# Run with verbose logging to debug cache misses
+just debug-cache backend build
+```
+
+### Task Pipeline Optimization
+
+NX automatically determines task execution order based on `dependsOn` relationships. HashHive's configuration ensures optimal task ordering:
+
+**Dependency Graph:**
+
+```
+shared:build
+  ├── backend:build (depends on ^build)
+  │   └── backend:test:integration (depends on build)
+  │   └── backend:test:coverage (depends on build)
+  └── frontend:build (depends on ^build)
+      └── frontend:test:e2e (depends on build)
+```
+
+**Key Relationships:**
+
+- **`shared:build`** → **`backend:build`** / **`frontend:build`**: Shared library must build before apps
+- **`backend:build`** → **`backend:test:integration`**: Code must compile before integration tests
+- **`frontend:build`** → **`frontend:test:e2e`**: Next.js app must build before E2E tests
+
+**Visualizing Dependencies:**
+
+```bash
+# Open interactive dependency graph
+just graph
+
+# Or use NX directly
+npx nx graph
+```
+
+**Parallel vs Sequential Execution:**
+
+NX runs independent tasks in parallel. Tasks with dependencies run sequentially:
+
+```bash
+# These run in parallel (no dependencies between them)
+nx run backend:lint
+nx run frontend:lint
+nx run shared:lint
+
+# These run sequentially (frontend depends on shared)
+nx run shared:build
+nx run frontend:build  # Waits for shared:build
+```
+
+### Parallel Execution Configuration
+
+HashHive uses configurable parallel execution to optimize build performance:
+
+**Current Settings:**
+
+- **Default**: `parallel: 3` (configured in `nx.json`)
+- **CI**: `parallel: 5` (GitHub Actions runners have 2-4 cores)
+- **Override**: Use `NX_PARALLEL` environment variable or `--parallel` CLI flag
+
+**Recommendations by Environment:**
+
+- **Local Development**: 3-5 (based on CPU cores, default: 3)
+- **CI Environments**: 5-10 (GitHub Actions runners have 2-4 cores, use 5 for optimal throughput)
+- **Powerful Workstations**: Up to number of CPU cores (e.g., 8-16 for high-end machines)
+
+**Overriding Parallelism:**
+
+```bash
+# Override for a single command
+npx nx run-many --target=test --all --parallel=8
+
+# Use justfile convenience command
+just test-parallel 8
+
+# Set environment variable (affects all commands)
+export NX_PARALLEL=5
+npx nx run-many --target=build --all
+```
+
+**Trade-offs:**
+
+- **More Parallelism**: Faster execution but higher CPU/memory usage
+- **Less Parallelism**: Lower resource usage but slower execution
+- **Optimal**: Balance based on available resources (default: 3 is a good starting point)
+
+### Task Retry Strategies
+
+NX doesn't have built-in retry logic (by design), but test frameworks can be configured for retries:
+
+**Jest (Backend Integration Tests):**
+
+Integration tests use Jest's `testRetries` option configured in `backend/jest.integration.config.js`:
+
+```javascript
+// backend/jest.integration.config.js
+module.exports = {
+  testRetries: 2, // Retry failed tests up to 2 times
+  // ... other config
+};
+```
+
+**When to Use Retries:**
+
+- Flaky tests due to Testcontainers startup timing
+- Network issues with Docker containers
+- Race conditions in async operations
+
+**Best Practice:** Fix flaky tests rather than relying on retries. Retries should be a temporary mitigation.
+
+**Playwright (Frontend E2E Tests):**
+
+E2E tests use Playwright's built-in retry mechanism configured in `frontend/playwright.config.ts`:
+
+```typescript
+// frontend/playwright.config.ts
+const config = defineConfig({
+  retries: process.env.CI ? 2 : 1, // CI: 2 retries, local: 1 retry
+  timeout: 30000, // 30 seconds per test
+  // ... other config
+});
+```
+
+**Retry Strategy:**
+
+- **CI Environments**: 2 retries (handles infrastructure variability)
+- **Local Development**: 1 retry (encourages fixing flaky tests)
+
+**Debugging Flaky Tests:**
+
+```bash
+# Run with verbose logging
+NX_VERBOSE_LOGGING=true npx nx run frontend:test:e2e
+
+# Run specific test multiple times
+npx playwright test --repeat-each=10 e2e/home.spec.ts
+```
+
+### Docker Build Caching
+
+NX caches Docker build targets, but Docker layer caching provides additional performance benefits:
+
+**NX Task Caching:**
+
+NX caches the entire Docker build command. If inputs haven't changed, the build is skipped entirely.
+
+**Docker BuildKit Layer Caching:**
+
+Enable BuildKit for faster Docker builds with layer caching:
+
+```bash
+# Build with BuildKit caching
+just docker-build-cached
+
+# Or manually
+DOCKER_BUILDKIT=1 docker build \
+  --cache-from hashhive-backend:latest \
+  -t hashhive-backend:latest \
+  backend/
+```
+
+**Remote Docker Layer Caching (CI):**
+
+For CI environments, export and import cache:
+
+```bash
+# Build with cache export
+just docker-build-cache-export
+
+# Or manually
+DOCKER_BUILDKIT=1 docker build \
+  --cache-from type=local,src=.docker-cache \
+  --cache-to type=local,dest=.docker-cache \
+  -t hashhive-backend:latest \
+  backend/
+```
+
+**NX Cloud Integration:**
+
+NX Cloud can distribute Docker layer cache across team members and CI runners. See [NX Cloud Integration](#nx-cloud-integration) section.
+
+**Trade-offs:**
+
+- **NX Task Caching**: Fast when inputs unchanged (skips entire build)
+- **Docker Layer Caching**: Fast when only some layers changed (reuses unchanged layers)
+- **Combined**: Best of both worlds (NX skips if possible, Docker optimizes if needed)
+
+### NX Cloud Integration
+
+NX Cloud provides distributed caching, task distribution, and analytics for teams:
+
+**Benefits:**
+
+- **Distributed Caching**: Share cache across team members and CI runners
+- **Task Distribution**: Distribute tasks across multiple machines
+- **Analytics**: Track build performance and cache hit rates
+- **Free Tier**: Available for open-source projects
+
+**Enabling NX Cloud:**
+
+```bash
+# Interactive setup
+just nx-cloud-connect
+
+# Or manually
+npx nx connect-to-nx-cloud
+```
+
+This adds `nxCloudAccessToken` to `nx.json` and configures remote caching.
+
+**Checking Status:**
+
+```bash
+# Check if NX Cloud is enabled
+just nx-cloud-status
+```
+
+**CI Configuration:**
+
+Add `NX_CLOUD_ACCESS_TOKEN` to GitHub Actions secrets and uncomment the NX Cloud step in `.github/workflows/ci.yml`.
+
+**Cost Considerations:**
+
+- **Free Tier**: Unlimited for open-source projects
+- **Paid Plans**: Available for private repositories
+- **See**: [NX Cloud Pricing](https://nx.app/pricing)
+
+**When to Consider NX Cloud:**
+
+- Team size: 5+ developers
+- CI time: >5 minutes per run
+- Cache hit rate: <50% locally
+- Multiple CI runners: Want shared cache across runners
+
+### Cache Debugging and Troubleshooting
+
+**Inspecting Cache Configuration:**
+
+```bash
+# Show all targets for a project
+just cache-config backend
+
+# Show inputs for a specific target
+just cache-inputs backend build
+
+# Or use NX directly
+npx nx show project backend --json | jq '.targets'
+```
+
+**Debugging Cache Misses:**
+
+```bash
+# Run with verbose logging
+just debug-cache backend build
+
+# Or manually
+NX_VERBOSE_LOGGING=true npx nx run backend:build
+```
+
+**Common Cache Miss Scenarios:**
+
+1. **Shared Globals Changed**: Affects all projects
+   - Example: `tsconfig.base.json` changed
+   - Result: All projects' build/type-check caches invalidated
+
+2. **Dependencies Changed**: Affects project-specific targets
+   - Example: `backend/package.json` changed
+   - Result: `backend:build` cache invalidated
+
+3. **Configuration Changed**: Affects related targets
+   - Example: `backend/tsconfig.json` changed
+   - Result: `backend:build` and `backend:type-check` caches invalidated
+
+4. **Source Files Changed**: Obvious cache miss
+   - Example: `backend/src/routes/auth.routes.ts` changed
+   - Result: `backend:build` cache invalidated
+
+**Clearing Cache:**
+
+```bash
+# Reset NX cache
+just reset-cache
+
+# Or manually
+npx nx reset
+```
+
+**Cache Statistics:**
+
+```bash
+# View cache directory size and contents
+just cache-stats
+```
+
+### Performance Optimization Tips
+
+**Best Practices:**
+
+1. **Keep `namedInputs` Specific**: Avoid overly broad patterns like `{projectRoot}/**/*`
+2. **Use `production` Input for Builds**: Excludes test files from build cache invalidation
+3. **Use `testing` Input for Tests**: Includes test configs in test cache invalidation
+4. **Leverage `sharedGlobals`**: Root-level configs affect all projects automatically
+
+**Measuring Cache Effectiveness:**
+
+```bash
+# Benchmark cache performance
+just benchmark-cache
+
+# Expected results:
+# - First run (cache miss): 10-30 seconds
+# - Second run (cache hit): <1 second (10-100x faster)
+```
+
+**Expected Performance Improvements:**
+
+- **Cache Hits**: 10-100x faster (milliseconds vs seconds)
+- **Affected Detection**: 50-80% time savings on PRs
+- **Parallel Execution**: 2-3x faster with 3-5 parallel tasks
+
+**Optimizing for Your Machine:**
+
+```bash
+# Test different parallelism levels
+just test-parallel 3  # Default
+just test-parallel 5  # Moderate
+just test-parallel 8  # Aggressive
+
+# Find optimal setting for your CPU
+nproc  # Linux: shows CPU count
+sysctl -n hw.ncpu  # macOS: shows CPU count
+```
+
+## References

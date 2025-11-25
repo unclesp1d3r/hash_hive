@@ -1,3 +1,11 @@
+// Integration Test Retry Configuration
+// Integration tests may occasionally fail due to:
+// - Testcontainers startup timing
+// - Network issues with Docker containers
+// - Race conditions in async operations
+// Jest will automatically retry failed tests up to 2 times before marking them as failed.
+// If tests consistently fail even with retries, investigate the root cause rather than increasing retries.
+
 /** @type {import('jest').Config} */
 module.exports = {
   preset: 'ts-jest',
@@ -17,4 +25,6 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   testTimeout: 60000, // Integration tests may take longer
   verbose: true,
+  // Retry failed tests up to 2 times. Useful for flaky integration tests that depend on Testcontainers startup timing.
+  testRetries: 2,
 };

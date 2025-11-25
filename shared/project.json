@@ -11,7 +11,7 @@
         "cwd": "shared"
       },
       "cache": true,
-      "inputs": ["default", "^default"],
+      "inputs": ["dependencies", "configuration", "default"],
       "outputs": ["{projectRoot}/dist/**"]
     },
     "lint": {
@@ -21,7 +21,7 @@
         "cwd": "shared"
       },
       "cache": true,
-      "inputs": ["default", "^default", "{projectRoot}/**/*.{ts,tsx,js,jsx}"]
+      "inputs": ["configuration", "default"]
     },
     "type-check": {
       "executor": "nx:run-commands",
@@ -30,7 +30,7 @@
         "cwd": "shared"
       },
       "cache": true,
-      "inputs": ["default", "^default", "{projectRoot}/**/*.{ts,tsx}"]
+      "inputs": ["configuration", "dependencies", "default"]
     },
     "test": {
       "executor": "nx:run-commands",
@@ -38,8 +38,9 @@
         "command": "echo 'No tests yet' && exit 0",
         "cwd": "shared"
       },
-      "cache": false,
-      "outputs": []
+      "cache": true,
+      "inputs": ["testing", "dependencies"],
+      "outputs": ["{projectRoot}/coverage/**"]
     }
   },
   "tags": []

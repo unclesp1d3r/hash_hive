@@ -13,7 +13,7 @@
       },
       "cache": true,
       "dependsOn": ["^build"],
-      "inputs": ["default", "^default"],
+      "inputs": ["dependencies", "configuration", "default"],
       "outputs": ["{projectRoot}/.next/**", "{projectRoot}/dist/**"]
     },
     "dev": {
@@ -39,7 +39,7 @@
         "cwd": "frontend"
       },
       "cache": true,
-      "inputs": ["default", "^default", "{projectRoot}/**/*.test.{ts,tsx,js,jsx}"]
+      "inputs": ["testing", "dependencies"]
     },
     "test:e2e": {
       "executor": "nx:run-commands",
@@ -48,7 +48,8 @@
         "cwd": "frontend"
       },
       "cache": true,
-      "inputs": ["default", "^default"]
+      "dependsOn": ["build"],
+      "inputs": ["testing", "dependencies", "default"]
     },
     "lint": {
       "executor": "nx:run-commands",
@@ -57,7 +58,7 @@
         "cwd": "frontend"
       },
       "cache": true,
-      "inputs": ["default", "^default", "{projectRoot}/**/*.{ts,tsx,js,jsx}"]
+      "inputs": ["configuration", "default"]
     },
     "type-check": {
       "executor": "nx:run-commands",
@@ -66,7 +67,7 @@
         "cwd": "frontend"
       },
       "cache": true,
-      "inputs": ["default", "^default", "{projectRoot}/**/*.{ts,tsx}"]
+      "inputs": ["configuration", "dependencies", "default"]
     },
     "preview": {
       "executor": "nx:run-commands",

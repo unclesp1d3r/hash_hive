@@ -4,40 +4,62 @@
     "build": {
       "cache": true,
       "dependsOn": ["^build"],
-      "inputs": ["default", "^default"],
+      "inputs": ["dependencies", "configuration", "default"],
       "outputs": ["{projectRoot}/dist/**", "{projectRoot}/.next/**"]
     },
     "test": {
       "cache": true,
-      "inputs": ["default", "^default", "{projectRoot}/**/*.test.{ts,tsx,js,jsx}"],
+      "inputs": ["testing", "dependencies"],
       "outputs": ["{projectRoot}/coverage/**"]
     },
     "test:integration": {
       "cache": true,
-      "inputs": ["default", "^default"],
+      "inputs": ["testing", "dependencies", "docker"],
       "outputs": ["{projectRoot}/coverage/**"]
     },
     "test:e2e": {
       "cache": true,
-      "inputs": ["default", "^default"]
+      "inputs": ["testing", "dependencies", "default"]
     },
     "test:coverage": {
       "cache": true,
-      "inputs": ["default", "^default"],
+      "inputs": ["testing", "dependencies"],
       "outputs": ["{projectRoot}/coverage/**"]
     },
     "lint": {
       "cache": true,
-      "inputs": ["default", "^default", "{projectRoot}/**/*.{ts,tsx,js,jsx}"]
+      "inputs": ["configuration", "default"]
     },
     "type-check": {
       "cache": true,
-      "inputs": ["default", "^default", "{projectRoot}/**/*.{ts,tsx}"]
+      "inputs": ["configuration", "dependencies", "default"]
     }
   },
   "namedInputs": {
     "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "dependencies": [
+      "{projectRoot}/package.json",
+      "{workspaceRoot}/package-lock.json",
+      "{workspaceRoot}/package.json"
+    ],
+    "configuration": [
+      "{projectRoot}/tsconfig*.json",
+      "{workspaceRoot}/tsconfig.base.json",
+      "{projectRoot}/eslint.config.*",
+      "{workspaceRoot}/eslint.config.mjs",
+      "{projectRoot}/jest*.config.*",
+      "{workspaceRoot}/.prettierrc.json",
+      "{workspaceRoot}/.prettierignore"
+    ],
+    "docker": [
+      "{projectRoot}/Dockerfile",
+      "{projectRoot}/.dockerignore",
+      "{workspaceRoot}/docker-compose.yml"
+    ],
+    "environment": ["{projectRoot}/.env.example", "{projectRoot}/.env.local", "{projectRoot}/.env"],
     "production": [
+      "dependencies",
+      "configuration",
       "default",
       "!{projectRoot}/**/*.spec.ts",
       "!{projectRoot}/**/*.test.{ts,tsx,js,jsx}",
@@ -48,13 +70,23 @@
       "!{projectRoot}/.eslintrc.js"
     ],
     "testing": [
+      "dependencies",
+      "configuration",
       "default",
       "{projectRoot}/**/*.test.{ts,tsx,js,jsx}",
       "{projectRoot}/**/*.spec.{ts,tsx,js,jsx}",
       "{projectRoot}/jest.config.*",
       "{projectRoot}/tsconfig.spec.json"
     ],
-    "sharedGlobals": []
+    "sharedGlobals": [
+      "{workspaceRoot}/package.json",
+      "{workspaceRoot}/package-lock.json",
+      "{workspaceRoot}/tsconfig.base.json",
+      "{workspaceRoot}/eslint.config.mjs",
+      "{workspaceRoot}/.prettierrc.json",
+      "{workspaceRoot}/.prettierignore",
+      "{workspaceRoot}/nx.json"
+    ]
   },
   "tasksRunnerOptions": {
     "default": {

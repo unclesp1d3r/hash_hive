@@ -150,6 +150,24 @@ npm run reset
 
 All standard commands (`build`, `test`, `lint`, `type-check`) are now NX-powered and benefit from caching and dependency-aware execution. The `just` recipes and npm scripts have been updated to use NX under the hood.
 
+### Advanced Features
+
+HashHive uses advanced NX features for optimal performance:
+
+- **Fine-grained cache invalidation** based on dependencies, configuration, and source files
+- **Intelligent task pipeline** with automatic dependency ordering
+- **Configurable parallel execution** (default: 3, CI: 5)
+- **Retry logic** for flaky integration and E2E tests
+- **Docker build caching** with BuildKit support
+
+See [docs/NX_SETUP.md](docs/NX_SETUP.md#advanced-features) for detailed documentation.
+
+> **Performance Tips**
+> - Use `just affected-test` instead of `just test` when working on a specific feature
+> - Run `just benchmark-cache` to verify cache is working correctly
+> - Increase parallelism on powerful machines: `just test-parallel 8`
+> - See `just cache-stats` to monitor cache size and effectiveness
+
 ### CI/CD Integration
 
 [![CI](https://github.com/unclesp1d3r/hash_hive/workflows/CI/badge.svg)](https://github.com/unclesp1d3r/hash_hive/actions/workflows/ci.yml)
