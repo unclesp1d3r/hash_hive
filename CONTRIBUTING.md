@@ -148,6 +148,175 @@ npm run build -w frontend
 npm run build -w shared
 ```
 
+## NX Monorepo Tooling
+
+HashHive uses [NX](https://nx.dev) for intelligent caching, affected detection, and task orchestration to dramatically improve developer productivity. NX automatically determines which projects need to be rebuilt, tested, or linted based on your changes, and caches results to make repeated runs nearly instantaneous.
+
+### Understanding Affected Detection
+
+NX's "affected detection" identifies only the projects that have changed compared to a base branch (typically `main`). This means you can run tests, builds, and linting only for what actually changed, saving significant time during development.
+
+**See which projects are affected:**
+
+```bash
+# Using just
+just affected-projects
+
+# Or npm directly
+npx nx show projects --affected --base=origin/main
+```
+
+**When to use affected vs. all:**
+
+- **Use affected commands** (`just affected-test`, `just affected-build`) during feature development for fast feedback
+- **Use all commands** (`just test`, `just build`) before committing to ensure everything passes
+
+**Examples:**
+
+- Changing `shared/src/types/index.ts` affects all projects (backend, frontend, shared) because both backend and frontend depend on shared
+- Changing `backend/src/routes/auth.routes.ts` affects only backend
+- Changing `frontend/app/page.tsx` affects only frontend
+
+### Leveraging Caching
+
+NX caches build, test, and lint outputs based on input files. If you run the same command twice without changing any source files, the second run will use cached results and complete almost instantly.
+
+**Verify caching behavior:**
+
+```bash
+# First run (cache miss - actual execution)
+just build-backend
+# Output: Builds backend, takes ~5-10 seconds
+
+# Second run (cache hit - instant)
+just build-backend
+# Output: [existing outputs match the cache, left as is] - completes in <1 second
+```
+
+**Cache location:** `.nx/cache/` (gitignored, local to your machine)
+
+**Cache invalidation:** Automatic when source files change. NX compares file hashes to determine if inputs have changed.
+
+### Affected Commands for Fast Iteration
+
+Use affected commands during development to get fast feedback on your changes:
+
+```bash
+# See what changed
+just affected-projects
+
+# Run affected tests (much faster than all tests)
+just affected-test
+# or
+npm run affected:test
+
+# Run affected builds
+just affected-build
+# or
+npm run affected:build
+
+# Preview what CI would run
+just affected-ci-preview
+```
+
+**Time savings example:**
+
+- Running all tests: ~2 minutes
+- Running affected tests (only backend changed): ~10 seconds
+
+This workflow is especially valuable when iterating on a feature in a single project.
+
+### Visualizing Dependencies
+
+NX can generate a visual dependency graph showing how projects depend on each other:
+
+```bash
+# Open dependency graph in browser
+just graph
+# or
+npm run graph
+```
+
+**What the graph shows:**
+
+- Project dependencies (e.g., backend and frontend both depend on shared)
+- Task dependencies (e.g., build tasks depend on upstream builds)
+- Affected projects highlighted when comparing to a base branch
+
+**Use cases:**
+
+- Understanding the impact of changes before making them
+- Debugging dependency issues
+- Planning architectural changes
+
+### Simulating CI Locally
+
+Before creating a pull request, simulate what CI will run to catch failures early:
+
+```bash
+# See what CI would run for your changes
+just affected-ci-preview
+
+# Run affected targets (simulates PR CI)
+just ci-affected
+
+# Check if backend is affected (useful for conditional logic)
+just affected-backend-check
+```
+
+**Benefits:**
+
+- Catch CI failures before pushing
+- Understand which projects will be tested in CI
+- Verify affected detection is working correctly
+
+The CI workflow uses affected detection for pull requests, so running `just ci-affected` locally closely simulates what will happen in CI.
+
+### Troubleshooting NX
+
+**Cache issues:**
+
+If builds seem stale or tests fail unexpectedly, clear the cache:
+
+```bash
+just reset-cache
+# or
+npm run reset
+```
+
+**Task not running:**
+
+- Verify the task exists in the project's `project.json` file
+- Check that the task name matches exactly (e.g., `test:integration` not `test-integration`)
+
+**Affected detection seems wrong:**
+
+- Ensure you're comparing against the correct base branch (`origin/main`)
+- Verify your changes are actually in the projects you expect
+- Use `just affected-projects` to see what NX detected
+
+**Performance:**
+
+- NX runs tasks in parallel (default: 3 jobs)
+- Adjust parallelism in `nx.json` if needed
+- Cache hits are always fast regardless of parallelism
+
+For detailed troubleshooting and advanced configuration, see [`docs/NX_SETUP.md`](docs/NX_SETUP.md).
+
+### Best Practices
+
+1. **During development:** Use affected commands (`just affected-test`, `just affected-build`) for fast feedback
+2. **Before committing:** Run full `just ci-check` to ensure everything passes
+3. **Cache issues:** Clear cache (`just reset-cache`) if you suspect cache corruption
+4. **Architectural changes:** Use `just graph` to understand project dependencies before making changes
+5. **Impact analysis:** Check affected projects (`just affected-projects`) to understand the scope of your changes
+
+### Additional Resources
+
+- **[`docs/NX_SETUP.md`](docs/NX_SETUP.md)**: Comprehensive NX documentation including CI/CD integration, advanced configuration, and detailed examples
+- **[`README.md`](README.md#nx-monorepo-tooling)**: Quick reference for NX commands and features
+- **[NX Official Docs](https://nx.dev)**: Complete NX documentation and guides
+
 ## Coding Standards
 
 ### TypeScript

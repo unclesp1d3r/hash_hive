@@ -524,7 +524,10 @@ redis-cli:
 
 # for the backend test suites, so no docker-compose step is required.
 ci-check:
-    npx nx run-many --target=lint,type-check,test,test:integration,test:e2e,test:coverage --all --parallel=3
+    npx nx run-many --targets=lint,type-check,test --all --parallel=3
+    npx nx run backend:test:integration
+    npx nx run backend:test:coverage
+    npx nx run frontend:test:e2e
     npm run format:check
 
 # NX-specific commands
@@ -556,7 +559,7 @@ affected-projects:
 
 # Preview what CI would run for current changes
 affected-ci-preview:
-    npx nx affected --target=lint,type-check,test --base=origin/main --dry-run
+    npx nx affected --targets=lint,type-check,test --base=origin/main --dry-run
 
 # Check if backend is affected (useful for conditional logic)
 [unix]
@@ -584,7 +587,10 @@ affected-backend-check:
 
 # Simulate full CI workflow locally (runs affected targets)
 ci-affected:
-    npx nx affected --target=lint,type-check,test,test:integration,test:e2e --base=origin/main --parallel=3
+    npx nx affected --targets=lint,type-check,test --base=origin/main --parallel=3
+    npx nx affected --target=test:integration --base=origin/main --parallel=3
+    npx nx affected --target=test:coverage --base=origin/main --parallel=3
+    npx nx affected --target=test:e2e --base=origin/main --parallel=3
     npm run format:check
 
 # Validate NX caching behavior with timing

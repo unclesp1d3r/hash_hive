@@ -190,7 +190,10 @@ jobs:
           else
             # Push to main or force run all: Run all targets
             echo "Running all targets (push to main or force_run_all enabled)"
-            npx nx run-many --target=lint,type-check,test,test:integration,test:e2e,test:coverage --all --parallel=3
+            npx nx run-many --targets=lint,type-check,test --all --parallel=3
+            npx nx run backend:test:integration
+            npx nx run backend:test:coverage
+            npx nx run frontend:test:e2e
             npm run format:check
           fi
 
