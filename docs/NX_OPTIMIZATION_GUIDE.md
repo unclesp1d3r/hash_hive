@@ -52,6 +52,7 @@ Add new scripts when:
 - Tooling requires specific command formats
 
 **Example:**
+
 ```json
 // backend/package.json
 {
@@ -86,6 +87,7 @@ This script is then wrapped by NX in `backend/project.json`:
 - Document non-obvious scripts with comments in `package.json` (if supported) or README
 
 **Anti-pattern:**
+
 ```json
 // ❌ Don't do this
 {
@@ -96,6 +98,7 @@ This script is then wrapped by NX in `backend/project.json`:
 ```
 
 **Better approach:**
+
 ```json
 // ✅ Use NX dependsOn instead
 {
@@ -129,23 +132,34 @@ export default [
 ];
 ```
 
-### Why @nx/eslint-plugin Is Not Needed
+### Current State: Boundary Rules Not Implemented
 
-The `@nx/eslint-plugin` provides workspace-level linting rules and boundary enforcement. However, for HashHive's current structure:
+**Status: Future Enhancement**
+
+The `@nx/eslint-plugin` provides workspace-level linting rules and boundary enforcement. However, for HashHive's current structure, boundary enforcement is **not currently implemented** and is marked as a future enhancement:
 
 - **Flat config is sufficient**: The current ESLint setup already handles workspace-level linting
-- **3-package structure**: Boundary rules are not needed yet (only 3 packages: shared, backend, frontend)
+- **3-package structure**: Boundary rules are deferred (only 3 packages: shared, backend, frontend)
 - **No circular dependencies**: Current structure prevents circular dependencies naturally
+- **Not configured**: `@nx/eslint-plugin` is not installed and boundary rules are not active
 
-### When to Consider @nx/eslint-plugin
+### When to Implement Boundary Enforcement
 
-Consider adding `@nx/eslint-plugin` when:
+Consider implementing boundary enforcement when:
 
 - **Monorepo grows**: 5+ packages with complex dependencies
 - **Boundary enforcement needed**: Want to enforce that `shared` doesn't import from `backend`/`frontend`
 - **Workspace-level rules**: Need project-specific ESLint rules
 
-**Example boundary rule (when needed):**
+**Implementation steps (when ready):**
+
+1. Install `@nx/eslint-plugin` as a dev dependency
+2. Update `eslint.config.mjs` to register the plugin
+3. Configure the `@nx/enforce-module-boundaries` rule with appropriate tags
+4. Add tags to `project.json` files (`backend`, `frontend`, `shared`)
+
+**Example boundary rule configuration (for future implementation):**
+
 ```javascript
 // eslint.config.mjs
 import nxEslintPlugin from '@nx/eslint-plugin';
@@ -209,6 +223,7 @@ TypeScript project references provide:
 ### Current Setup
 
 **Shared package** (`shared/tsconfig.json`):
+
 ```json
 {
   "compilerOptions": {
@@ -218,6 +233,7 @@ TypeScript project references provide:
 ```
 
 **Backend package** (`backend/tsconfig.json`):
+
 ```json
 {
   "references": [
@@ -229,6 +245,7 @@ TypeScript project references provide:
 ```
 
 **Frontend package** (`frontend/tsconfig.json`):
+
 ```json
 {
   "references": [
@@ -255,6 +272,7 @@ As the monorepo grows, add references when:
 - You want incremental compilation benefits
 
 **Example:**
+
 ```json
 // backend/tsconfig.json
 {
@@ -317,6 +335,7 @@ Create custom `namedInputs` when:
 - **External dependencies**: e.g., generated files from external tools
 
 **Example:**
+
 ```json
 {
   "namedInputs": {
@@ -338,30 +357,35 @@ Create custom `namedInputs` when:
 **Common scenarios:**
 
 1. **Shared globals changed**: Affects all projects
+
    ```bash
    # Change tsconfig.base.json
    # Result: All projects' build/type-check caches invalidated
    ```
 
 2. **Dependencies changed**: Affects project-specific targets
+
    ```bash
    # Change backend/package.json
    # Result: backend:build cache invalidated
    ```
 
 3. **Configuration changed**: Affects related targets
+
    ```bash
    # Change backend/tsconfig.json
    # Result: backend:build and backend:type-check caches invalidated
    ```
 
 4. **Source files changed**: Obvious cache miss
+
    ```bash
    # Change backend/src/index.ts
    # Result: backend:build cache invalidated
    ```
 
 **Debugging commands:**
+
 ```bash
 # Show cache inputs for a target
 just cache-inputs backend build
@@ -381,6 +405,7 @@ just cache-stats
 4. **Leverage `sharedGlobals`**: Root-level configs affect all projects automatically
 
 **Example optimization:**
+
 ```json
 // ❌ Too broad
 {
@@ -423,16 +448,19 @@ HashHive uses configurable parallel execution:
 ### Guidelines by Environment
 
 **Local Development:**
+
 - **Default**: 3 tasks (optimal for most machines)
 - **Powerful workstations**: 5-8 tasks (based on CPU cores)
 - **Laptops**: 2-3 tasks (to avoid overheating)
 
 **CI Environments:**
+
 - **GitHub Actions**: 5 tasks (runners have 2-4 cores)
 - **Self-hosted**: Match CPU cores (e.g., 8-16 for powerful runners)
 - **Cloud CI**: 5-10 tasks (based on runner specs)
 
 **Measuring Performance:**
+
 ```bash
 # Test different parallelism levels
 time npx nx run-many --target=test --all --parallel=3
@@ -473,6 +501,7 @@ The CI workflow uses affected detection for pull requests:
 ```
 
 **Benefits:**
+
 - Only runs tests for changed projects
 - Saves 50-80% of CI time on PRs
 - Faster feedback for developers
@@ -494,6 +523,7 @@ The CI workflow conditionally executes steps:
 ```
 
 **Time savings:**
+
 - Frontend-only PR: ~60 seconds saved (no Docker pulls, no backend tests)
 - Backend-only PR: ~30 seconds saved (no frontend E2E tests)
 - Docs-only PR: ~3 minutes saved (only format:check runs)
@@ -512,6 +542,7 @@ The CI workflow conditionally executes steps:
 ```
 
 **Cache key strategy:**
+
 - Include `nx.json` and `project.json` files (configuration changes invalidate cache)
 - Include `package-lock.json` (dependency changes invalidate cache)
 - Use OS-specific keys (different OS = different cache)
@@ -542,6 +573,7 @@ The `docker-build` target has `cache: false` in `backend/project.json`:
 ```
 
 **Reasoning:**
+
 - Docker has its own sophisticated layer caching via BuildKit
 - Docker layer caching is more granular (layer-by-layer) than NX task caching
 - Docker builds are typically run less frequently than other targets
@@ -561,6 +593,7 @@ DOCKER_BUILDKIT=1 docker build \
 ```
 
 **Benefits:**
+
 - Reuses unchanged layers from previous builds
 - Only rebuilds layers that changed
 - Significantly faster for incremental builds
@@ -581,6 +614,7 @@ DOCKER_BUILDKIT=1 docker build \
 ```
 
 **CI integration:**
+
 - Store `.docker-cache` in GitHub Actions cache
 - Restore cache before Docker build
 - Export cache after successful build
@@ -637,6 +671,7 @@ just cache-stats
 ```
 
 **What to monitor:**
+
 - Cache directory size (should grow over time)
 - Cache hit rate (should be 50-80% for unchanged projects)
 - Cache invalidation frequency (should match change frequency)
@@ -649,6 +684,7 @@ just benchmark-cache
 ```
 
 **Expected results:**
+
 - First run (cache miss): 10-30 seconds
 - Second run (cache hit): <1 second
 - Speedup: 10-100x faster
@@ -664,6 +700,7 @@ NX_VERBOSE_LOGGING=true npx nx run-many --target=build --all
 ```
 
 **Common bottlenecks:**
+
 - Slow dependency installation (npm install)
 - Large source files (consider code splitting)
 - Inefficient test suites (consider test optimization)
@@ -693,25 +730,31 @@ When a package becomes too large:
 ### Managing Dependencies
 
 **Best practices:**
+
 - Keep dependencies minimal (only what's needed)
 - Use `implicitDependencies` for logical dependencies
 - Avoid circular dependencies (use `shared` package for common code)
 - Document dependency relationships in `project.json`
 
-### Enforcing Boundaries
+### Enforcing Boundaries (Future Enhancement)
 
-As the monorepo grows, consider enforcing boundaries:
+**Status: Not Currently Implemented**
 
-1. **Add `@nx/eslint-plugin`**: For boundary enforcement
-2. **Define tags**: Tag packages (e.g., `shared`, `backend`, `frontend`)
-3. **Configure rules**: Define allowed dependencies per tag
-4. **Enforce in CI**: Fail CI if boundaries are violated
+As the monorepo grows, boundary enforcement can be added as a future enhancement:
+
+1. **Add `@nx/eslint-plugin`**: Install as dev dependency for boundary enforcement
+2. **Define tags**: Tag packages in `project.json` files (e.g., `shared`, `backend`, `frontend`)
+3. **Configure rules**: Update `eslint.config.mjs` to define allowed dependencies per tag
+4. **Enforce in CI**: CI will automatically fail if boundaries are violated once configured
+
+**Note:** This is a planned enhancement, not part of the current baseline. The current 3-package structure does not require boundary enforcement, but it should be implemented when the monorepo grows beyond 5 packages or when explicit boundary rules become necessary.
 
 ## Common Anti-patterns
 
 ### 1. Overly Broad Inputs
 
 **Anti-pattern:**
+
 ```json
 {
   "namedInputs": {
@@ -723,6 +766,7 @@ As the monorepo grows, consider enforcing boundaries:
 **Problem:** Cache invalidates on any file change, even irrelevant files.
 
 **Solution:**
+
 ```json
 {
   "namedInputs": {
@@ -737,6 +781,7 @@ As the monorepo grows, consider enforcing boundaries:
 ### 2. Unnecessary cache: false
 
 **Anti-pattern:**
+
 ```json
 {
   "targets": {
@@ -754,6 +799,7 @@ As the monorepo grows, consider enforcing boundaries:
 ### 3. Missing dependsOn
 
 **Anti-pattern:**
+
 ```json
 {
   "targets": {
@@ -770,6 +816,7 @@ As the monorepo grows, consider enforcing boundaries:
 **Problem:** May build before dependencies are ready.
 
 **Solution:**
+
 ```json
 {
   "targets": {
@@ -787,6 +834,7 @@ As the monorepo grows, consider enforcing boundaries:
 ### 4. Incorrect Parallelism Settings
 
 **Anti-pattern:**
+
 ```json
 {
   "tasksRunnerOptions": {
@@ -806,6 +854,7 @@ As the monorepo grows, consider enforcing boundaries:
 ### 5. Not Using Affected Detection
 
 **Anti-pattern:**
+
 ```bash
 # Always running all tests
 npm run test
@@ -814,6 +863,7 @@ npm run test
 **Problem:** Wastes time running tests for unchanged projects.
 
 **Solution:**
+
 ```bash
 # Use affected detection during development
 npx nx affected --target=test
