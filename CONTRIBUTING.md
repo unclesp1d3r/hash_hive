@@ -395,6 +395,16 @@ just benchmark-cache
 
 **Expected results:** Second run should be 10-100x faster (milliseconds vs seconds).
 
+### Validation and Optimization
+
+After setting up the project or making major changes, use the validation checklist to verify all NX features work correctly:
+
+- **[`docs/NX_VALIDATION_CHECKLIST.md`](docs/NX_VALIDATION_CHECKLIST.md)**: Step-by-step validation guide for verifying NX setup, caching, affected detection, and performance. Use this after initial setup, after major changes, or when troubleshooting NX-related issues. The checklist includes a results template for tracking validation outcomes.
+
+For understanding best practices and performance tuning:
+
+- **[`docs/NX_OPTIMIZATION_GUIDE.md`](docs/NX_OPTIMIZATION_GUIDE.md)**: Comprehensive guide covering package.json scripts optimization, ESLint configuration, TypeScript project references, cache optimization strategies, parallel execution tuning, CI/CD optimization, Docker build optimization, NX Cloud considerations, monitoring and metrics, scaling strategies, and common anti-patterns.
+
 ### Additional Resources
 
 - **[`docs/NX_SETUP.md`](docs/NX_SETUP.md)**: Comprehensive NX documentation including CI/CD integration, advanced configuration, and detailed examples

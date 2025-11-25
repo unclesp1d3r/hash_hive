@@ -25,6 +25,7 @@
     "validate:build": "nx run-many --target=build --all",
     "validate:cache": "nx reset && npm run build && npm run build",
     "validate:affected": "nx affected --target=test",
+    "validate:nx": "npx nx graph --file=nx-graph.json && npx nx show projects --affected --base=origin/main && npm run build && npm run build && npx nx reset",
     "ci-check": "just ci-check"
   },
   "devDependencies": {

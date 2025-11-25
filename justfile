@@ -708,6 +708,45 @@ benchmark-cache:
     Write-Output "Expected: 10-100x faster"
 
 # -----------------------------
+# ✅ Validation & Optimization
+# -----------------------------
+# Commands for validating NX setup and optimizing performance
+
+# Comprehensive NX validation (runs dependency graph check, affected detection, cache verification, and displays statistics)
+validate-nx:
+    npm run validate:nx
+
+# Full validation including NX validation plus ci-check (ensures everything works end-to-end)
+validate-all:
+    npm run validate:nx
+    just ci-check
+
+# Generate a report showing cache statistics, affected projects, and performance metrics
+[unix]
+optimization-report:
+    #!/usr/bin/env bash
+    echo "=== NX Cache Statistics ==="
+    just cache-stats
+    echo ""
+    echo "=== Affected Projects ==="
+    just affected-projects
+    echo ""
+    echo "=== Recent Build Times ==="
+    echo "Run 'just benchmark-cache' to measure build performance"
+
+[windows]
+optimization-report:
+    #!pwsh.exe
+    Write-Output "=== NX Cache Statistics ==="
+    just cache-stats
+    Write-Output ""
+    Write-Output "=== Affected Projects ==="
+    just affected-projects
+    Write-Output ""
+    Write-Output "=== Recent Build Times ==="
+    Write-Output "Run 'just benchmark-cache' to measure build performance"
+
+# -----------------------------
 # 📚 Documentation
 # -----------------------------
 # -----------------------------

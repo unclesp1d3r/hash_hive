@@ -148,6 +148,74 @@ NX automatically parallelizes tasks. Adjust parallelism in `nx.json`:
 }
 ```
 
+## Validation and Optimization
+
+This section provides links to comprehensive validation and optimization resources for the NX monorepo setup.
+
+### Validation Checklist
+
+**[`docs/NX_VALIDATION_CHECKLIST.md`](NX_VALIDATION_CHECKLIST.md)** provides step-by-step instructions for verifying all NX features work correctly:
+
+- Dependency graph validation
+- Individual project commands validation
+- Bulk operations validation
+- Caching functionality verification
+- Affected detection testing
+- CI simulation
+- Advanced features validation
+- Performance benchmarks
+- Troubleshooting guide
+- Results template for tracking validation outcomes
+
+Use this checklist after initial NX setup, after major changes, or when troubleshooting NX-related issues.
+
+### Optimization Guide
+
+**[`docs/NX_OPTIMIZATION_GUIDE.md`](NX_OPTIMIZATION_GUIDE.md)** documents best practices, performance tuning, and advanced configuration:
+
+- Package.json scripts optimization
+- ESLint configuration best practices
+- TypeScript project references
+- Cache optimization strategies
+- Parallel execution tuning
+- CI/CD optimization
+- Docker build optimization
+- NX Cloud considerations
+- Monitoring and metrics
+- Scaling strategies
+- Common anti-patterns
+
+Use this guide to understand optimization strategies, when to apply them, and how to measure their impact.
+
+### Quick Validation
+
+For quick validation checks, use these commands:
+
+```bash
+# Run full CI check
+just ci-check
+# or
+npm run ci-check
+
+# Benchmark cache performance
+just benchmark-cache
+
+# Check affected projects
+just affected-projects
+
+# Visualize dependency graph
+just graph
+# or
+npm run graph
+
+# Validate NX setup
+just validate-nx
+# or
+npm run validate:nx
+```
+
+These commands provide quick feedback on NX functionality without running the full validation checklist.
+
 ## References
 
 - [NX Documentation](https://nx.dev)

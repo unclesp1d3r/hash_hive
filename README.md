@@ -192,6 +192,27 @@ just affected-backend-check
 
 For detailed CI/CD documentation, see [docs/NX_SETUP.md](docs/NX_SETUP.md#cicd-integration).
 
+### Validation
+
+After setting up the project or making major changes, run through the [validation checklist](docs/NX_VALIDATION_CHECKLIST.md) to ensure all NX features are working correctly. The checklist provides step-by-step instructions for verifying dependency graphs, caching, affected detection, and more.
+
+**Quick validation commands:**
+```bash
+# Run full CI check
+just ci-check
+
+# Benchmark cache performance
+just benchmark-cache
+
+# Check affected projects
+just affected-projects
+
+# Visualize dependency graph
+just graph
+```
+
+For comprehensive validation instructions, see [docs/NX_VALIDATION_CHECKLIST.md](docs/NX_VALIDATION_CHECKLIST.md). For optimization best practices and advanced configuration, see [docs/NX_OPTIMIZATION_GUIDE.md](docs/NX_OPTIMIZATION_GUIDE.md).
+
 ## Architecture
 
 HashHive follows a monorepo structure with:
