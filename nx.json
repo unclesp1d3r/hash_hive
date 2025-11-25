@@ -32,6 +32,7 @@
     },
     "type-check": {
       "cache": true,
+      "dependsOn": ["^build"],
       "inputs": ["configuration", "dependencies", "default"]
     }
   },
