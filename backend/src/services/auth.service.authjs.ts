@@ -58,11 +58,13 @@ export class AuthService {
     req: Request
   ): Promise<{ id: string; email: string; name: string; roles?: string[] } | null> {
     const session = await this.getSession(req);
-    if (session === null || typeof session !== 'object') {
-      return null;
-    }
-
-    if (typeof session !== 'object' || !('user' in session)) {
+    if (
+      session === null ||
+      typeof session !== 'object' ||
+      !('user' in session) ||
+      session.user === null ||
+      session.user === undefined
+    ) {
       return null;
     }
 
