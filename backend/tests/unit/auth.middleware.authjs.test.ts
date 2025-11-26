@@ -3,6 +3,7 @@ import { authenticateSession, optionalAuth } from '../../src/middleware/auth.mid
 import { getSession } from '@auth/express';
 import { User } from '../../src/models/user.model';
 import { AppError } from '../../src/middleware/error-handler';
+import type { User as UserType } from '../../../shared/src/types';
 
 // Mock @auth/express
 jest.mock('@auth/express', () => ({
@@ -34,7 +35,7 @@ jest.mock('jsonwebtoken', () => ({
 }));
 
 describe('Auth.js Authentication Middleware', () => {
-  let mockReq: Partial<Request>;
+  let mockReq: Partial<Request> & { user?: UserType };
   let mockRes: Partial<Response>;
   let mockNext: NextFunction;
 

@@ -3,9 +3,11 @@ import { AppError } from './error-handler';
 import { ProjectService } from '../services/project.service';
 import { Project } from '../models/project.model';
 import { Role } from '../models/role.model';
+import { logger } from '../utils/logger';
 import type { UserRole, User } from '../../../shared/src/types';
 
 const HTTP_FORBIDDEN = 403;
+const HTTP_NOT_FOUND = 404;
 
 /**
  * Require user to have one of the specified roles
@@ -68,10 +70,29 @@ export const requireProjectAccess =
 
     // Attach project to request
     const project = await Project.findById(projectId);
-    if (project !== null) {
-      // eslint-disable-next-line no-param-reassign -- Express middleware pattern requires mutating req
-      req.project = project;
+    if (project === null) {
+      logger.warn(
+        {
+          projectId,
+          userId: req.user.id,
+          userEmail: req.user.email,
+          path: req.path,
+          method: req.method,
+        },
+        'Project not found after access validation'
+      );
+      next(
+        new AppError(
+          'PROJECT_NOT_FOUND',
+          'Project not found',
+          HTTP_NOT_FOUND
+        )
+      );
+      return;
     }
+
+    // eslint-disable-next-line no-param-reassign -- Express middleware pattern requires mutating req
+    req.project = project;
 
     next();
   };
@@ -108,10 +129,29 @@ export const requireProjectRole =
 
     // Attach project to request
     const project = await Project.findById(projectId);
-    if (project !== null) {
-      // eslint-disable-next-line no-param-reassign -- Express middleware pattern requires mutating req
-      req.project = project;
+    if (project === null) {
+      logger.warn(
+        {
+          projectId,
+          userId: req.user.id,
+          userEmail: req.user.email,
+          path: req.path,
+          method: req.method,
+        },
+        'Project not found after role validation'
+      );
+      next(
+        new AppError(
+          'PROJECT_NOT_FOUND',
+          'Project not found',
+          HTTP_NOT_FOUND
+        )
+      );
+      return;
     }
+
+    // eslint-disable-next-line no-param-reassign -- Express middleware pattern requires mutating req
+    req.project = project;
 
     next();
   };

@@ -58,16 +58,20 @@ export class AuthService {
     req: Request
   ): Promise<{ id: string; email: string; name: string; roles?: string[] } | null> {
     const session = await this.getSession(req);
-    if (
-      session !== null &&
-      session !== undefined &&
-      'user' in session &&
-      session.user !== null &&
-      session.user !== undefined
-    ) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Auth.js session user type
-      return session.user as { id: string; email: string; name: string; roles?: string[] };
+    if (session === null || typeof session !== 'object') {
+      return null;
     }
-    return null;
+
+    if (typeof session !== 'object' || !('user' in session)) {
+      return null;
+    }
+
+    const { user } = session as { user?: unknown };
+    if (user === null || user === undefined) {
+      return null;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Auth.js session user type
+    return user as { id: string; email: string; name: string; roles?: string[] };
   }
 }

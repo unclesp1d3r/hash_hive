@@ -8,8 +8,8 @@ import { z } from 'zod';
 import { signIn } from '../../lib/auth';
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
+  email: z.string().email({ message: 'Invalid email address' }),
+  password: z.string().min(1, { message: 'Password is required' }),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;

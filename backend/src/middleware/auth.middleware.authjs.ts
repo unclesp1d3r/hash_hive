@@ -176,12 +176,14 @@ export const authenticateJWT = async (
 async function trySessionAuthOptional(req: Request, res: Response): Promise<boolean> {
   try {
     const session = await getSession(req, authConfig);
-    if (!session?.user) {
+    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain, @typescript-eslint/no-unnecessary-condition -- Explicit null checks for type safety
+    if (session === null || session === undefined || session.user === null || session.user === undefined) {
       return false;
     }
 
     const { user: sessionUser } = session;
     const user = await UserModel.findById(sessionUser.id);
+    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- Explicit null check required
     if (user === null || user.status !== 'active') {
       return false;
     }
@@ -202,7 +204,8 @@ async function trySessionAuthOptional(req: Request, res: Response): Promise<bool
  */
 async function tryJWTAuthOptional(req: Request): Promise<boolean> {
   try {
-    const { authorization: authHeader } = req.headers;
+    // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- Direct property access is clearer here
+    const authHeader = req.headers.authorization;
     if (typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
       return false;
     }
@@ -212,6 +215,7 @@ async function tryJWTAuthOptional(req: Request): Promise<boolean> {
     const payload = jwt.verify(token, config.auth.jwtSecret) as AuthTokenPayload;
     const { userId } = payload;
     const user = await UserModel.findById(userId);
+    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain -- Explicit null check required by linter
     if (user === null || user.status !== 'active') {
       return false;
     }

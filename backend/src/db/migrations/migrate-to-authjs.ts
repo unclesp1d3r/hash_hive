@@ -30,6 +30,7 @@ export async function migrateToAuthJS(): Promise<void> {
     // Check if migration has already been run
     // Auth.js adapter creates its own collections (users, accounts, sessions, verification_tokens)
     // We check if auth.users collection exists and has the expected schema
+    // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- db is a getter property, not a regular property
     const db = mongoose.connection.db;
     if (db === undefined) {
       throw new Error('Database connection not available');
@@ -48,7 +49,8 @@ export async function migrateToAuthJS(): Promise<void> {
     // Since we're not in production, this is primarily for documentation
     const legacyUsers = await User.find({}).session(session);
 
-    if (legacyUsers.length === 0) {
+    const EMPTY_ARRAY_LENGTH = 0;
+    if (legacyUsers.length === EMPTY_ARRAY_LENGTH) {
       logger.info('No existing users to migrate');
       await session.commitTransaction();
       return;
@@ -97,6 +99,7 @@ export async function migrateToAuthJS(): Promise<void> {
  */
 export async function validateMigration(): Promise<boolean> {
   try {
+    // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- db is a getter property, not a regular property
     const db = mongoose.connection.db;
     if (db === undefined) {
       logger.error('Database connection not available');
@@ -122,7 +125,7 @@ export async function validateMigration(): Promise<boolean> {
 
     logger.info('Migration validation passed');
     return true;
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error({ error }, 'Migration validation failed');
     return false;
   }
@@ -130,20 +133,22 @@ export async function validateMigration(): Promise<boolean> {
 
 // Run migration if this file is executed directly
 if (require.main === module) {
+  const EXIT_SUCCESS = 0;
+  const EXIT_FAILURE = 1;
   migrateToAuthJS()
-    .then(() => validateMigration())
+    .then(async () => await validateMigration())
     .then((isValid) => {
       if (isValid) {
         logger.info('Migration and validation completed');
-        process.exit(0);
+        process.exit(EXIT_SUCCESS);
       } else {
         logger.error('Migration validation failed');
-        process.exit(1);
+        process.exit(EXIT_FAILURE);
       }
     })
-    .catch((error) => {
+    .catch((error: unknown) => {
       logger.error({ error }, 'Migration failed');
-      process.exit(1);
+      process.exit(EXIT_FAILURE);
     });
 }
 

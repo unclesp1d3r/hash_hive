@@ -301,7 +301,7 @@ router.post('/projects/:projectId/campaigns',
 Authentication settings are configured via environment variables:
 
 - `AUTH_SECRET`: Secret key for Auth.js (required, minimum 32 characters)
-- `AUTH_URL`: Base URL for Auth.js callbacks (e.g., 'http://localhost:3001')
+- `AUTH_URL`: Base URL for Auth.js callbacks (e.g., '<http://localhost:3001>')
 - `JWT_SECRET`: Secret key for JWT signing (minimum 32 characters, for Agent API)
 - `JWT_EXPIRES_IN`: Token expiration (e.g., '7d', '24h', '15m')
 - `SESSION_SECRET`: Secret key for session signing (minimum 32 characters, legacy)

@@ -54,15 +54,20 @@ describe('Auth.js Configuration', () => {
         name: 'Test User',
       };
 
-      if (authConfig.callbacks?.session) {
-        const result = await authConfig.callbacks.session({ session, user } as never);
-        if (result.user) {
-          expect(result.user.roles).toContain('admin');
-          expect(result.user.roles).toContain('operator');
-        }
-        expect(ProjectService.getUserProjects).toHaveBeenCalledWith('user-id');
-        expect(ProjectService.getUserRolesInProject).toHaveBeenCalledTimes(2);
+      expect(authConfig.callbacks?.session).toBeDefined();
+      if (!authConfig.callbacks?.session) {
+        throw new Error('Session callback is not defined');
       }
+      const sessionCallback = authConfig.callbacks.session;
+      const result = await sessionCallback({ session, user } as never);
+      if (result.user) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access -- roles is dynamically added to session user
+        expect((result.user as any).roles).toContain('admin');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access -- roles is dynamically added to session user
+        expect((result.user as any).roles).toContain('operator');
+      }
+      expect(ProjectService.getUserProjects).toHaveBeenCalledWith('user-id');
+      expect(ProjectService.getUserRolesInProject).toHaveBeenCalledTimes(2);
     });
 
     it('should handle errors in role aggregation gracefully', async () => {
@@ -85,7 +90,8 @@ describe('Auth.js Configuration', () => {
       if (authConfig.callbacks?.session) {
         const result = await authConfig.callbacks.session({ session, user } as never);
         if (result.user) {
-          expect(result.user.roles).toEqual([]);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access -- roles is dynamically added to session user
+          expect((result.user as any).roles).toEqual([]);
         }
       }
     });

@@ -6,7 +6,7 @@ import { SessionProvider, useSession, signIn, signOut } from 'next-auth/react';
  * Frontend Auth.js configuration for Next.js
  * Provides SessionProvider, useSession hook, and signIn/signOut functions
  * API URL points to backend /auth/* endpoint (Auth.js Express endpoint)
- * 
+ *
  * For next-auth v5, the basePath configuration is handled via NEXTAUTH_URL
  * and the provider configuration in the SessionProvider component.
  */
@@ -26,7 +26,7 @@ export function getAuthApiUrl(): string {
 /**
  * NextAuth v5 configuration for frontend
  * Points to backend Auth.js Express endpoint
- * 
+ *
  * Note: In next-auth v5, configuration is primarily done via environment variables
  * and the SessionProvider component props. The basePath is determined by the
  * backend Auth.js ExpressAuth mount point (/auth).

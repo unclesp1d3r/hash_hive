@@ -18,17 +18,17 @@ router.get('/me', async (req, res, next) => {
   try {
     const session = await getSession(req, authConfig);
 
-    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain, @typescript-eslint/no-unnecessary-condition -- Type checking for session and user
     if (
       session === null ||
-      session === undefined ||
+      typeof session !== 'object' ||
+      !('user' in session) ||
       session.user === null ||
       session.user === undefined
     ) {
       throw new AppError('AUTH_SESSION_INVALID', 'User not found in session', HTTP_UNAUTHORIZED);
     }
 
-    const { user: sessionUser } = session;
+    const { user: sessionUser } = session as { user: { id?: unknown } };
     const { id: userId } = sessionUser;
     if (typeof userId !== 'string') {
       throw new AppError('AUTH_SESSION_INVALID', 'Invalid user ID in session', HTTP_UNAUTHORIZED);

@@ -389,7 +389,6 @@ app.use('/health', healthRouter);
 // Must be mounted before other routes to handle Auth.js endpoints
 // ExpressAuth handles CSRF protection internally, so custom CSRF middleware is not needed
 // Note: Express automatically matches /auth/* when mounted at /auth
-// eslint-disable-next-line @typescript-eslint/no-unsafe-call -- ExpressAuth is a function that returns middleware
 app.use('/auth', ExpressAuth(authConfig));
 
 // API routes
