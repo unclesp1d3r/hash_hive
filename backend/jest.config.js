@@ -27,6 +27,7 @@ module.exports = {
     '!src/**/*.spec.ts',
     '!src/index.ts',
     '!src/examples/**/*.ts',
+    '!src/auth.sandbox.ts', // Sandbox file, not production code
   ],
   coverageThreshold: {
     global: {

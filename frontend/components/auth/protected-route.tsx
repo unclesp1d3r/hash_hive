@@ -15,6 +15,21 @@ interface ProtectedRouteProps {
  * Redirects to login if unauthenticated
  * Optionally checks for required role
  */
+function getUserRoles(session: ReturnType<typeof useSession>['data']): string[] {
+  const user = session?.user;
+  if (user === null || user === undefined) {
+    return [];
+  }
+  return (user as { roles?: string[] }).roles ?? [];
+}
+
+function checkRoleAccess(userRoles: string[], requiredRole: string | undefined): boolean {
+  if (requiredRole === null || requiredRole === undefined || requiredRole === '') {
+    return true;
+  }
+  return userRoles.includes(requiredRole);
+}
+
 export function ProtectedRoute({
   children,
   requiredRole,
@@ -29,11 +44,10 @@ export function ProtectedRoute({
       return;
     }
 
-    if (status === 'authenticated' && requiredRole) {
-      const userRoles = (session?.user as { roles?: string[] })?.roles ?? [];
-      if (!userRoles.includes(requiredRole)) {
+    if (status === 'authenticated') {
+      const userRoles = getUserRoles(session);
+      if (!checkRoleAccess(userRoles, requiredRole)) {
         router.push('/unauthorized');
-        return;
       }
     }
   }, [status, session, requiredRole, router, redirectTo]);
@@ -56,9 +70,9 @@ export function ProtectedRoute({
   }
 
   // Check role if required
-  if (requiredRole && status === 'authenticated') {
-    const userRoles = (session?.user as { roles?: string[] })?.roles ?? [];
-    if (!userRoles.includes(requiredRole)) {
+  if (status === 'authenticated') {
+    const userRoles = getUserRoles(session);
+    if (!checkRoleAccess(userRoles, requiredRole)) {
       return null; // Redirect will happen in useEffect
     }
   }

@@ -7,9 +7,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { signIn } from '../../lib/auth';
 
+const MIN_PASSWORD_LENGTH = 1;
+
 const loginSchema = z.object({
-  email: z.string().email({ message: 'Invalid email address' }),
-  password: z.string().min(1, { message: 'Password is required' }),
+  email: z.string().email(),
+  password: z.string().min(MIN_PASSWORD_LENGTH, { message: 'Password is required' }),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -42,6 +44,7 @@ export function LoginForm(): React.ReactElement {
         redirect: false,
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- signIn result may have error property
       if (result?.error) {
         setError('Invalid email or password');
         setIsLoading(false);
@@ -58,8 +61,8 @@ export function LoginForm(): React.ReactElement {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {error && (
+    <form onSubmit={(e) => { void handleSubmit(onSubmit)(e); }} className="space-y-4">
+      {error !== null && error !== '' && (
         <div className="rounded-md bg-red-50 p-4 text-sm text-red-800" role="alert">
           {error}
         </div>
@@ -76,6 +79,7 @@ export function LoginForm(): React.ReactElement {
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
           disabled={isLoading}
         />
+        {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- errors.email may be undefined */}
         {errors.email && (
           <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
         )}
@@ -92,6 +96,7 @@ export function LoginForm(): React.ReactElement {
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
           disabled={isLoading}
         />
+        {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- errors.password may be undefined */}
         {errors.password && (
           <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
         )}

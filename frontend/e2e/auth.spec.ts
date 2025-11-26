@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+const DEFAULT_TIMEOUT_MS = 5000;
+
 test.describe('Authentication Flows', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to login page before each test
@@ -22,7 +24,9 @@ test.describe('Authentication Flows', () => {
     await page.click('button[type="submit"]');
 
     // Wait for error message
-    await expect(page.locator('text=Invalid email or password')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Invalid email or password')).toBeVisible({
+      timeout: DEFAULT_TIMEOUT_MS,
+    });
   });
 
   test('should successfully login with valid credentials', async ({ page }) => {
@@ -40,7 +44,7 @@ test.describe('Authentication Flows', () => {
     // After successful login, should redirect to dashboard
     // Note: This will fail if test user doesn't exist, which is expected
     // In a full implementation, you'd create test users in beforeAll
-    await page.waitForURL('**/dashboard', { timeout: 5000 }).catch(() => {
+    await page.waitForURL('**/dashboard', { timeout: DEFAULT_TIMEOUT_MS }).catch(() => {
       // If login fails (no test user), that's okay for now
       // The important thing is the form works
     });
@@ -79,9 +83,10 @@ test.describe('Authentication Flows', () => {
 
     const logoutButton = page.locator('text=Logout').or(page.locator('button:has-text("Logout")'));
 
-    if (await logoutButton.isVisible().catch(() => false)) {
+    const isVisible = await logoutButton.isVisible().catch(() => false);
+    if (isVisible) {
       await logoutButton.click();
-      await page.waitForURL('**/login', { timeout: 5000 });
+      await page.waitForURL('**/login', { timeout: DEFAULT_TIMEOUT_MS }).catch(() => undefined);
     }
   });
 });

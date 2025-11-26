@@ -14,6 +14,7 @@ const MAX_RETRIES = 2;
 const MIN_RETRIES = 1;
 const CI_WORKERS = 1;
 const DEFAULT_WORKERS = 1;
+const TEST_TIMEOUT_MS = 30000;
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -26,7 +27,7 @@ const config = defineConfig({
   retries: isCI ? MAX_RETRIES : MIN_RETRIES,
   workers: isCI ? CI_WORKERS : DEFAULT_WORKERS,
   // 30 second timeout per test. Increase if tests legitimately need more time.
-  timeout: 30000,
+  timeout: TEST_TIMEOUT_MS,
   reporter: 'html',
   use: {
     baseURL: 'http://localhost:3000',

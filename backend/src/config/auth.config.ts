@@ -116,7 +116,9 @@ export const authConfig: AuthConfig = {
         const { user: sessionUser } = session;
         const { id, email, name } = user;
         sessionUser.id = id;
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- MongoDB adapter may return undefined even though model requires these fields
         sessionUser.email = email ?? null;
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- MongoDB adapter may return undefined even though model requires these fields
         sessionUser.name = name ?? null;
         // Aggregate roles from all projects
         try {
