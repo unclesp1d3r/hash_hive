@@ -18,17 +18,15 @@ router.get('/me', async (req, res, next) => {
   try {
     const session = await getSession(req, authConfig);
 
-    if (
-      session === null ||
-      typeof session !== 'object' ||
-      !('user' in session) ||
-      session.user === null ||
-      session.user === undefined
-    ) {
+    if (session === null || typeof session !== 'object') {
       throw new AppError('AUTH_SESSION_INVALID', 'User not found in session', HTTP_UNAUTHORIZED);
     }
 
-    const { user: sessionUser } = session as { user: { id?: unknown } };
+    const sessionWithUser = session as { user?: { id?: unknown } };
+    const { user: sessionUser } = sessionWithUser;
+    if (sessionUser === undefined) {
+      throw new AppError('AUTH_SESSION_INVALID', 'User not found in session', HTTP_UNAUTHORIZED);
+    }
     const { id: userId } = sessionUser;
     if (typeof userId !== 'string') {
       throw new AppError('AUTH_SESSION_INVALID', 'Invalid user ID in session', HTTP_UNAUTHORIZED);

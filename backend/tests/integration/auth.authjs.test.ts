@@ -273,7 +273,7 @@ describe('Auth.js Authentication Integration Tests', () => {
       expect(response.status).toBe(200);
 
       // Verify password_requires_upgrade flag was set
-      const updatedUser = await User.findById(user._id);
+      const updatedUser = await User.findById(user._id).select('+password_requires_upgrade');
       expect(updatedUser?.password_requires_upgrade).toBe(true);
     });
 
@@ -296,7 +296,7 @@ describe('Auth.js Authentication Integration Tests', () => {
       expect(response.status).toBe(200);
 
       // Verify password_requires_upgrade flag was not set
-      const updatedUser = await User.findById(user._id);
+      const updatedUser = await User.findById(user._id).select('+password_requires_upgrade');
       expect(updatedUser?.password_requires_upgrade).toBe(false);
     });
   });

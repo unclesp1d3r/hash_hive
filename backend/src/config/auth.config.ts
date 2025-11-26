@@ -34,6 +34,7 @@ async function aggregateUserRoles(userId: string): Promise<string[]> {
 export const authConfig: AuthConfig = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-unnecessary-type-assertion -- MongoDB adapter requires type casting due to version mismatch
   adapter: MongoDBAdapter(mongoose.connection.getClient() as any) as Adapter,
+  basePath: '/auth',
   providers: [
     Credentials({
       name: 'Credentials',
@@ -115,8 +116,8 @@ export const authConfig: AuthConfig = {
         const { user: sessionUser } = session;
         const { id, email, name } = user;
         sessionUser.id = id;
-        sessionUser.email = email;
-        sessionUser.name = name;
+        sessionUser.email = email ?? null;
+        sessionUser.name = name ?? null;
         // Aggregate roles from all projects
         try {
           const roles = await aggregateUserRoles(id);

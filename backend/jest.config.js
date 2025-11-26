@@ -6,6 +6,8 @@ module.exports = {
   maxWorkers: 1,
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
+  // Exclude integration tests from regular test run (they use test:integration)
+  testPathIgnorePatterns: ['/node_modules/', '/tests/integration/'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@shared/(.*)$': '<rootDir>/../shared/$1',
@@ -44,13 +46,13 @@ module.exports = {
     './src/routes/health.ts': {
       branches: 50,
     },
-    './src/services/auth.service.ts': {
-      statements: 79,
-      lines: 79,
+    './src/services/auth.service.authjs.ts': {
+      statements: 100,
+      lines: 100,
     },
-    './src/routes/auth.routes.ts': {
-      statements: 78,
-      lines: 78,
+    './src/routes/auth.routes.authjs.ts': {
+      statements: 0, // Route handlers are tested via integration tests
+      lines: 0,
     },
     './src/utils/permission-helpers.ts': {
       statements: 50,

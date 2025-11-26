@@ -21,6 +21,14 @@ module.exports = {
   coverageReporters: ['text', 'lcov', 'html'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^@shared/(.*)$': '<rootDir>/../shared/$1',
+    // Use integration mock for @auth/express in integration tests
+    '^@auth/express$': '<rootDir>/tests/mocks/@auth/express.integration.ts',
+    // Mock other Auth.js modules for integration tests (they use ESM)
+    '^@auth/mongodb-adapter$': '<rootDir>/tests/mocks/@auth/mongodb-adapter.ts',
+    '^@auth/core$': '<rootDir>/tests/mocks/@auth/core.ts',
+    '^@auth/core/adapters$': '<rootDir>/tests/mocks/@auth/core/adapters.ts',
+    '^@auth/core/providers/credentials$': '<rootDir>/tests/mocks/@auth/core/providers/credentials.ts',
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts', '<rootDir>/tests/jest.integration.setup.ts'],
   testTimeout: 60000, // Integration tests may take longer

@@ -385,10 +385,7 @@ app.set('trust proxy', true);
 app.use('/health', healthRouter);
 
 // Mount Auth.js routes at /auth
-// This handles /auth/signin, /auth/signout, /auth/callback, etc.
-// Must be mounted before other routes to handle Auth.js endpoints
-// ExpressAuth handles CSRF protection internally, so custom CSRF middleware is not needed
-// Note: Express automatically matches /auth/* when mounted at /auth
+// ExpressAuth with basePath: '/auth' should be mounted at /auth (matches sandbox pattern)
 app.use('/auth', ExpressAuth(authConfig));
 
 // API routes
