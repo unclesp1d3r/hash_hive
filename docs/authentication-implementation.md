@@ -1,15 +1,15 @@
 # Authentication and Authorization Implementation
 
-This document describes the authentication and authorization system implemented for HashHive, following the MERN migration specification.
+This document describes the authentication and authorization system implemented for HashHive using **Auth.js v5** with **@auth/express** for Express backend integration, following the MERN migration specification.
 
 ## Overview
 
 The authentication system implements a dual authentication approach:
 
 - **JWT tokens** for Agent API (stateless, token-based authentication)
-- **Session-based authentication** for Web API (stateful, cookie-based authentication)
+- **Session-based authentication** for Web API (stateful, cookie-based authentication using Auth.js)
 
-Both authentication methods are backed by the same user model and service layer, ensuring consistency across API surfaces.
+Both authentication methods are backed by the same user model and service layer, ensuring consistency across API surfaces. The system uses **Auth.js v5** with the **@auth/express** package for Express backend integration and **@auth/mongodb-adapter** for session storage.
 
 ## Architecture
 
@@ -25,13 +25,14 @@ Both authentication methods are backed by the same user model and service layer,
 6. HttpOnly cookie is set with session ID
 7. User object and token are returned to client
 
-#### Protected Request Flow
+#### Protected Request Flow (Auth.js)
 
-1. Client includes session cookie in request
-2. `authenticateSession` middleware validates session from Redis
-3. User is fetched from MongoDB and roles are aggregated from all projects
-4. User object with roles is attached to `req.user`
-5. Request proceeds to route handler with authenticated user context
+1. Client includes Auth.js session cookie in request
+2. `authenticateSession` middleware uses `getSession()` from `@auth/express` to validate session
+3. Session is validated against MongoDB (via Auth.js adapter)
+4. User is fetched from MongoDB and roles are retrieved from session (already aggregated in callback)
+5. User object with roles is attached to `req.user`
+6. Request proceeds to route handler with authenticated user context
 
 #### Agent API Authentication
 
@@ -87,14 +88,14 @@ Roles are assigned at the project level through the `ProjectUser` junction model
 
 ### Services
 
-#### AuthService (`backend/src/services/auth.service.ts`)
+#### AuthService (`backend/src/services/auth.service.authjs.ts`)
 
-- `login(email, password)`: Validates credentials, aggregates user roles from all projects, and returns user + token
-- `generateToken(userId, roles)`: Creates JWT with user ID and roles
-- `validateToken(token)`: Verifies and decodes JWT token
-- `createSession(userId)`: Creates session in MongoDB and Redis
-- `validateSession(sessionId)`: Validates session from Redis and MongoDB
-- `logout(sessionId)`: Removes session from both stores
+- `login(req, email, password)`: Uses Auth.js `signIn()` to authenticate user
+- `logout(req)`: Uses Auth.js `signOut()` to clear session
+- `getSession(req)`: Uses Auth.js `getSession()` to retrieve current session
+- `getUser(req)`: Gets user from session
+
+**Note**: Role aggregation is handled in Auth.js callbacks (see `backend/src/config/auth.config.ts`), not in the service layer.
 
 #### ProjectService (`backend/src/services/project.service.ts`)
 
@@ -105,15 +106,16 @@ Roles are assigned at the project level through the `ProjectUser` junction model
 - `validateProjectAccess(userId, projectId, requiredRole?)`: Checks project access
 - `getUserRolesInProject(userId, projectId)`: Returns user's roles in project
 
-#### Role Aggregator (`backend/src/utils/role-aggregator.ts`)
+#### Role Aggregation (Auth.js Callbacks)
 
-- `aggregateUserRoles(userId)`: Aggregates all roles for a user across all projects
+- Role aggregation is handled in Auth.js `session` and `jwt` callbacks (see `backend/src/config/auth.config.ts`)
+- `aggregateUserRoles(userId)` function aggregates all roles for a user across all projects
 - Returns a de-duplicated array of role strings
-- Used by both `AuthService.login()` and `/auth/refresh` route to ensure consistent role sets
+- Roles are automatically attached to session objects via callbacks
 
 ### Middleware
 
-#### Authentication Middleware (`backend/src/middleware/auth.middleware.ts`)
+#### Authentication Middleware (`backend/src/middleware/auth.middleware.authjs.ts`)
 
 **authenticateJWT**
 
@@ -126,10 +128,11 @@ Roles are assigned at the project level through the `ProjectUser` junction model
 
 **authenticateSession**
 
-- Extracts session ID from `sessionId` cookie
-- Validates session using `AuthService.validateSession()`
-- Aggregates user roles from all projects using `aggregateUserRoles()` helper
-- Attaches user with roles to `req.user`
+- Uses `getSession()` from `@auth/express` to validate Auth.js session
+- Validates session against MongoDB (via Auth.js adapter)
+- Retrieves user from database and validates status
+- Uses roles from session (already aggregated in Auth.js callback)
+- Attaches user with roles to `req.user` and stores session in `res.locals.session`
 - Returns 401 with `AUTH_SESSION_INVALID` on failure
 
 **optionalAuth**
@@ -137,7 +140,7 @@ Roles are assigned at the project level through the `ProjectUser` junction model
 - Attempts authentication but doesn't fail if not authenticated
 - Useful for public endpoints that show different content when authenticated
 
-#### Authorization Middleware (`backend/src/middleware/authz.middleware.ts`)
+#### Authorization Middleware (`backend/src/middleware/authz.middleware.authjs.ts`)
 
 **requireRole(...roles)**
 
@@ -177,33 +180,19 @@ Utility functions for common permission checks:
 
 ### Routes
 
-#### Auth Routes (`backend/src/routes/auth.routes.ts`)
+#### Auth Routes (Auth.js)
 
-**POST /api/v1/web/auth/login**
+Auth.js core routes are mounted directly in `backend/src/index.ts` at `/auth/*` using `ExpressAuth(authConfig)`:
 
-- Validates email and password with Zod schema
-- Calls `AuthService.login()`
-- Sets HttpOnly session cookie
-- Returns user object and JWT token
+- `POST /auth/signin/credentials` - Login with email and password
+- `POST /auth/signout` - Logout and clear session
+- `GET /auth/callback` - OAuth callback (if OAuth providers are added)
 
-**POST /api/v1/web/auth/logout**
+**GET /api/v1/web/auth/me** (`backend/src/routes/auth.routes.authjs.ts`)
 
-- Requires `authenticateSession` middleware
-- Calls `AuthService.logout()` to remove session
-- Clears session cookie
-- Returns success message
-
-**GET /api/v1/web/auth/me**
-
-- Requires `authenticateSession` middleware
+- Uses `getSession()` from `@auth/express` to get current session
 - Returns current user with projects and roles
 - Uses `ProjectService.getUserProjects()` to fetch user's projects
-
-**POST /api/v1/web/auth/refresh**
-
-- Requires `authenticateSession` middleware
-- Generates new JWT token with current user's roles
-- Returns new token
 
 ## Usage Examples
 
@@ -285,13 +274,14 @@ router.post('/projects/:projectId/campaigns',
 - Passwords are never stored in plain text
 - Password hash field is excluded from queries by default (`select: false`)
 
-### Session Management
+### Session Management (Auth.js)
 
-- Sessions are stored in both MongoDB (persistence) and Redis (fast lookups)
+- Sessions are stored in MongoDB via `@auth/mongodb-adapter`
+- Auth.js manages session lifecycle automatically
 - HttpOnly cookies prevent XSS attacks
 - Secure flag is set in production to enforce HTTPS
 - SameSite: 'lax' prevents CSRF attacks while allowing navigation
-- Sessions expire after 7 days (configurable via `SESSION_MAX_AGE`)
+- Sessions expire after 7 days (configurable via `SESSION_MAX_AGE` or `AUTH_MAX_AGE`)
 
 ### Token Security
 
@@ -310,10 +300,14 @@ router.post('/projects/:projectId/campaigns',
 
 Authentication settings are configured via environment variables:
 
-- `JWT_SECRET`: Secret key for JWT signing (minimum 32 characters)
+- `AUTH_SECRET`: Secret key for Auth.js (required, minimum 32 characters)
+- `AUTH_URL`: Base URL for Auth.js callbacks (e.g., '<http://localhost:3001>')
+- `JWT_SECRET`: Secret key for JWT signing (minimum 32 characters, for Agent API)
 - `JWT_EXPIRES_IN`: Token expiration (e.g., '7d', '24h', '15m')
-- `SESSION_SECRET`: Secret key for session signing (minimum 32 characters)
+- `SESSION_SECRET`: Secret key for session signing (minimum 32 characters, legacy)
 - `SESSION_MAX_AGE`: Session expiration in milliseconds (default: 7 days)
+
+Auth.js configuration is defined in `backend/src/config/auth.config.ts` using `@auth/express` and `@auth/mongodb-adapter`.
 
 See `backend/src/config/index.ts` for full configuration options.
 

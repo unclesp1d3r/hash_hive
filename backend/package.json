@@ -17,8 +17,10 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.937.0",
-    "@aws-sdk/s3-request-presigner": "^3.937.0",
+    "@auth/express": "^0.12.1",
+    "@auth/mongodb-adapter": "^3.11.1",
+    "@aws-sdk/client-s3": "^3.940.0",
+    "@aws-sdk/s3-request-presigner": "^3.940.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.64.1",
     "cookie-parser": "^1.4.7",
@@ -32,7 +34,7 @@
     "mongoose": "^9.0.0",
     "pino": "^10.1.0",
     "pino-http": "^11.0.0",
-    "zod": "^4.1.12",
+    "zod": "^4.1.13",
     "express-rate-limit": "^8.2.1"
   },
   "devDependencies": {
@@ -44,7 +46,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.5",
     "@types/jest": "^30.0.0",
-    "@types/jsonwebtoken": "^9.0.5",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.10.1",
     "@types/supertest": "^6.0.3",
     "aws-sdk-client-mock": "^4.1.0",

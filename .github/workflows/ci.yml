@@ -191,6 +191,10 @@ jobs:
       # For PRs: Only runs targets for affected projects
       # For pushes: Runs all targets to ensure full coverage
       - name: Run CI check (NX-powered)
+        env:
+          # Auth.js required environment variables for tests
+          AUTH_SECRET: test-secret-key-minimum-32-characters-long-for-ci
+          AUTH_URL: http://localhost:3001
         run: |
           if [ "${{ github.event_name }}" == "pull_request" ] && [ "${{ inputs.force_run_all }}" != "true" ]; then
             # PR workflow: Use affected detection with PR base SHA

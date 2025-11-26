@@ -9,7 +9,16 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@shared/(.*)$': '<rootDir>/../shared/$1',
+    // Mock Auth.js modules for Jest (they use ESM which Jest doesn't handle well)
+    '^@auth/express$': '<rootDir>/tests/mocks/@auth/express.ts',
+    '^@auth/mongodb-adapter$': '<rootDir>/tests/mocks/@auth/mongodb-adapter.ts',
+    '^@auth/core$': '<rootDir>/tests/mocks/@auth/core.ts',
+    '^@auth/core/adapters$': '<rootDir>/tests/mocks/@auth/core/adapters.ts',
+    '^@auth/core/providers/credentials$': '<rootDir>/tests/mocks/@auth/core/providers/credentials.ts',
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(@auth)/)',
+  ],
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',

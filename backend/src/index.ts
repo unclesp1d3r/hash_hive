@@ -15,6 +15,8 @@ import { securityHeadersMiddleware } from './middleware/security-headers';
 import { errorHandler } from './middleware/error-handler';
 import { healthRouter } from './routes/health';
 import { webRouter } from './routes';
+import { ExpressAuth } from '@auth/express';
+import { authConfig } from './config/auth.config';
 
 // HTTP status / exit code constants to avoid magic numbers
 const HTTP_STATUS_SERVER_ERROR_THRESHOLD = 500;
@@ -350,6 +352,12 @@ app.use((req, res, next) => {
     return;
   }
 
+  // Skip CSRF protection for Auth.js routes - ExpressAuth handles CSRF internally
+  if (req.path.startsWith('/auth/')) {
+    next();
+    return;
+  }
+
   // Health check endpoints: generate CSRF tokens for GET/HEAD/OPTIONS, skip CSRF for other methods
   if (req.path.startsWith('/health')) {
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
@@ -369,8 +377,20 @@ app.use((req, res, next) => {
   validateCsrfToken(req, res, next);
 });
 
+// Set trust proxy for HTTPS detection behind proxies (required for Auth.js)
+// Must be set BEFORE mounting ExpressAuth middleware
+app.set('trust proxy', true);
+
 // Health check endpoint
 app.use('/health', healthRouter);
+
+// Mount Auth.js routes at /auth
+// This handles /auth/signin, /auth/signout, /auth/callback, etc.
+// Must be mounted before other routes to handle Auth.js endpoints
+// ExpressAuth handles CSRF protection internally, so custom CSRF middleware is not needed
+// Note: Express automatically matches /auth/* when mounted at /auth
+// eslint-disable-next-line @typescript-eslint/no-unsafe-call -- ExpressAuth is a function that returns middleware
+app.use('/auth', ExpressAuth(authConfig));
 
 // API routes
 app.use('/api/v1/web', webRouter);
