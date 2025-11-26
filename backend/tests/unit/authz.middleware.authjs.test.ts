@@ -1,5 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
-import { requireRole, requireProjectAccess, requireProjectRole, hasPermission } from '../../src/middleware/authz.middleware.authjs';
+import {
+  requireRole,
+  requireProjectAccess,
+  requireProjectRole,
+  hasPermission,
+} from '../../src/middleware/authz.middleware.authjs';
 import { ProjectService } from '../../src/services/project.service';
 import { Project } from '../../src/models/project.model';
 import { Role } from '../../src/models/role.model';
@@ -73,7 +78,10 @@ describe('Auth.js Authorization Middleware', () => {
     it('should allow access if user has project access', async () => {
       mockReq.params = { projectId: 'project-id' };
       (ProjectService.validateProjectAccess as jest.Mock).mockResolvedValue(true);
-      (Project.findById as jest.Mock).mockResolvedValue({ _id: 'project-id', name: 'Test Project' });
+      (Project.findById as jest.Mock).mockResolvedValue({
+        _id: 'project-id',
+        name: 'Test Project',
+      });
 
       const middleware = requireProjectAccess('projectId');
       await middleware(mockReq as Request, mockRes as Response, mockNext);
@@ -89,9 +97,9 @@ describe('Auth.js Authorization Middleware', () => {
 
       const middleware = requireProjectAccess('projectId');
 
-      await expect(
-        middleware(mockReq as Request, mockRes as Response, mockNext)
-      ).rejects.toThrow(AppError);
+      await expect(middleware(mockReq as Request, mockRes as Response, mockNext)).rejects.toThrow(
+        AppError
+      );
 
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -101,7 +109,10 @@ describe('Auth.js Authorization Middleware', () => {
     it('should allow access if user has required role in project', async () => {
       mockReq.params = { projectId: 'project-id' };
       (ProjectService.getUserRolesInProject as jest.Mock).mockResolvedValue(['admin']);
-      (Project.findById as jest.Mock).mockResolvedValue({ _id: 'project-id', name: 'Test Project' });
+      (Project.findById as jest.Mock).mockResolvedValue({
+        _id: 'project-id',
+        name: 'Test Project',
+      });
 
       const middleware = requireProjectRole('projectId', 'admin');
       await middleware(mockReq as Request, mockRes as Response, mockNext);
@@ -116,9 +127,9 @@ describe('Auth.js Authorization Middleware', () => {
 
       const middleware = requireProjectRole('projectId', 'admin');
 
-      await expect(
-        middleware(mockReq as Request, mockRes as Response, mockNext)
-      ).rejects.toThrow(AppError);
+      await expect(middleware(mockReq as Request, mockRes as Response, mockNext)).rejects.toThrow(
+        AppError
+      );
 
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -174,4 +185,3 @@ describe('Auth.js Authorization Middleware', () => {
     });
   });
 });
-

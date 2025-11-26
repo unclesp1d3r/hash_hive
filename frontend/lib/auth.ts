@@ -28,4 +28,3 @@ export const nextAuthConfig = {
   baseUrl: API_URL,
   basePath: '/auth',
 };
-

@@ -14,7 +14,10 @@ interface ProtectedRouteProps {
  * Redirects to login if unauthenticated
  * Optionally checks for required role
  */
-export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps): React.ReactElement | null {
+export function ProtectedRoute({
+  children,
+  requiredRole,
+}: ProtectedRouteProps): React.ReactElement | null {
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -51,4 +54,3 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps):
 
   return <>{children}</>;
 }
-

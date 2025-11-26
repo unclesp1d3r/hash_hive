@@ -14,11 +14,10 @@ module.exports = {
     '^@auth/mongodb-adapter$': '<rootDir>/tests/mocks/@auth/mongodb-adapter.ts',
     '^@auth/core$': '<rootDir>/tests/mocks/@auth/core.ts',
     '^@auth/core/adapters$': '<rootDir>/tests/mocks/@auth/core/adapters.ts',
-    '^@auth/core/providers/credentials$': '<rootDir>/tests/mocks/@auth/core/providers/credentials.ts',
+    '^@auth/core/providers/credentials$':
+      '<rootDir>/tests/mocks/@auth/core/providers/credentials.ts',
   },
-  transformIgnorePatterns: [
-    'node_modules/(?!(@auth)/)',
-  ],
+  transformIgnorePatterns: ['node_modules/(?!(@auth)/)'],
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',

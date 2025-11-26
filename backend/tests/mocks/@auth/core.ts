@@ -4,4 +4,3 @@
  */
 export type AuthConfig = Record<string, unknown>;
 export type Adapter = Record<string, unknown>;
-

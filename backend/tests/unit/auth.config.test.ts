@@ -109,4 +109,3 @@ describe('Auth.js Configuration', () => {
     });
   });
 });
-

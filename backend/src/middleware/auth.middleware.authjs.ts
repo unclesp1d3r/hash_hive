@@ -65,7 +65,10 @@ export const authenticateSession = async (
     // eslint-disable-next-line no-param-reassign -- Express middleware pattern
     _res.locals['session'] = session;
 
-    logger.info({ userId: user._id.toString(), requestId: req.id }, 'Session authentication successful');
+    logger.info(
+      { userId: user._id.toString(), requestId: req.id },
+      'Session authentication successful'
+    );
     next();
   } catch (error) {
     if (error instanceof AppError) {
@@ -139,7 +142,10 @@ export const authenticateJWT = async (
     // eslint-disable-next-line no-param-reassign -- Express middleware pattern requires mutating req
     req.user = mapUserToRequestUser(user, payload.roles);
 
-    logger.info({ userId: user._id.toString(), requestId: req.id }, 'JWT authentication successful');
+    logger.info(
+      { userId: user._id.toString(), requestId: req.id },
+      'JWT authentication successful'
+    );
     next();
   } catch (error) {
     if (error instanceof AppError) {
@@ -147,7 +153,11 @@ export const authenticateJWT = async (
     }
 
     if (error instanceof AuthTokenExpiredError) {
-      throw new AppError('AUTH_TOKEN_EXPIRED', 'Authentication token has expired', HTTP_UNAUTHORIZED);
+      throw new AppError(
+        'AUTH_TOKEN_EXPIRED',
+        'Authentication token has expired',
+        HTTP_UNAUTHORIZED
+      );
     }
 
     if (error instanceof AuthTokenInvalidError) {
@@ -163,10 +173,7 @@ export const authenticateJWT = async (
 /**
  * Try to authenticate via session (for optional auth)
  */
-async function trySessionAuthOptional(
-  req: Request,
-  res: Response
-): Promise<boolean> {
+async function trySessionAuthOptional(req: Request, res: Response): Promise<boolean> {
   try {
     const session = await getSession(req, authConfig);
     if (!session?.user) {
@@ -242,8 +249,10 @@ export const optionalAuth = async (
     next();
   } catch (error) {
     // Log authentication errors at debug level and continue without authentication
-    logger.debug({ error, requestId: req.id }, 'Optional auth middleware error, proceeding unauthenticated');
+    logger.debug(
+      { error, requestId: req.id },
+      'Optional auth middleware error, proceeding unauthenticated'
+    );
     next();
   }
 };
-

@@ -96,4 +96,3 @@ export function LoginForm(): React.ReactElement {
     </form>
   );
 }
-

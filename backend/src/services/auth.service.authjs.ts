@@ -17,7 +17,9 @@ export class AuthService {
    * @deprecated Use ExpressAuth routes directly
    */
   static login(_req: Request, _email: string, _password: string): void {
-    logger.warn('AuthService.login is deprecated. Use POST /auth/signin/credentials endpoint instead.');
+    logger.warn(
+      'AuthService.login is deprecated. Use POST /auth/signin/credentials endpoint instead.'
+    );
     throw new Error('Use POST /auth/signin/credentials endpoint for login');
   }
 
@@ -52,13 +54,20 @@ export class AuthService {
   /**
    * Get user from session
    */
-  static async getUser(req: Request): Promise<{ id: string; email: string; name: string; roles?: string[] } | null> {
+  static async getUser(
+    req: Request
+  ): Promise<{ id: string; email: string; name: string; roles?: string[] } | null> {
     const session = await this.getSession(req);
-    if (session !== null && session !== undefined && 'user' in session && session.user !== null && session.user !== undefined) {
+    if (
+      session !== null &&
+      session !== undefined &&
+      'user' in session &&
+      session.user !== null &&
+      session.user !== undefined
+    ) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Auth.js session user type
       return session.user as { id: string; email: string; name: string; roles?: string[] };
     }
     return null;
   }
 }
-

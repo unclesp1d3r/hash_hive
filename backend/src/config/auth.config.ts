@@ -60,7 +60,10 @@ export const authConfig: AuthConfig = {
 
           const isPasswordValid = await user.comparePassword(password);
           if (!isPasswordValid) {
-            logger.warn({ email, userId: user._id.toString() }, 'Login attempt with invalid password');
+            logger.warn(
+              { email, userId: user._id.toString() },
+              'Login attempt with invalid password'
+            );
             return null;
           }
 
@@ -146,4 +149,3 @@ export const authConfig: AuthConfig = {
     },
   },
 };
-

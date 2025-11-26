@@ -17,4 +17,3 @@ declare module 'next-auth' {
     roles?: string[];
   }
 }
-

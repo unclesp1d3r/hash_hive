@@ -16,6 +16,23 @@ jest.mock('../../src/models/user.model', () => ({
   },
 }));
 
+// Mock jsonwebtoken
+jest.mock('jsonwebtoken', () => ({
+  verify: jest.fn(),
+  TokenExpiredError: class TokenExpiredError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = 'TokenExpiredError';
+    }
+  },
+  JsonWebTokenError: class JsonWebTokenError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = 'JsonWebTokenError';
+    }
+  },
+}));
+
 describe('Auth.js Authentication Middleware', () => {
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
@@ -136,7 +153,7 @@ describe('Auth.js Authentication Middleware', () => {
         authorization: `Bearer ${mockToken}`,
       };
 
-      jest.spyOn(jwt, 'verify').mockReturnValue(mockPayload as never);
+      (jwt.verify as jest.Mock).mockReturnValue(mockPayload);
       (User.findById as jest.Mock).mockResolvedValue(mockUser);
 
       await authenticateJWT(mockReq as Request, mockRes as Response, mockNext);
@@ -213,7 +230,9 @@ describe('Auth.js Authentication Middleware', () => {
     });
 
     it('should attach user if valid JWT exists when session is not available', async () => {
-      const { optionalAuth: optionalAuthFn } = await import('../../src/middleware/auth.middleware.authjs');
+      const { optionalAuth: optionalAuthFn } = await import(
+        '../../src/middleware/auth.middleware.authjs'
+      );
       const jwt = await import('jsonwebtoken');
       const mockPayload = {
         userId: 'user-id',
@@ -237,7 +256,7 @@ describe('Auth.js Authentication Middleware', () => {
         authorization: 'Bearer valid-jwt-token',
       };
 
-      jest.spyOn(jwt, 'verify').mockReturnValue(mockPayload as never);
+      (jwt.verify as jest.Mock).mockReturnValue(mockPayload);
       (User.findById as jest.Mock).mockResolvedValue(mockUser);
 
       await optionalAuthFn(mockReq as Request, mockRes as Response, mockNext);
@@ -248,7 +267,9 @@ describe('Auth.js Authentication Middleware', () => {
     });
 
     it('should continue without user if JWT is invalid', async () => {
-      const { optionalAuth: optionalAuthFn } = await import('../../src/middleware/auth.middleware.authjs');
+      const { optionalAuth: optionalAuthFn } = await import(
+        '../../src/middleware/auth.middleware.authjs'
+      );
       const jwt = await import('jsonwebtoken');
 
       (getSession as jest.Mock).mockResolvedValue(null);
@@ -256,7 +277,7 @@ describe('Auth.js Authentication Middleware', () => {
         authorization: 'Bearer invalid-token',
       };
 
-      jest.spyOn(jwt, 'verify').mockImplementation(() => {
+      (jwt.verify as jest.Mock).mockImplementation(() => {
         throw new Error('Invalid token');
       });
 
@@ -267,4 +288,3 @@ describe('Auth.js Authentication Middleware', () => {
     });
   });
 });
-

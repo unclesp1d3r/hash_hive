@@ -8,4 +8,3 @@ export const ExpressAuth = jest.fn(() => (_req: unknown, _res: unknown, next: un
     next();
   }
 });
-

@@ -72,12 +72,10 @@ describe('Auth.js Authentication Integration Tests', () => {
         status: 'active',
       });
 
-      const response = await request(app)
-        .post('/auth/signin/credentials')
-        .send({
-          email: 'test@example.com',
-          password: 'password123',
-        });
+      const response = await request(app).post('/auth/signin/credentials').send({
+        email: 'test@example.com',
+        password: 'password123',
+      });
 
       expect(response.status).toBe(200);
       expect(response.headers['set-cookie']).toBeDefined();
@@ -85,7 +83,9 @@ describe('Auth.js Authentication Integration Tests', () => {
       // Normalize set-cookie header to array
       const cookies = response.headers['set-cookie'];
       const cookieArray = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
-      const sessionCookie = cookieArray.find((cookie: string) => cookie.startsWith('authjs.session-token='));
+      const sessionCookie = cookieArray.find((cookie: string) =>
+        cookie.startsWith('authjs.session-token=')
+      );
       expect(sessionCookie).toBeDefined();
       expect(sessionCookie).toContain('HttpOnly');
     });
@@ -100,12 +100,10 @@ describe('Auth.js Authentication Integration Tests', () => {
         status: 'active',
       });
 
-      const response = await request(app)
-        .post('/auth/signin/credentials')
-        .send({
-          email: 'test@example.com',
-          password: 'wrongpassword',
-        });
+      const response = await request(app).post('/auth/signin/credentials').send({
+        email: 'test@example.com',
+        password: 'wrongpassword',
+      });
 
       expect(response.status).toBe(401);
     });
@@ -137,20 +135,16 @@ describe('Auth.js Authentication Integration Tests', () => {
       });
 
       // Login to get session
-      const loginResponse = await request(app)
-        .post('/auth/signin/credentials')
-        .send({
-          email: 'test@example.com',
-          password: 'password123',
-        });
+      const loginResponse = await request(app).post('/auth/signin/credentials').send({
+        email: 'test@example.com',
+        password: 'password123',
+      });
 
       const cookies = loginResponse.headers['set-cookie'];
       const cookieHeader = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
 
       // Get current user
-      const response = await request(app)
-        .get('/api/v1/web/auth/me')
-        .set('Cookie', cookieHeader);
+      const response = await request(app).get('/api/v1/web/auth/me').set('Cookie', cookieHeader);
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('user');
@@ -181,27 +175,21 @@ describe('Auth.js Authentication Integration Tests', () => {
       });
 
       // Login to get session
-      const loginResponse = await request(app)
-        .post('/auth/signin/credentials')
-        .send({
-          email: 'test@example.com',
-          password: 'password123',
-        });
+      const loginResponse = await request(app).post('/auth/signin/credentials').send({
+        email: 'test@example.com',
+        password: 'password123',
+      });
 
       const cookies = loginResponse.headers['set-cookie'];
       const cookieHeader = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
 
       // Logout
-      const response = await request(app)
-        .post('/auth/signout')
-        .set('Cookie', cookieHeader);
+      const response = await request(app).post('/auth/signout').set('Cookie', cookieHeader);
 
       expect(response.status).toBe(200);
 
       // Verify session is cleared by trying to access /me
-      const meResponse = await request(app)
-        .get('/api/v1/web/auth/me')
-        .set('Cookie', cookieHeader);
+      const meResponse = await request(app).get('/api/v1/web/auth/me').set('Cookie', cookieHeader);
 
       expect(meResponse.status).toBe(401);
     });
@@ -245,20 +233,16 @@ describe('Auth.js Authentication Integration Tests', () => {
       });
 
       // Login to get session
-      const loginResponse = await request(app)
-        .post('/auth/signin/credentials')
-        .send({
-          email: 'test@example.com',
-          password: 'password123',
-        });
+      const loginResponse = await request(app).post('/auth/signin/credentials').send({
+        email: 'test@example.com',
+        password: 'password123',
+      });
 
       const cookies = loginResponse.headers['set-cookie'];
       const cookieHeader = Array.isArray(cookies) ? cookies : cookies ? [cookies] : [];
 
       // Get current user - roles should be aggregated from both projects
-      const response = await request(app)
-        .get('/api/v1/web/auth/me')
-        .set('Cookie', cookieHeader);
+      const response = await request(app).get('/api/v1/web/auth/me').set('Cookie', cookieHeader);
 
       expect(response.status).toBe(200);
       expect(response.body.user.roles).toContain('admin');
@@ -281,12 +265,10 @@ describe('Auth.js Authentication Integration Tests', () => {
         password_requires_upgrade: false,
       });
 
-      const response = await request(app)
-        .post('/auth/signin/credentials')
-        .send({
-          email: 'test@example.com',
-          password: 'weak', // Less than 12 characters
-        });
+      const response = await request(app).post('/auth/signin/credentials').send({
+        email: 'test@example.com',
+        password: 'weak', // Less than 12 characters
+      });
 
       expect(response.status).toBe(200);
 
@@ -306,12 +288,10 @@ describe('Auth.js Authentication Integration Tests', () => {
         password_requires_upgrade: false,
       });
 
-      const response = await request(app)
-        .post('/auth/signin/credentials')
-        .send({
-          email: 'test@example.com',
-          password: 'VeryStrongPassword123!', // 24 characters
-        });
+      const response = await request(app).post('/auth/signin/credentials').send({
+        email: 'test@example.com',
+        password: 'VeryStrongPassword123!', // 24 characters
+      });
 
       expect(response.status).toBe(200);
 
@@ -321,4 +301,3 @@ describe('Auth.js Authentication Integration Tests', () => {
     });
   });
 });
-
