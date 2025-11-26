@@ -17,7 +17,12 @@ The migration replaces the custom authentication implementation with Auth.js v5,
 
 Run the migration script to migrate existing users and sessions to Auth.js schema:
 
-**Note:** Migration script was removed as the system is not in production and there are no existing users to migrate. Auth.js will create users in the correct schema format automatically when new users are created.
+```bash
+# From backend directory
+npx tsx src/db/migrations/migrate-to-authjs.ts
+```
+
+**Note:** The migration script (`backend/src/db/migrations/migrate-to-authjs.ts`) is idempotent and can be run multiple times safely. Since the system is not in production and there are no existing users, Auth.js will create users in the correct schema format automatically when new users are created. The migration script is primarily for documentation and future use.
 
 ### 2. Environment Variables
 
@@ -140,3 +145,4 @@ Roles are automatically attached to session objects, eliminating the need for ma
 - [@auth/mongodb-adapter Documentation](https://authjs.dev/reference/adapter/mongodb)
 - Design document: `.kiro/specs/mern-migration/design.md`
 - Implementation: `backend/src/config/auth.config.ts`
+- Migration script: `backend/src/db/migrations/migrate-to-authjs.ts`
