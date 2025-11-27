@@ -7,6 +7,7 @@ import { connectRedis, disconnectRedis } from '../../src/db/redis';
 import { User } from '../../src/models/user.model';
 import { Project } from '../../src/models/project.model';
 import { ProjectUser } from '../../src/models/project-user.model';
+import { Session } from '../../src/models/session.model';
 
 let mongoContainer: StartedMongoDBContainer;
 let redisContainer: StartedRedisContainer;
@@ -58,6 +59,7 @@ describe('Auth.js Authentication Integration Tests', () => {
     await User.deleteMany({});
     await Project.deleteMany({});
     await ProjectUser.deleteMany({});
+    await Session.deleteMany({});
   });
 
   describe('POST /auth/signin/credentials', () => {
@@ -89,14 +91,18 @@ describe('Auth.js Authentication Integration Tests', () => {
       expect(sessionCookie).toBeDefined();
       expect(sessionCookie).toContain('HttpOnly');
 
-      // Note: Integration tests use mocks that store sessions in-memory, not in the database.
+      // Verify session is stored in the database (integration tests use real Auth.js with Testcontainers)
       // With the real Auth.js MongoDB adapter implementation, only a single session row
       // is created per login because:
       // 1. The authorize callback returns a user object (no manual session creation)
       // 2. Auth.js automatically creates the session via the MongoDB adapter
       // 3. No orphaned sessions are created since createCredentialsSession was removed
-      // This fix prevents the bug where manual session creation would create orphaned
-      // sessions that weren't linked to the HTTP cookie.
+      const user = await User.findOne({ email: 'test@example.com' });
+      expect(user).not.toBeNull();
+      const sessions = await Session.find({ user_id: user!._id });
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0]!.session_id).toBeDefined();
+      expect(sessions[0]!.expires_at).toBeInstanceOf(Date);
     });
 
     it('should return 401 with invalid credentials', async () => {

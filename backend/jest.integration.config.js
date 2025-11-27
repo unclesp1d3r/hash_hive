@@ -8,7 +8,7 @@
 
 /** @type {import('jest').Config} */
 module.exports = {
-  preset: 'ts-jest',
+  preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'node',
   // Integration tests talk to real containers (Redis, MongoDB, MinIO) and
   // share external resources, so we run them in a single worker to avoid
@@ -22,15 +22,23 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@shared/(.*)$': '<rootDir>/../shared/$1',
-    // Use integration mock for @auth/express in integration tests
-    '^@auth/express$': '<rootDir>/tests/mocks/@auth/express.integration.ts',
-    // Mock other Auth.js modules for integration tests (they use ESM)
-    '^@auth/mongodb-adapter$': '<rootDir>/tests/mocks/@auth/mongodb-adapter.ts',
-    '^@auth/core$': '<rootDir>/tests/mocks/@auth/core.ts',
-    '^@auth/core/adapters$': '<rootDir>/tests/mocks/@auth/core/adapters.ts',
-    '^@auth/core/providers/credentials$':
-      '<rootDir>/tests/mocks/@auth/core/providers/credentials.ts',
+    // Integration tests use real Auth.js implementations with Testcontainers
+    // No mocks - tests run against real MongoDB adapter and ExpressAuth
   },
+  extensionsToTreatAsEsm: ['.ts'],
+  transform: {
+    '^.+\\.tsx?$': [
+      'ts-jest',
+      {
+        useESM: true,
+      },
+    ],
+  },
+  // Transform @auth packages since they use ESM which Jest doesn't handle natively
+  transformIgnorePatterns: [
+    // Transform @auth packages (they use ESM)
+    'node_modules/(?!(@auth)/)',
+  ],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts', '<rootDir>/tests/jest.integration.setup.ts'],
   testTimeout: 60000, // Integration tests may take longer
   verbose: true,
