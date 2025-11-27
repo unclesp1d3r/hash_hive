@@ -110,8 +110,21 @@ app.use(securityHeadersMiddleware);
 app.use(cookieParser());
 
 // Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Skip body parsing for /auth routes - ExpressAuth handles body parsing internally
+app.use((req, res, next) => {
+  if (req.path.startsWith('/auth/')) {
+    next();
+  } else {
+    express.json({ limit: '10mb' })(req, res, next);
+  }
+});
+app.use((req, res, next) => {
+  if (req.path.startsWith('/auth/')) {
+    next();
+  } else {
+    express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+  }
+});
 
 // CSRF protection middleware
 // Note: CSRF protection is NOT required for agent API endpoints (/api/v1/agent)
