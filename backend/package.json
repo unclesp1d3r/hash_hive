@@ -11,7 +11,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:integration": "jest --config jest.integration.config.js",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "lint": "npx eslint \"src/**/*.{ts,tsx,js,jsx}\"",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "type-check": "tsc --noEmit"
@@ -29,13 +29,13 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-async-errors": "^3.1.1",
+    "express-rate-limit": "^8.2.1",
     "ioredis": "^5.8.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^9.0.0",
     "pino": "^10.1.0",
     "pino-http": "^11.0.0",
-    "zod": "^4.1.13",
-    "express-rate-limit": "^8.2.1"
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@testcontainers/minio": "^11.8.1",
@@ -49,12 +49,14 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.10.1",
     "@types/supertest": "^6.0.3",
+    "@vitest/ui": "^4.0.14",
     "aws-sdk-client-mock": "^4.1.0",
     "jest": "^30.2.0",
     "pino-pretty": "^13.1.2",
     "supertest": "^7.1.4",
     "testcontainers": "^11.8.1",
     "ts-jest": "^29.4.5",
-    "tsx": "^4.20.6"
+    "tsx": "^4.20.6",
+    "vitest": "^4.0.14"
   }
 }
