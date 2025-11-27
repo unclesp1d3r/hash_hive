@@ -361,11 +361,12 @@ export const closeQueues = async (): Promise<void> => {
   await Promise.all(workerClosePromises);
   workers.clear();
 
-  // Close all queue events - remove listeners first to prevent unhandled errors
+  // Close all queue events - keep error handlers attached during and after close
+  // The error handler suppresses expected "Connection is closed" errors during shutdown
   const eventsClosePromises = Array.from(queueEvents.entries()).map(async ([queueName, events]) => {
     try {
-      // Remove all event listeners before closing to prevent errors during shutdown
-      events.removeAllListeners();
+      // Close while error handler is still active; do not remove listeners to avoid
+      // emitting unhandled 'error' events after close resolves.
       await events.close();
     } catch (error) {
       // Ignore connection closed errors during shutdown as they're expected

@@ -7,11 +7,12 @@ import { SessionProvider, useSession, signIn, signOut } from 'next-auth/react';
  * Provides SessionProvider, useSession hook, and signIn/signOut functions
  *
  * Configuration:
- * - NEXTAUTH_URL: The canonical URL of the frontend application (required)
- * - basePath: Configured via SessionProvider props if needed (defaults to /api/auth)
+ * - NEXTAUTH_URL: The canonical URL of the frontend application (required by NextAuth)
+ * - NEXT_PUBLIC_API_URL: The backend API base URL (exposed as API_URL in this module)
  *
  * The backend Auth.js Express endpoint is mounted at /auth/* and is accessed
- * via the NEXTAUTH_URL environment variable.
+ * via NEXT_PUBLIC_API_URL (exposed as API_URL), not NEXTAUTH_URL.
+ * Use getAuthApiUrl() to get the full backend Auth.js endpoint URL: ${API_URL}/auth
  */
 // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- Destructuring breaks with process.env
 const envApiUrl = process.env['NEXT_PUBLIC_API_URL'];
@@ -22,7 +23,11 @@ export { SessionProvider, useSession, signIn, signOut };
 /**
  * Get the backend Auth.js API URL.
  *
- * @returns The full URL of the backend Auth.js endpoint
+ * Constructs the full URL by appending '/auth' to the API_URL (which comes from
+ * NEXT_PUBLIC_API_URL environment variable). This is the Express backend endpoint,
+ * not the NextAuth frontend endpoint (which uses NEXTAUTH_URL).
+ *
+ * @returns The full URL of the backend Auth.js Express endpoint (${API_URL}/auth)
  */
 export function getAuthApiUrl(): string {
   return `${API_URL}/auth`;
