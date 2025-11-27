@@ -1,9 +1,8 @@
-import { beforeAll, afterAll } from 'vitest';
 import mongoose from 'mongoose';
 import { MongoDBContainer, type StartedMongoDBContainer } from '@testcontainers/mongodb';
 
-// Test setup file for Vitest integration tests
-// For Jest unit tests, see jest.setup.ts
+// Test setup file for Jest unit tests
+// This file runs before all tests
 
 // Set test environment variables that do not depend on containers
 process.env['NODE_ENV'] = 'test';
