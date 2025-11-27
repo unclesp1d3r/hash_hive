@@ -62,7 +62,6 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v1
 
-      - run: npm install
       - run: npm ci
 
       - name: Verify Docker is available for Testcontainers
