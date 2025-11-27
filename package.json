@@ -9,6 +9,7 @@
     "shared"
   ],
   "scripts": {
+    "postinstall": "npx playwright install --with-deps chromium",
     "dev": "concurrently \"npm run dev -w backend\" \"npm run dev -w frontend\"",
     "build": "nx run-many --target=build --all",
     "lint": "nx run-many --target=lint --all",
