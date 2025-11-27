@@ -21,6 +21,12 @@ module.exports = {
   coverageReporters: ['text', 'lcov', 'html'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^@shared/(.*)$': '<rootDir>/../shared/$1',
+    // Integration tests use real Auth.js implementations with Testcontainers
+    // No mocks - tests run against real MongoDB adapter and ExpressAuth
+    // Note: Jest has limitations with ESM modules from @auth packages, but
+    // we work around this by ensuring the app loads Auth.js at runtime via
+    // the actual Express server, not at Jest module load time
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts', '<rootDir>/tests/jest.integration.setup.ts'],
   testTimeout: 60000, // Integration tests may take longer

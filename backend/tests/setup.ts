@@ -1,8 +1,10 @@
+import { beforeAll, afterAll } from 'vitest';
 import mongoose from 'mongoose';
 import { MongoDBContainer, type StartedMongoDBContainer } from '@testcontainers/mongodb';
 
-// Jest setup file for global test configuration
+// Test setup file for global test configuration
 // This file runs before all tests
+// Works with both Jest (unit tests) and Vitest (integration tests)
 
 // Set test environment variables that do not depend on containers
 process.env['NODE_ENV'] = 'test';
@@ -13,8 +15,9 @@ process.env['SESSION_SECRET'] = 'test-session-secret-with-minimum-32-characters'
 process.env['MONGODB_URI'] =
   process.env['MONGODB_URI'] || 'mongodb://localhost:27017/hashhive-test';
 
-// Increase test timeout for integration tests
-jest.setTimeout(30000);
+// Note: Test timeout is configured in the test runner config (Jest or Vitest)
+// Jest: jest.setTimeout() or testTimeout in config
+// Vitest: testTimeout in vitest config
 
 let mongoContainer: StartedMongoDBContainer | null = null;
 
