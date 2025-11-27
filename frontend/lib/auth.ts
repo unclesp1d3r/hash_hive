@@ -17,7 +17,9 @@ const API_URL = typeof envApiUrl === 'string' ? envApiUrl : 'http://localhost:30
 export { SessionProvider, useSession, signIn, signOut };
 
 /**
- * Get API URL for Auth.js
+ * Get the backend Auth.js API URL.
+ *
+ * @returns The full URL of the backend Auth.js endpoint
  */
 export function getAuthApiUrl(): string {
   return `${API_URL}/auth`;

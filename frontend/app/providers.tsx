@@ -5,8 +5,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 
 /**
- * Providers wrapper for Next.js app
- * Includes Auth.js SessionProvider and React Query QueryClientProvider
+ * Wraps application children with authentication and React Query providers.
+ *
+ * Lazily creates a single QueryClient configured with a 60,000 ms staleTime and
+ * with `refetchOnWindowFocus` disabled, then renders `SessionProvider` and
+ * `QueryClientProvider` around the provided children.
+ *
+ * @returns A React element that renders `children` inside `SessionProvider` and `QueryClientProvider`.
  */
 export function Providers({ children }: { children: React.ReactNode }): React.ReactElement {
   const [queryClient] = useState(

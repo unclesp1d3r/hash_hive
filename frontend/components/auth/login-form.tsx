@@ -17,8 +17,12 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 /**
- * Login form component using Auth.js signIn
- * Redirects to dashboard on successful login
+ * Render a login form that authenticates using credentials and navigates to the dashboard on success.
+ *
+ * The form validates email and password with the Zod schema, shows per-field and general error messages,
+ * disables inputs and the submit button while signing in, and redirects to `/dashboard` after a successful sign-in.
+ *
+ * @returns A React element containing the login form
  */
 export function LoginForm(): React.ReactElement {
   const router = useRouter();

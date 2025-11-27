@@ -14,10 +14,9 @@ import { User } from '../../models/user.model';
 import { logger } from '../../utils/logger';
 
 /**
- * Idempotent migration script
- * Maps users from legacy schema to Auth.js schema (if needed)
- * Migrates sessions to Auth.js sessions (if needed)
- * Maps project-user relations (preserved in existing models)
+ * Ensure legacy authentication data is compatible with Auth.js in an idempotent migration.
+ *
+ * Checks for existing Auth.js collections and skips work if present; if legacy users exist, verifies compatibility with Auth.js (no automatic schema changes are applied) and leaves session handling to Auth.js. The operation runs inside a MongoDB transaction and commits on success or aborts on error.
  */
 export async function migrateToAuthJS(): Promise<void> {
   const session = await mongoose.startSession();
@@ -95,7 +94,15 @@ export async function migrateToAuthJS(): Promise<void> {
 }
 
 /**
- * Validate post-migration state
+ * Verify the post-migration database state for Auth.js readiness.
+ *
+ * Performs checks against the active MongoDB connection and inspects collection names.
+ * Specifically verifies the presence of the Auth.js collections `users` and `sessions`.
+ * If the database connection is unavailable or an error occurs, validation fails.
+ * If the Auth.js collections are missing, a warning is logged but validation still succeeds
+ * because those collections are created lazily by the Auth.js adapter on first use.
+ *
+ * @returns `true` if the migration state is valid or acceptable (missing Auth.js collections are tolerated), `false` otherwise.
  */
 export async function validateMigration(): Promise<boolean> {
   try {

@@ -11,9 +11,9 @@ import { logger } from '../utils/logger';
 const MS_PER_SECOND = 1000;
 
 /**
- * Aggregate all roles for a user across all projects
- * Returns a de-duplicated array of role strings
- * This replaces the logic from role-aggregator.ts
+ * Collects all role names assigned to a user across every project and returns them without duplicates.
+ *
+ * @returns An array of unique role strings assigned to the user across all projects.
  */
 async function aggregateUserRoles(userId: string): Promise<string[]> {
   const projects = await ProjectService.getUserProjects(userId);

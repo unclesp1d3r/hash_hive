@@ -13,7 +13,11 @@ const HTTP_UNAUTHORIZED = 401;
 const BEARER_PREFIX_LENGTH = 7;
 
 /**
- * Maps a Mongoose IUser document to a User object for request context
+ * Convert a Mongoose IUser document into the lightweight User shape used on request objects.
+ *
+ * @param user - The IUser document to map (source of id, email, name, status, timestamps, and last login)
+ * @param roles - The roles to include on the resulting User
+ * @returns A User object containing `id`, `email`, `name`, `status`, `last_login_at`, `created_at`, `updated_at`, and `roles`
  */
 function mapUserToRequestUser(user: IUser, roles: string[]): User {
   return {
@@ -81,7 +85,11 @@ export const authenticateSession = async (
 };
 
 /**
- * Extract and validate JWT token from Authorization header
+ * Extracts the JWT from an HTTP Authorization header that uses the `Bearer` scheme.
+ *
+ * @param authHeader - The value of the `Authorization` header (expected format: `Bearer <token>`).
+ * @returns The JWT token string (the substring after `Bearer `).
+ * @throws AppError with code `AUTH_TOKEN_INVALID` and status 401 if the header is missing or not a `Bearer` token.
  */
 function extractJWTToken(authHeader: string | undefined): string {
   if (typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
@@ -95,7 +103,12 @@ function extractJWTToken(authHeader: string | undefined): string {
 }
 
 /**
- * Verify JWT token and return payload
+ * Verify a JWT and return its decoded authentication payload.
+ *
+ * @param token - The JWT string to verify
+ * @returns The decoded `AuthTokenPayload`
+ * @throws AuthTokenExpiredError - if the token has expired
+ * @throws AuthTokenInvalidError - if the token is invalid or cannot be verified
  */
 function verifyJWTToken(token: string): AuthTokenPayload {
   try {
@@ -171,7 +184,14 @@ export const authenticateJWT = async (
 };
 
 /**
- * Try to authenticate via session (for optional auth)
+ * Attempt session-based authentication and attach a mapped user to the request when successful.
+ *
+ * If a valid session with a corresponding active user is found, this sets `req.user` to the mapped
+ * user object and stores the session on `res.locals['session']`.
+ *
+ * @param req - Express request object; `req.user` will be set on success
+ * @param res - Express response object; `res.locals['session']` will be set on success
+ * @returns `true` if a session was validated and an active user was attached to `req.user`, `false` otherwise
  */
 async function trySessionAuthOptional(req: Request, res: Response): Promise<boolean> {
   try {
@@ -199,7 +219,10 @@ async function trySessionAuthOptional(req: Request, res: Response): Promise<bool
 }
 
 /**
- * Try to authenticate via JWT (for optional auth)
+ * Attempts to authenticate the request using a Bearer JWT and attach the mapped user to `req` on success.
+ *
+ * @param req - Express request; on success `req.user` is set to the mapped User object
+ * @returns `true` if a valid token was present and an active user was attached to `req`, `false` otherwise.
  */
 async function tryJWTAuthOptional(req: Request): Promise<boolean> {
   try {
