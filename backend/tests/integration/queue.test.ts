@@ -316,10 +316,17 @@ describe('BullMQ Queue Integration Tests', () => {
   describe('closeQueues', () => {
     it('should close all queues gracefully', async () => {
       await initializeQueues();
+      
+      // Verify queues exist before closing
+      expect(() => getQueue(QUEUE_NAMES.TASKS)).not.toThrow();
+      
       await closeQueues();
 
       // Should throw error when trying to get queue after closing
       expect(() => getQueue(QUEUE_NAMES.TASKS)).toThrow();
+      
+      // Re-initialize for afterEach cleanup to work properly
+      await initializeQueues();
     });
 
     it('should handle closing when no queues exist', async () => {
