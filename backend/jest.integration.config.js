@@ -36,8 +36,8 @@ module.exports = {
   },
   // Transform @auth packages since they use ESM which Jest doesn't handle natively
   transformIgnorePatterns: [
-    // Transform @auth packages (they use ESM)
-    'node_modules/(?!(@auth)/)',
+    // Transform @auth packages and their dependencies (they use ESM)
+    'node_modules/(?!(@auth|oauth4webapi))',
   ],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts', '<rootDir>/tests/jest.integration.setup.ts'],
   testTimeout: 60000, // Integration tests may take longer
