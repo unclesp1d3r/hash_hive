@@ -57,11 +57,14 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version-file: '.node-version'
+          # Cache npm dependencies based on package-lock.json (compatible with npm ci)
           cache: npm
 
       - name: Install just
         uses: extractions/setup-just@v1
 
+      # Use npm ci for reproducible, lockfile-respecting installs in CI
+      # npm ci removes node_modules before install and does not modify package-lock.json
       - run: npm ci
 
       - name: Verify Docker is available for Testcontainers

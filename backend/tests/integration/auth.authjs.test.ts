@@ -90,8 +90,13 @@ describe('Auth.js Authentication Integration Tests', () => {
       expect(sessionCookie).toContain('HttpOnly');
 
       // Note: Integration tests use mocks that store sessions in-memory, not in the database.
-      // The fix ensures Auth.js automatically creates sessions (no manual creation needed),
-      // preventing orphaned sessions when using the real Auth.js implementation.
+      // With the real Auth.js MongoDB adapter implementation, only a single session row
+      // is created per login because:
+      // 1. The authorize callback returns a user object (no manual session creation)
+      // 2. Auth.js automatically creates the session via the MongoDB adapter
+      // 3. No orphaned sessions are created since createCredentialsSession was removed
+      // This fix prevents the bug where manual session creation would create orphaned
+      // sessions that weren't linked to the HTTP cookie.
     });
 
     it('should return 401 with invalid credentials', async () => {
