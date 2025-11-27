@@ -176,8 +176,7 @@ export const authenticateJWT = async (
 async function trySessionAuthOptional(req: Request, res: Response): Promise<boolean> {
   try {
     const session = await getSession(req, authConfig);
-    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain, @typescript-eslint/no-unnecessary-condition -- Explicit null checks for type safety
-    if (session === null || session === undefined || session.user === null || session.user === undefined) {
+    if (session?.user === undefined) {
       return false;
     }
 

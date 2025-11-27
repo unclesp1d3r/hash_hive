@@ -61,7 +61,12 @@ export function LoginForm(): React.ReactElement {
   };
 
   return (
-    <form onSubmit={(e) => { void handleSubmit(onSubmit)(e); }} className="space-y-4">
+    <form
+      onSubmit={(e) => {
+        void handleSubmit(onSubmit)(e);
+      }}
+      className="space-y-4"
+    >
       {error !== null && error !== '' && (
         <div className="rounded-md bg-red-50 p-4 text-sm text-red-800" role="alert">
           {error}
@@ -80,9 +85,7 @@ export function LoginForm(): React.ReactElement {
           disabled={isLoading}
         />
         {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- errors.email may be undefined */}
-        {errors.email && (
-          <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-        )}
+        {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
       </div>
 
       <div>
@@ -97,9 +100,7 @@ export function LoginForm(): React.ReactElement {
           disabled={isLoading}
         />
         {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- errors.password may be undefined */}
-        {errors.password && (
-          <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-        )}
+        {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
       </div>
 
       <button

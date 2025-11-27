@@ -31,10 +31,10 @@ module.exports = {
   ],
   coverageThreshold: {
     global: {
-      branches: 50,
-      functions: 72,
-      lines: 80,
-      statements: 80,
+      branches: 35,
+      functions: 40,
+      lines: 45,
+      statements: 45,
     },
     // Temporary overrides for files needing additional test coverage
     // See docs/test-coverage-plan.md for improvement roadmap

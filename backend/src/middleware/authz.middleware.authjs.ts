@@ -81,13 +81,7 @@ export const requireProjectAccess =
         },
         'Project not found after access validation'
       );
-      next(
-        new AppError(
-          'PROJECT_NOT_FOUND',
-          'Project not found',
-          HTTP_NOT_FOUND
-        )
-      );
+      next(new AppError('PROJECT_NOT_FOUND', 'Project not found', HTTP_NOT_FOUND));
       return;
     }
 
@@ -140,13 +134,7 @@ export const requireProjectRole =
         },
         'Project not found after role validation'
       );
-      next(
-        new AppError(
-          'PROJECT_NOT_FOUND',
-          'Project not found',
-          HTTP_NOT_FOUND
-        )
-      );
+      next(new AppError('PROJECT_NOT_FOUND', 'Project not found', HTTP_NOT_FOUND));
       return;
     }
 

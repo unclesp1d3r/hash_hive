@@ -44,11 +44,18 @@ const config = defineConfig({
 
 // Only add webServer in non-CI environments
 if (!isCI) {
-  config.webServer = {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: true,
-  };
+  config.webServer = [
+    {
+      command: 'npm run dev',
+      url: 'http://localhost:3000',
+      reuseExistingServer: true,
+    },
+    {
+      command: 'npm run dev --prefix ../backend',
+      url: 'http://localhost:3001',
+      reuseExistingServer: true,
+    },
+  ];
 }
 
 export default config;

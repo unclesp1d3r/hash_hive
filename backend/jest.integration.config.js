@@ -28,7 +28,8 @@ module.exports = {
     '^@auth/mongodb-adapter$': '<rootDir>/tests/mocks/@auth/mongodb-adapter.ts',
     '^@auth/core$': '<rootDir>/tests/mocks/@auth/core.ts',
     '^@auth/core/adapters$': '<rootDir>/tests/mocks/@auth/core/adapters.ts',
-    '^@auth/core/providers/credentials$': '<rootDir>/tests/mocks/@auth/core/providers/credentials.ts',
+    '^@auth/core/providers/credentials$':
+      '<rootDir>/tests/mocks/@auth/core/providers/credentials.ts',
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts', '<rootDir>/tests/jest.integration.setup.ts'],
   testTimeout: 60000, // Integration tests may take longer

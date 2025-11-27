@@ -151,4 +151,3 @@ if (require.main === module) {
       process.exit(EXIT_FAILURE);
     });
 }
-

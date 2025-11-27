@@ -43,16 +43,22 @@ function getSessionFromCookie(req: Request): { userId: string } | null {
   return { userId: session.userId };
 }
 
-export const getSession = async (req: Request): Promise<{ user: { id: string; email: string; name: string; roles: string[] } } | null> => {
+export const getSession = async (
+  req: Request
+): Promise<{ user: { id: string; email: string; name: string; roles: string[] } } | null> => {
   const session = getSessionFromCookie(req);
   if (!session) return null;
 
   const user = await User.findById(session.userId);
   if (!user) return null;
 
-  const roles = await ProjectService.getUserProjects(session.userId).then((projects) =>
-    Promise.all(projects.map((p) => ProjectService.getUserRolesInProject(session.userId, p._id.toString())))
-  ).then((roleArrays) => Array.from(new Set(roleArrays.flat())));
+  const roles = await ProjectService.getUserProjects(session.userId)
+    .then((projects) =>
+      Promise.all(
+        projects.map((p) => ProjectService.getUserRolesInProject(session.userId, p._id.toString()))
+      )
+    )
+    .then((roleArrays) => Array.from(new Set(roleArrays.flat())));
 
   return {
     user: {
@@ -68,63 +74,70 @@ export const ExpressAuth = (_config: unknown) => {
   const router = express.Router();
 
   // POST /auth/signin/credentials
-  router.post('/signin/credentials', express.json(), async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { email, password } = req.body;
+  router.post(
+    '/signin/credentials',
+    express.json(),
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const { email, password } = req.body;
 
-      if (typeof email !== 'string' || typeof password !== 'string') {
-        res.status(401).json({ error: 'Invalid credentials' });
-        return;
+        if (typeof email !== 'string' || typeof password !== 'string') {
+          res.status(401).json({ error: 'Invalid credentials' });
+          return;
+        }
+
+        // Use the real User model to authenticate (same logic as auth.config.ts)
+        const user = await User.findOne({ email: email.toLowerCase() }).select(
+          '+password_hash +password_requires_upgrade'
+        );
+
+        if (!user) {
+          res.status(401).json({ error: 'Invalid credentials' });
+          return;
+        }
+
+        const isPasswordValid = await user.comparePassword(password);
+        if (!isPasswordValid) {
+          res.status(401).json({ error: 'Invalid credentials' });
+          return;
+        }
+
+        if (user.status !== 'active') {
+          res.status(401).json({ error: 'Invalid credentials' });
+          return;
+        }
+
+        // Flag weak passwords for upgrade (same logic as auth.config.ts)
+        const STRONG_MIN_PASSWORD_LENGTH = 12;
+        if (
+          password.length < STRONG_MIN_PASSWORD_LENGTH &&
+          user.password_requires_upgrade !== true
+        ) {
+          user.password_requires_upgrade = true;
+        }
+
+        // Update last login timestamp
+        user.last_login_at = new Date();
+        // Save once with both updates
+        await user.save();
+
+        const userId = user._id.toString();
+        const sessionToken = createSession(userId);
+
+        res.cookie(SESSION_COOKIE_NAME, sessionToken, {
+          httpOnly: true,
+          sameSite: 'lax',
+          path: '/',
+          secure: false, // Allow HTTP in tests
+          maxAge: SESSION_MAX_AGE_MS,
+        });
+
+        res.status(200).json({ success: true });
+      } catch (error) {
+        next(error);
       }
-
-      // Use the real User model to authenticate (same logic as auth.config.ts)
-      const user = await User.findOne({ email: email.toLowerCase() }).select(
-        '+password_hash +password_requires_upgrade'
-      );
-
-      if (!user) {
-        res.status(401).json({ error: 'Invalid credentials' });
-        return;
-      }
-
-      const isPasswordValid = await user.comparePassword(password);
-      if (!isPasswordValid) {
-        res.status(401).json({ error: 'Invalid credentials' });
-        return;
-      }
-
-      if (user.status !== 'active') {
-        res.status(401).json({ error: 'Invalid credentials' });
-        return;
-      }
-
-      // Flag weak passwords for upgrade (same logic as auth.config.ts)
-      const STRONG_MIN_PASSWORD_LENGTH = 12;
-      if (password.length < STRONG_MIN_PASSWORD_LENGTH && user.password_requires_upgrade !== true) {
-        user.password_requires_upgrade = true;
-      }
-
-      // Update last login timestamp
-      user.last_login_at = new Date();
-      // Save once with both updates
-      await user.save();
-
-      const userId = user._id.toString();
-      const sessionToken = createSession(userId);
-
-      res.cookie(SESSION_COOKIE_NAME, sessionToken, {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: false, // Allow HTTP in tests
-        maxAge: SESSION_MAX_AGE_MS,
-      });
-
-      res.status(200).json({ success: true });
-    } catch (error) {
-      next(error);
     }
-  });
+  );
 
   // POST /auth/signout
   router.post('/signout', async (req: Request, res: Response) => {
@@ -145,4 +158,3 @@ export const ExpressAuth = (_config: unknown) => {
 
   return router;
 };
-
