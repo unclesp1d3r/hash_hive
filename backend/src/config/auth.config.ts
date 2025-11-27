@@ -2,7 +2,6 @@ import type { Adapter } from '@auth/core/adapters';
 import { MongoDBAdapter } from '@auth/mongodb-adapter';
 import type { AuthConfig } from '@auth/core';
 import Credentials from '@auth/core/providers/credentials';
-import * as crypto from 'node:crypto';
 import { mongoose } from '../db';
 import { User } from '../models/user.model';
 import { ProjectService } from '../services/project.service';
@@ -10,7 +9,6 @@ import { config } from './index';
 import { logger } from '../utils/logger';
 
 const MS_PER_SECOND = 1000;
-const SESSION_TOKEN_BYTES = 32;
 
 /**
  * Collects all role names assigned to a user across every project and returns them without duplicates.
@@ -27,42 +25,6 @@ async function aggregateUserRoles(userId: string): Promise<string[]> {
     )
   );
   return Array.from(new Set(roleArrays.flat()));
-}
-
-/**
- * Creates a database session for Credentials provider authentication.
- * Auth.js does not auto-create DB sessions for Credentials logins with database strategy.
- *
- * @param adapter - MongoDB adapter instance
- * @param userId - User ID to create session for
- */
-async function createCredentialsSession(adapter: Adapter, userId: string): Promise<void> {
-  if (typeof adapter.createSession !== 'function') {
-    logger.warn({ userId }, 'MongoDB adapter createSession method not available');
-    return;
-  }
-
-  try {
-    // Generate a secure session token (base64url encoding for URL-safe cookies)
-    const sessionToken = crypto.randomBytes(SESSION_TOKEN_BYTES).toString('base64url');
-
-    // Calculate session expiration based on configured max age
-    const expires = new Date(Date.now() + config.auth.sessionMaxAge);
-
-    // Create session via adapter - this ensures the session exists in the database
-    // so that the session callback receives the user object for role aggregation
-    await adapter.createSession({
-      sessionToken,
-      userId,
-      expires,
-    });
-
-    logger.info({ userId }, 'Database session created for Credentials login');
-  } catch (error) {
-    logger.error({ error, userId }, 'Failed to create database session in authorize callback');
-    // Continue even if session creation fails - but session callback may not receive user
-    // This could cause role aggregation to be skipped
-  }
 }
 
 /**
@@ -155,16 +117,10 @@ export const authConfig: AuthConfig = {
 
           logger.info({ email, userId: user._id.toString() }, 'User logged in successfully');
 
-          const userId = user._id.toString();
-
-          // Explicitly create database session for Credentials provider
-          // Auth.js does not auto-create DB sessions for Credentials logins with database strategy.
-          // Without this, the session callback will not receive a user and role aggregation will be skipped.
-          // ExpressAuth will automatically set the session cookie after successful authentication.
-          await createCredentialsSession(mongoAdapter, userId);
-
+          // Auth.js with MongoDB adapter automatically creates a session when authorize returns a user
+          // The session callback will receive the user from the adapter for role aggregation
           return {
-            id: userId,
+            id: user._id.toString(),
             email: user.email,
             name: user.name,
           };

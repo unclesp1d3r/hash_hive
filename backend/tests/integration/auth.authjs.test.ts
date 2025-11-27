@@ -88,6 +88,10 @@ describe('Auth.js Authentication Integration Tests', () => {
       );
       expect(sessionCookie).toBeDefined();
       expect(sessionCookie).toContain('HttpOnly');
+
+      // Note: Integration tests use mocks that store sessions in-memory, not in the database.
+      // The fix ensures Auth.js automatically creates sessions (no manual creation needed),
+      // preventing orphaned sessions when using the real Auth.js implementation.
     });
 
     it('should return 401 with invalid credentials', async () => {
