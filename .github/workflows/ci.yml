@@ -88,8 +88,8 @@ jobs:
       # For pushes: Runs all targets to ensure full coverage
       - uses: mansagroup/nrwl-nx-action@v3
         with:
-            targets: lint,type-check,test,test:integration,test:coverage,test:e2e
-            parallel: 5
+          targets: lint,type-check,test,test:integration,test:coverage,test:e2e
+          parallel: 5
 
       # Upload coverage only if tests ran and coverage directory exists
       # Use if: always() to ensure upload even if tests fail
