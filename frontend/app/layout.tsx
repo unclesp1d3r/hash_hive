@@ -10,6 +10,12 @@ export const metadata: Metadata = {
   description: 'Distributed password cracking platform',
 };
 
+/**
+ * Render the application's root HTML layout and wrap content with app providers.
+ *
+ * @param children - The React nodes to render inside the document body; they are wrapped with the app's Providers.
+ * @returns The root React element containing an `<html lang="en">` element and a `<body>` that applies the Inter font and renders the providers-wrapped children.
+ */
 export default function RootLayout({
   children,
 }: {

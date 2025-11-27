@@ -11,12 +11,25 @@ import * as crypto from 'node:crypto';
 // Mock session storage (in-memory for tests)
 const sessions = new Map<string, { userId: string; expiresAt: number }>();
 const SESSION_COOKIE_NAME = 'authjs.session-token';
-const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; /**
+ * Generate a 32-byte random hex string to use as a session token.
+ *
+ * @returns A 64-character hexadecimal string used as the session token
+ */
 
 function generateSessionToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
 
+/**
+ * Create a new in-memory session for the given user and return its token.
+ *
+ * Stores a session record keyed by the returned token containing the `userId`
+ * and an `expiresAt` timestamp equal to now plus `SESSION_MAX_AGE_MS`.
+ *
+ * @param userId - The identifier of the user to associate with the session
+ * @returns The generated session token
+ */
 function createSession(userId: string): string {
   const token = generateSessionToken();
   sessions.set(token, {
@@ -26,6 +39,14 @@ function createSession(userId: string): string {
   return token;
 }
 
+/**
+ * Extracts a session token from the request cookies, validates it, and returns the associated user id.
+ *
+ * If the token exists but the session is expired, the session is removed from the in-memory store.
+ *
+ * @param req - The incoming Express request whose Cookie header will be inspected for the session token
+ * @returns `{ userId: string }` with the session's user id if a valid, non-expired session exists, `null` otherwise
+ */
 function getSessionFromCookie(req: Request): { userId: string } | null {
   const cookies = req.headers.cookie || '';
   const match = cookies.match(new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`));
