@@ -9,11 +9,10 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     // Integration tests talk to real containers and share external resources,
-    // so we run them in a single thread to avoid cross-test interference
-    threads: false,
-    // Single worker for integration tests
-    maxWorkers: 1,
-    minWorkers: 1,
+    // so we run them sequentially to avoid cross-test interference
+    // Use maxConcurrency to limit parallel execution
+    maxConcurrency: 1,
+    fileParallelism: false,
     testTimeout: 60000, // Integration tests may take longer
     retry: 2, // Retry failed tests up to 2 times
     setupFiles: [
