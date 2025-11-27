@@ -45,10 +45,10 @@ async function createCredentialsSession(adapter: Adapter, userId: string): Promi
   try {
     // Generate a secure session token (base64url encoding for URL-safe cookies)
     const sessionToken = crypto.randomBytes(SESSION_TOKEN_BYTES).toString('base64url');
-    
+
     // Calculate session expiration based on configured max age
     const expires = new Date(Date.now() + config.auth.sessionMaxAge);
-    
+
     // Create session via adapter - this ensures the session exists in the database
     // so that the session callback receives the user object for role aggregation
     await adapter.createSession({
@@ -56,7 +56,7 @@ async function createCredentialsSession(adapter: Adapter, userId: string): Promi
       userId,
       expires,
     });
-    
+
     logger.info({ userId }, 'Database session created for Credentials login');
   } catch (error) {
     logger.error({ error, userId }, 'Failed to create database session in authorize callback');
@@ -72,7 +72,10 @@ async function createCredentialsSession(adapter: Adapter, userId: string): Promi
  * @param password - Plain text password to validate
  * @returns true if password is valid, false otherwise
  */
-async function validateUserPassword(user: InstanceType<typeof User>, password: string): Promise<boolean> {
+async function validateUserPassword(
+  user: InstanceType<typeof User>,
+  password: string
+): Promise<boolean> {
   const isPasswordValid = await user.comparePassword(password);
   if (!isPasswordValid) {
     logger.warn(
@@ -83,16 +86,16 @@ async function validateUserPassword(user: InstanceType<typeof User>, password: s
   }
 
   if (user.status !== 'active') {
-    logger.warn({ email: user.email, userId: user._id.toString() }, 'Login attempt for disabled user');
+    logger.warn(
+      { email: user.email, userId: user._id.toString() },
+      'Login attempt for disabled user'
+    );
     return false;
   }
 
   // Flag weak passwords for upgrade (does not block login)
   const STRONG_MIN_PASSWORD_LENGTH = 12;
-  if (
-    password.length < STRONG_MIN_PASSWORD_LENGTH &&
-    user.password_requires_upgrade !== true
-  ) {
+  if (password.length < STRONG_MIN_PASSWORD_LENGTH && user.password_requires_upgrade !== true) {
     // eslint-disable-next-line no-param-reassign -- Mongoose document must be mutated to save changes
     user.password_requires_upgrade = true;
     await user.save();

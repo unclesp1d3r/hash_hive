@@ -56,7 +56,9 @@ export async function migrateToAuthJS(): Promise<void> {
     }
 
     if (hasAuthCollections || hasAuthFields) {
-      logger.info('Auth.js already initialized (found Auth.js collections or fields), skipping migration');
+      logger.info(
+        'Auth.js already initialized (found Auth.js collections or fields), skipping migration'
+      );
       await session.commitTransaction();
       return;
     }
