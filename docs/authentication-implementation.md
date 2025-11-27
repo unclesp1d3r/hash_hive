@@ -311,6 +311,50 @@ Auth.js configuration is defined in `backend/src/config/auth.config.ts` using `@
 
 See `backend/src/config/index.ts` for full configuration options.
 
+### Auth.js Dependencies
+
+#### @auth/express (Experimental)
+
+The `@auth/express` package (version `^0.12.1`) is currently marked as **experimental** and is **ESM-only**. This means:
+
+- The API may change in future releases
+- Breaking changes are possible between minor versions
+- The package requires ESM module resolution
+
+**Maintenance**: Monitor [Auth.js release notes](https://authjs.dev/reference/core#releases) for breaking changes. The caret range (`^0.12.1`) in `package.json` will automatically pick up patch and minor updates, but breaking changes may require manual intervention and code updates.
+
+#### @auth/mongodb-adapter Initialization
+
+The `@auth/mongodb-adapter` (version `^3.11.1`) requires an **already-connected MongoClient** before it can be initialized. The adapter does not handle connection logic itself.
+
+**Initialization Sequence**:
+
+1. **Connect to MongoDB first**: Call `connectDatabase()` to establish the Mongoose connection
+2. **Initialize Auth.js adapter**: The adapter in `auth.config.ts` uses `mongoose.connection.getClient()`, which requires the connection to be established
+3. **Mount Auth.js routes**: Auth.js routes can be mounted, but they won't work until MongoDB is connected
+
+In `backend/src/index.ts`, the initialization ensures MongoDB is connected before the server starts:
+
+```typescript
+Promise.all([connectDatabase(), connectRedis()])
+  .then(() => {
+    initializeQueues();
+    app.listen(config.server.port, () => {
+      logger.info('🚀 HashHive Backend started successfully');
+    });
+  });
+```
+
+The adapter is initialized in `backend/src/config/auth.config.ts` as:
+
+```typescript
+adapter: MongoDBAdapter(mongoose.connection.getClient() as any) as Adapter,
+```
+
+**Important**: `mongoose.connection.getClient()` will throw an error if called before `mongoose.connect()` completes. This is why the connection must be established before the server starts accepting requests.
+
+For detailed setup instructions, see `backend/SETUP.md`.
+
 For frontend configuration:
 - `NEXT_PUBLIC_API_URL`: Base URL for backend API (used by Auth.js client)
 - `NEXTAUTH_URL`: Base URL of the application (optional for next-auth v5)

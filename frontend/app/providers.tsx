@@ -28,7 +28,7 @@ export function Providers({ children }: { children: React.ReactNode }): React.Re
   );
 
   return (
-    <SessionProvider>
+    <SessionProvider basePath="/auth">
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </SessionProvider>
   );

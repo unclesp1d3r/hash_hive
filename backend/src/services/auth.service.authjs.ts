@@ -38,10 +38,6 @@ export class AuthService {
    * Get current session
    * Uses Auth.js getSession function
    */
-  /**
-   * Get current session
-   * Uses Auth.js getSession function
-   */
   static async getSession(req: Request): Promise<Awaited<ReturnType<typeof getSession>>> {
     try {
       return await getSession(req, authConfig);

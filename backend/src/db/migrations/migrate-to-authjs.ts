@@ -28,7 +28,7 @@ export async function migrateToAuthJS(): Promise<void> {
 
     // Check if migration has already been run
     // Auth.js adapter creates its own collections (users, accounts, sessions, verification_tokens)
-    // We check if auth.users collection exists and has the expected schema
+    // We check for Auth.js-specific collections or fields to avoid ambiguity with legacy users collection
     // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- db is a getter property, not a regular property
     const db = mongoose.connection.db;
     if (db === undefined) {
@@ -36,10 +36,27 @@ export async function migrateToAuthJS(): Promise<void> {
     }
 
     const collections = await db.listCollections().toArray();
-    const hasAuthUsers = collections.some((col) => col.name === 'users');
+    const collectionNames = collections.map((col) => col.name);
 
-    if (hasAuthUsers) {
-      logger.info('Auth.js collections already exist, skipping migration');
+    // Check for Auth.js-specific collections (accounts and verification_tokens are Auth.js-only)
+    const hasAuthCollections =
+      collectionNames.includes('accounts') || collectionNames.includes('verification_tokens');
+
+    // If Auth.js collections don't exist, check users collection for Auth.js-specific fields
+    let hasAuthFields = false;
+    if (!hasAuthCollections && collectionNames.includes('users')) {
+      const usersCollection = db.collection('users');
+      // Check for Auth.js-specific fields: emailVerified or account-related structure
+      const sampleUser = await usersCollection.findOne({});
+      if (sampleUser !== null) {
+        // Auth.js adds emailVerified field and accounts are stored separately
+        // Check if user has emailVerified field (Auth.js-specific)
+        hasAuthFields = 'emailVerified' in sampleUser;
+      }
+    }
+
+    if (hasAuthCollections || hasAuthFields) {
+      logger.info('Auth.js already initialized (found Auth.js collections or fields), skipping migration');
       await session.commitTransaction();
       return;
     }
