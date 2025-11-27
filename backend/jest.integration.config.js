@@ -28,7 +28,7 @@ module.exports = {
     // we work around this by ensuring the app loads Auth.js at runtime via
     // the actual Express server, not at Jest module load time
   },
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts', '<rootDir>/tests/jest.integration.setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/jest.setup.ts', '<rootDir>/tests/jest.integration.setup.ts'],
   testTimeout: 60000, // Integration tests may take longer
   verbose: true,
 };
