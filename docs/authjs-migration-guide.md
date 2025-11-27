@@ -112,11 +112,11 @@ If migration fails, rollback steps:
 
 Role aggregation is now handled in Auth.js callbacks (`backend/src/config/auth.config.ts`):
 
-- **JWT callback**: Aggregates roles when JWT token is created
-- **Session callback**: Aggregates roles when session is created/refreshed
+- **Session callback**: Aggregates roles when database-backed sessions are created or refreshed
+- **Database session creation**: For Credentials provider, database sessions are explicitly created during sign-in (in the authorize callback), which triggers the session callback where roles are aggregated
 - **Project-user relations**: Preserved in existing `ProjectUser` model
 
-Roles are automatically attached to session objects, eliminating the need for manual role aggregation in middleware.
+Roles are automatically attached to session objects via the session callback, eliminating the need for manual role aggregation in middleware. Since the implementation uses `strategy: 'database'`, role aggregation occurs when database sessions are created or refreshed, not via JWT tokens.
 
 ## Troubleshooting
 
@@ -138,11 +138,35 @@ Roles are automatically attached to session objects, eliminating the need for ma
 - Check CORS configuration in `backend/src/index.ts`
 - Verify `trustHost: true` is set in `auth.config.ts`
 
+## Important Notes
+
+### @auth/express Experimental Status
+
+The `@auth/express` package (version `^0.12.1`) is currently marked as **experimental** and is **ESM-only**. This means:
+
+- The API may change in future releases
+- Breaking changes are possible between minor versions
+- Monitor [Auth.js release notes](https://authjs.dev/reference/core#releases) for updates
+
+### MongoDB Adapter Initialization
+
+The `@auth/mongodb-adapter` requires an **already-connected MongoClient** before it can be initialized. The adapter does not handle connection logic itself.
+
+**Required Initialization Sequence**:
+
+1. Connect to MongoDB first: `await connectDatabase()`
+2. Initialize Auth.js adapter: Uses `mongoose.connection.getClient()` which requires connection
+3. Mount Auth.js routes: Routes can be mounted, but won't work until MongoDB is connected
+
+See `backend/SETUP.md` for detailed setup instructions.
+
 ## References
 
 - [Auth.js Documentation](https://authjs.dev/)
 - [@auth/express Documentation](https://authjs.dev/getting-started/installation?framework=express)
 - [@auth/mongodb-adapter Documentation](https://authjs.dev/reference/adapter/mongodb)
+- [Auth.js Release Notes](https://authjs.dev/reference/core#releases) - Monitor for breaking changes
 - Design document: `.kiro/specs/mern-migration/design.md`
 - Implementation: `backend/src/config/auth.config.ts`
+- Setup guide: `backend/SETUP.md`
 - Migration script: `backend/src/db/migrations/migrate-to-authjs.ts`
