@@ -45,6 +45,10 @@ jobs:
       TESTCONTAINERS_RYUK_DISABLED: false
       # Use the local Docker daemon
       DOCKER_HOST: unix:///var/run/docker.sock
+
+      # Auth.js required environment variables for tests
+      AUTH_SECRET: test-secret-key-minimum-32-characters-long-for-ci
+      AUTH_URL: http://localhost:3001
     steps:
       - uses: actions/checkout@v5
         with:
