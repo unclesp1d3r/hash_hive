@@ -11,7 +11,8 @@
     "type-check": "tsc --noEmit",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
-    "test:e2e": "playwright test --pass-with-no-tests || exit 0"
+    "test:e2e": "playwright test --pass-with-no-tests",
+    "postinstall": "playwright install --with-deps chromium"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
@@ -19,7 +20,7 @@
     "@tanstack/react-query": "^5.90.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.0",
-    "lucide-react": "^0.554.0",
+    "lucide-react": "^0.555.0",
     "next": "^16.0.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
