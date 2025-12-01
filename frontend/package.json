@@ -11,7 +11,8 @@
     "type-check": "tsc --noEmit",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
-    "test:e2e": "playwright test --pass-with-no-tests || exit 0"
+    "test:e2e": "playwright test --pass-with-no-tests",
+    "postinstall": "playwright install --with-deps chromium"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
