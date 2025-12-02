@@ -25,7 +25,7 @@
     "cors": "^2.8.5",
     "csrf": "^3.1.0",
     "dotenv": "^17.2.3",
-    "express": "^5.1.0",
+    "express": "^5.2.0",
     "express-async-errors": "^3.1.1",
     "ioredis": "^5.8.2",
     "jsonwebtoken": "^9.0.2",
