@@ -14,6 +14,7 @@ const MAX_RETRIES = 2;
 const MIN_RETRIES = 1;
 const CI_WORKERS = 1;
 const DEFAULT_WORKERS = 1;
+const TEST_TIMEOUT_MS = 30000;
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -26,7 +27,7 @@ const config = defineConfig({
   retries: isCI ? MAX_RETRIES : MIN_RETRIES,
   workers: isCI ? CI_WORKERS : DEFAULT_WORKERS,
   // 30 second timeout per test. Increase if tests legitimately need more time.
-  timeout: 30000,
+  timeout: TEST_TIMEOUT_MS,
   reporter: 'html',
   use: {
     baseURL: 'http://localhost:3000',
@@ -43,11 +44,18 @@ const config = defineConfig({
 
 // Only add webServer in non-CI environments
 if (!isCI) {
-  config.webServer = {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: true,
-  };
+  config.webServer = [
+    {
+      command: 'npm run dev',
+      url: 'http://localhost:3000',
+      reuseExistingServer: true,
+    },
+    {
+      command: 'npm run dev --prefix ../backend',
+      url: 'http://localhost:3001',
+      reuseExistingServer: true,
+    },
+  ];
 }
 
 export default config;

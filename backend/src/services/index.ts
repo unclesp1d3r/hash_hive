@@ -12,5 +12,5 @@ export type {
   PresignedUrlOptions,
 } from './storage.service';
 
-export { AuthService } from './auth.service';
+export { AuthService } from './auth.service.authjs';
 export { ProjectService } from './project.service';

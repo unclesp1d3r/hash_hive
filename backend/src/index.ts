@@ -15,6 +15,8 @@ import { securityHeadersMiddleware } from './middleware/security-headers';
 import { errorHandler } from './middleware/error-handler';
 import { healthRouter } from './routes/health';
 import { webRouter } from './routes';
+import { ExpressAuth } from '@auth/express';
+import { authConfig } from './config/auth.config';
 
 // HTTP status / exit code constants to avoid magic numbers
 const HTTP_STATUS_SERVER_ERROR_THRESHOLD = 500;
@@ -108,8 +110,21 @@ app.use(securityHeadersMiddleware);
 app.use(cookieParser());
 
 // Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Skip body parsing for /auth routes - ExpressAuth handles body parsing internally
+app.use((req, res, next) => {
+  if (req.path.startsWith('/auth/')) {
+    next();
+  } else {
+    express.json({ limit: '10mb' })(req, res, next);
+  }
+});
+app.use((req, res, next) => {
+  if (req.path.startsWith('/auth/')) {
+    next();
+  } else {
+    express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+  }
+});
 
 // CSRF protection middleware
 // Note: CSRF protection is NOT required for agent API endpoints (/api/v1/agent)
@@ -350,6 +365,12 @@ app.use((req, res, next) => {
     return;
   }
 
+  // Skip CSRF protection for Auth.js routes - ExpressAuth handles CSRF internally
+  if (req.path.startsWith('/auth/')) {
+    next();
+    return;
+  }
+
   // Health check endpoints: generate CSRF tokens for GET/HEAD/OPTIONS, skip CSRF for other methods
   if (req.path.startsWith('/health')) {
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
@@ -369,8 +390,16 @@ app.use((req, res, next) => {
   validateCsrfToken(req, res, next);
 });
 
+// Set trust proxy for HTTPS detection behind proxies (required for Auth.js)
+// Must be set BEFORE mounting ExpressAuth middleware
+app.set('trust proxy', true);
+
 // Health check endpoint
 app.use('/health', healthRouter);
+
+// Mount Auth.js routes at /auth
+// ExpressAuth with basePath: '/auth' should be mounted at /auth (matches sandbox pattern)
+app.use('/auth', ExpressAuth(authConfig));
 
 // API routes
 app.use('/api/v1/web', webRouter);

@@ -5,7 +5,7 @@
  */
 
 // Authentication middleware
-export { authenticateJWT, authenticateSession, optionalAuth } from './auth.middleware';
+export { authenticateJWT, authenticateSession, optionalAuth } from './auth.middleware.authjs';
 
 // Authorization middleware
 export {
@@ -13,7 +13,7 @@ export {
   requireProjectAccess,
   requireProjectRole,
   hasPermission,
-} from './authz.middleware';
+} from './authz.middleware.authjs';
 
 // Error handling
 export { errorHandler, AppError } from './error-handler';
