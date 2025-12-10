@@ -21,7 +21,8 @@ module.exports = {
     '^@auth/core/providers/credentials$':
       '<rootDir>/tests/mocks/@auth/core/providers/credentials.ts',
   },
-  transformIgnorePatterns: ['node_modules/(?!(@auth)/)'],
+  // Don't try to transform @auth packages - we mock them instead
+  transformIgnorePatterns: ['node_modules/'],
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',
