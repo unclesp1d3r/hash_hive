@@ -100,10 +100,10 @@ describe('Auth.js Authentication Integration Tests', () => {
       // 3. No orphaned sessions are created since createCredentialsSession was removed
       const user = await User.findOne({ email: 'test@example.com' });
       expect(user).not.toBeNull();
-      const sessions = await Session.find({ user_id: user!._id });
+      const sessions = await Session.find({ userId: user!._id });
       expect(sessions).toHaveLength(1);
-      expect(sessions[0]!.session_id).toBeDefined();
-      expect(sessions[0]!.expires_at).toBeInstanceOf(Date);
+      expect(sessions[0]!.sessionToken).toBeDefined();
+      expect(sessions[0]!.expires).toBeInstanceOf(Date);
     });
 
     it('should return 401 with invalid credentials', async () => {
