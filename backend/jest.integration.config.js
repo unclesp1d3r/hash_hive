@@ -8,7 +8,7 @@
 
 /** @type {import('jest').Config} */
 module.exports = {
-  preset: 'ts-jest/presets/default-esm',
+  preset: 'ts-jest',
   testEnvironment: 'node',
   // Integration tests talk to real containers (Redis, MongoDB, MinIO) and
   // share external resources, so we run them in a single worker to avoid
@@ -24,6 +24,9 @@ module.exports = {
     '^@shared/(.*)$': '<rootDir>/../shared/$1',
     // Integration tests use real Auth.js implementations with Testcontainers
     // No mocks - tests run against real MongoDB adapter and ExpressAuth
+    // Note: Jest has limitations with ESM modules from @auth packages, but
+    // we work around this by ensuring the app loads Auth.js at runtime via
+    // the actual Express server, not at Jest module load time
   },
   extensionsToTreatAsEsm: ['.ts'],
   transform: {
