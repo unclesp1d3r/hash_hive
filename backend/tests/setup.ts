@@ -1,9 +1,15 @@
-import { beforeAll, afterAll } from 'vitest';
 import mongoose from 'mongoose';
 import { MongoDBContainer, type StartedMongoDBContainer } from '@testcontainers/mongodb';
 
-// Test setup file for Vitest integration tests
-// For Jest unit tests, see jest.setup.ts
+// Test setup file for global test configuration
+// This file runs before all tests
+// Works with both Jest (unit tests) and Vitest (integration tests)
+// Both Jest and Vitest (with globals: true) provide beforeAll/afterAll as globals
+
+// Use global test hooks - available in both Jest and Vitest (with globals enabled)
+// TypeScript doesn't know about these globals, so we cast to any
+const beforeAll = (global as any).beforeAll;
+const afterAll = (global as any).afterAll;
 
 // Set test environment variables that do not depend on containers
 process.env['NODE_ENV'] = 'test';
