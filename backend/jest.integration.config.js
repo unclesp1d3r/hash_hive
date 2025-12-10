@@ -32,7 +32,10 @@ module.exports = {
       '<rootDir>/tests/mocks/@auth/core/providers/credentials.ts',
   },
   transformIgnorePatterns: ['node_modules/(?!(@auth)/)'],
-  setupFilesAfterEnv: ['<rootDir>/tests/jest.setup.ts', '<rootDir>/tests/jest.integration.setup.ts'],
+  setupFilesAfterEnv: [
+    '<rootDir>/tests/jest.setup.ts',
+    '<rootDir>/tests/jest.integration.setup.ts',
+  ],
   testTimeout: 60000, // Integration tests may take longer
   verbose: true,
 };

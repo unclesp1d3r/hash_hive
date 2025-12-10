@@ -35,4 +35,3 @@ export default defineConfig({
   // Vitest natively supports ESM modules, so no mocks needed for @auth packages
   // Integration tests use real Auth.js implementations with Testcontainers
 });
-
