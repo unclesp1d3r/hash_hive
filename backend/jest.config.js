@@ -4,7 +4,7 @@ module.exports = {
   // Run tests in a single worker to avoid interference between integration tests
   // that share external resources like Redis and BullMQ queues.
   maxWorkers: 1,
-  // Increased timeout for testcontainers to start
+  // Increase timeout to allow testcontainers to start (default 5000ms is too short)
   testTimeout: 60000,
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
@@ -73,5 +73,5 @@ module.exports = {
       functions: 0,
     },
   },
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/jest.setup.ts'],
 };
