@@ -73,5 +73,5 @@ module.exports = {
       functions: 0,
     },
   },
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/jest.setup.ts'],
 };
