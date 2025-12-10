@@ -27,8 +27,7 @@ describe('StorageService Integration', () => {
       process.env['S3_REGION'] = 'us-east-1';
       process.env['S3_FORCE_PATH_STYLE'] = 'true';
 
-      // Reload config module to pick up new environment
-      jest.resetModules();
+      // Import the StorageService directly
       const { StorageService: ReloadedStorageService } = await import(
         '../../src/services/storage.service'
       );
