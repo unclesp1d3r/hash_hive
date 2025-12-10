@@ -1,4 +1,4 @@
-import 'express-async-errors';
+// Express 5 has native async error handling - no need for express-async-errors
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
