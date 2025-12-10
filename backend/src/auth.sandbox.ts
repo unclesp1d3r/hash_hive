@@ -1,12 +1,12 @@
 import express from 'express';
 import { ExpressAuth } from '@auth/express';
-import { authConfig } from './config/auth.config';
+import { getAuthConfig } from './config/auth.config';
 import { logger } from './utils/logger';
 
 const app = express();
 
 app.set('trust proxy', true);
-app.use('/auth', ExpressAuth(authConfig));
+app.use('/auth', ExpressAuth(getAuthConfig()));
 
 const DEFAULT_SANDBOX_PORT = 4000;
 const SANDBOX_PORT = Number(process.env['AUTH_SANDBOX_PORT'] ?? DEFAULT_SANDBOX_PORT);

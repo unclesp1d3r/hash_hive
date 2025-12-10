@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { getSession } from '@auth/express';
-import { authConfig } from '../config/auth.config';
+import { getAuthConfig } from '../config/auth.config';
 import { AppError } from './error-handler';
 import { logger } from '../utils/logger';
 import { User as UserModel, type IUser } from '../models/user.model';
@@ -42,7 +42,7 @@ export const authenticateSession = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const session = await getSession(req, authConfig);
+    const session = await getSession(req, getAuthConfig());
 
     if (session?.user === undefined) {
       throw new AppError('AUTH_SESSION_INVALID', 'Session not found or invalid', HTTP_UNAUTHORIZED);
@@ -195,7 +195,7 @@ export const authenticateJWT = async (
  */
 async function trySessionAuthOptional(req: Request, res: Response): Promise<boolean> {
   try {
-    const session = await getSession(req, authConfig);
+    const session = await getSession(req, getAuthConfig());
     if (session?.user === undefined) {
       return false;
     }

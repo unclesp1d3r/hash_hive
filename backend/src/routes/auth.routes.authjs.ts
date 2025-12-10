@@ -1,6 +1,6 @@
 import express from 'express';
 import { getSession } from '@auth/express';
-import { authConfig } from '../config/auth.config';
+import { getAuthConfig } from '../config/auth.config';
 import { ProjectService } from '../services/project.service';
 import { AppError } from '../middleware/error-handler';
 
@@ -16,7 +16,7 @@ const HTTP_UNAUTHORIZED = 401;
  */
 router.get('/me', async (req, res, next) => {
   try {
-    const session = await getSession(req, authConfig);
+    const session = await getSession(req, getAuthConfig());
 
     if (session === null || typeof session !== 'object') {
       throw new AppError('AUTH_SESSION_INVALID', 'User not found in session', HTTP_UNAUTHORIZED);

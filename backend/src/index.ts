@@ -16,7 +16,7 @@ import { errorHandler } from './middleware/error-handler';
 import { healthRouter } from './routes/health';
 import { webRouter } from './routes';
 import { ExpressAuth } from '@auth/express';
-import { authConfig } from './config/auth.config';
+import { getAuthConfig } from './config/auth.config';
 
 // HTTP status / exit code constants to avoid magic numbers
 const HTTP_STATUS_SERVER_ERROR_THRESHOLD = 500;
@@ -399,7 +399,9 @@ app.use('/health', healthRouter);
 
 // Mount Auth.js routes at /auth
 // ExpressAuth with basePath: '/auth' should be mounted at /auth (matches sandbox pattern)
-app.use('/auth', ExpressAuth(authConfig));
+// Note: ExpressAuth mounting is deferred until after database connection is established
+// to ensure mongoose.connection.getClient() is called after mongoose.connect() completes
+let authRouterMounted = false;
 
 // API routes
 app.use('/api/v1/web', webRouter);
@@ -414,6 +416,13 @@ if (require.main === module) {
   // Initialize all infrastructure before starting server
   Promise.all([connectDatabase(), connectRedis()])
     .then(() => {
+      // Mount Auth.js routes after database connection is established
+      // This ensures mongoose.connection.getClient() is called after mongoose.connect() completes
+      if (!authRouterMounted) {
+        app.use('/auth', ExpressAuth(getAuthConfig()));
+        authRouterMounted = true;
+      }
+
       // Initialize BullMQ queues after Redis is connected
       initializeQueues();
 

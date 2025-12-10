@@ -78,14 +78,40 @@ async function validateUserPassword(
 /**
  * Auth.js configuration for Express backend using @auth/express
  * Integrates with MongoDB adapter and custom RBAC via callbacks
+ *
+ * Note: The adapter is created lazily via getAuthConfig() to ensure MongoDB connection
+ * is established before calling mongoose.connection.getClient()
  */
-// Create adapter instance for use in authorize callback
-// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-unnecessary-type-assertion -- MongoDB adapter requires type casting due to version mismatch
-const mongoAdapter = MongoDBAdapter(mongoose.connection.getClient() as any) as Adapter;
+// eslint-disable-next-line @typescript-eslint/init-declarations -- Adapter is created lazily after MongoDB connection
+let mongoAdapter: Adapter | undefined;
 
-export const authConfig: AuthConfig = {
-  adapter: mongoAdapter,
-  basePath: '/auth',
+/**
+ * Get or create the MongoDB adapter instance
+ * Must be called after MongoDB connection is established
+ */
+function getMongoAdapter(): Adapter {
+  if (mongoAdapter === undefined) {
+    const client = mongoose.connection.getClient();
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- getClient() can return undefined if connection not established
+    if (client === undefined) {
+      throw new Error(
+        'MongoDB connection not established. Ensure connectDatabase() is called before using authConfig.'
+      );
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-unnecessary-type-assertion -- MongoDB adapter requires type casting due to version mismatch
+    mongoAdapter = MongoDBAdapter(client as any) as Adapter;
+  }
+  return mongoAdapter;
+}
+
+/**
+ * Get Auth.js configuration
+ * The adapter is created lazily on first access, ensuring MongoDB connection is established
+ */
+export function getAuthConfig(): AuthConfig {
+  return {
+    adapter: getMongoAdapter(),
+    basePath: '/auth',
   providers: [
     Credentials({
       name: 'Credentials',
@@ -198,4 +224,5 @@ export const authConfig: AuthConfig = {
       },
     },
   },
-};
+  };
+}

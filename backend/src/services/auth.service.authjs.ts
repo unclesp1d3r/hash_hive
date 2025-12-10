@@ -1,5 +1,5 @@
 import { getSession } from '@auth/express';
-import { authConfig } from '../config/auth.config';
+import { getAuthConfig } from '../config/auth.config';
 import { logger } from '../utils/logger';
 import type { Request } from 'express';
 
@@ -40,7 +40,7 @@ export class AuthService {
    */
   static async getSession(req: Request): Promise<Awaited<ReturnType<typeof getSession>>> {
     try {
-      return await getSession(req, authConfig);
+      return await getSession(req, getAuthConfig());
     } catch (error) {
       logger.error({ error }, 'Error getting session');
       return null as Awaited<ReturnType<typeof getSession>>;
