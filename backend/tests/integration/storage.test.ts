@@ -30,9 +30,8 @@ describe('StorageService Integration', () => {
 
       // Reload config module to pick up new environment
       vi.resetModules();
-      const { StorageService: ReloadedStorageService } = await import(
-        '../../src/services/storage.service'
-      );
+      const { StorageService: ReloadedStorageService } =
+        await import('../../src/services/storage.service');
       storageService = new ReloadedStorageService();
 
       // Initialize the service (creates bucket)

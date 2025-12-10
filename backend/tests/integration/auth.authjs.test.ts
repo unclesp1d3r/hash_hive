@@ -138,14 +138,14 @@ describe('Auth.js Authentication Integration Tests', () => {
       // After redirect, should be 200 or check cookies from redirect response
       const finalStatus = response.status;
       expect([200, 302]).toContain(finalStatus);
-      
+
       // Check for session cookie - Auth.js with JWT strategy may use different cookie names
       // Look for any authjs-related cookie or session cookie
       const sessionCookie =
         cookieArray.find((cookie: string) => cookie.startsWith('authjs.session-token=')) ||
         cookieArray.find((cookie: string) => cookie.includes('session')) ||
         cookieArray.find((cookie: string) => cookie.includes('authjs'));
-      
+
       // If no session cookie found in response, check if login was successful by verifying user session in DB
       if (!sessionCookie) {
         const user = await User.findOne({ email: 'test@example.com' });
@@ -219,10 +219,15 @@ describe('Auth.js Authentication Integration Tests', () => {
       });
 
       // Login to get session
-      const { cookies: cookieHeader } = await loginWithCredentials('test@example.com', 'password123');
+      const { cookies: cookieHeader } = await loginWithCredentials(
+        'test@example.com',
+        'password123'
+      );
 
       // Get current user
-      const response = await request(app).get('/api/v1/web/auth/me').set('Cookie', cookieHeader.join('; '));
+      const response = await request(app)
+        .get('/api/v1/web/auth/me')
+        .set('Cookie', cookieHeader.join('; '));
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('user');
@@ -253,13 +258,20 @@ describe('Auth.js Authentication Integration Tests', () => {
       });
 
       // Login to get session
-      const { cookies: cookieHeader } = await loginWithCredentials('test@example.com', 'password123');
+      const { cookies: cookieHeader } = await loginWithCredentials(
+        'test@example.com',
+        'password123'
+      );
 
       // Logout - get CSRF token first
       const csrfResponse = await request(app).get('/auth/csrf');
       const csrfToken = csrfResponse.body?.csrfToken;
       const csrfCookies = csrfResponse.headers['set-cookie'] || [];
-      const csrfCookieArray = Array.isArray(csrfCookies) ? csrfCookies : csrfCookies ? [csrfCookies] : [];
+      const csrfCookieArray = Array.isArray(csrfCookies)
+        ? csrfCookies
+        : csrfCookies
+          ? [csrfCookies]
+          : [];
       const allCookies = [...cookieHeader, ...csrfCookieArray].join('; ');
 
       const response = await request(app)
@@ -315,10 +327,15 @@ describe('Auth.js Authentication Integration Tests', () => {
       });
 
       // Login to get session
-      const { cookies: cookieHeader } = await loginWithCredentials('test@example.com', 'password123');
+      const { cookies: cookieHeader } = await loginWithCredentials(
+        'test@example.com',
+        'password123'
+      );
 
       // Get current user - roles should be aggregated from both projects
-      const response = await request(app).get('/api/v1/web/auth/me').set('Cookie', cookieHeader.join('; '));
+      const response = await request(app)
+        .get('/api/v1/web/auth/me')
+        .set('Cookie', cookieHeader.join('; '));
 
       expect(response.status).toBe(200);
       expect(response.body.user.roles).toContain('admin');

@@ -1,11 +1,30 @@
 import { AuthService } from '../../src/services/auth.service.authjs';
 import { getSession } from '@auth/express';
-import { authConfig } from '../../src/config/auth.config';
+import { getAuthConfig } from '../../src/config/auth.config';
 import type { Request } from 'express';
 
 // Mock @auth/express
 jest.mock('@auth/express', () => ({
   getSession: jest.fn(),
+}));
+
+// Mock auth config to avoid MongoDB connection requirement
+jest.mock('../../src/config/auth.config', () => ({
+  getAuthConfig: jest.fn(() => ({
+    adapter: {},
+    basePath: '/auth',
+    providers: [],
+    callbacks: {},
+    session: { strategy: 'jwt' as const, maxAge: 86400 },
+    cookies: {
+      sessionToken: {
+        options: {
+          httpOnly: true,
+          sameSite: 'lax' as const,
+        },
+      },
+    },
+  })),
 }));
 
 describe('AuthService (Auth.js)', () => {
@@ -56,7 +75,7 @@ describe('AuthService (Auth.js)', () => {
       const result = await AuthService.getSession(mockReq as Request);
 
       expect(result).toEqual(mockSession);
-      expect(getSession).toHaveBeenCalledWith(mockReq, authConfig);
+      expect(getSession).toHaveBeenCalledWith(mockReq, getAuthConfig());
     });
 
     it('should return null when session is not available', async () => {

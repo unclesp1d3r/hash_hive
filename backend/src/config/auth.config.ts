@@ -112,117 +112,117 @@ export function getAuthConfig(): AuthConfig {
   return {
     adapter: getMongoAdapter(),
     basePath: '/auth',
-  providers: [
-    Credentials({
-      name: 'Credentials',
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials: Partial<Record<'email' | 'password', unknown>>) {
-        if (typeof credentials.email !== 'string' || typeof credentials.password !== 'string') {
-          return null;
-        }
-
-        const { email, password } = credentials;
-
-        try {
-          const user = await User.findOne({ email: email.toLowerCase() }).select(
-            '+password_hash +password_requires_upgrade'
-          );
-
-          if (user === null) {
-            logger.warn({ email }, 'Login attempt with invalid email');
+    providers: [
+      Credentials({
+        name: 'Credentials',
+        credentials: {
+          email: { label: 'Email', type: 'email' },
+          password: { label: 'Password', type: 'password' },
+        },
+        async authorize(credentials: Partial<Record<'email' | 'password', unknown>>) {
+          if (typeof credentials.email !== 'string' || typeof credentials.password !== 'string') {
             return null;
           }
 
-          const isValid = await validateUserPassword(user, password);
-          if (!isValid) {
+          const { email, password } = credentials;
+
+          try {
+            const user = await User.findOne({ email: email.toLowerCase() }).select(
+              '+password_hash +password_requires_upgrade'
+            );
+
+            if (user === null) {
+              logger.warn({ email }, 'Login attempt with invalid email');
+              return null;
+            }
+
+            const isValid = await validateUserPassword(user, password);
+            if (!isValid) {
+              return null;
+            }
+
+            logger.info({ email, userId: user._id.toString() }, 'User logged in successfully');
+
+            // Auth.js with MongoDB adapter automatically creates a session when authorize returns a user
+            // The session callback will receive the user from the adapter for role aggregation
+            return {
+              id: user._id.toString(),
+              email: user.email,
+              name: user.name,
+            };
+          } catch (error) {
+            logger.error({ error, email }, 'Error during authentication');
             return null;
           }
-
-          logger.info({ email, userId: user._id.toString() }, 'User logged in successfully');
-
-          // Auth.js with MongoDB adapter automatically creates a session when authorize returns a user
-          // The session callback will receive the user from the adapter for role aggregation
-          return {
-            id: user._id.toString(),
-            email: user.email,
-            name: user.name,
-          };
-        } catch (error) {
-          logger.error({ error, email }, 'Error during authentication');
-          return null;
+        },
+      }),
+    ],
+    session: {
+      strategy: 'jwt',
+      maxAge: Math.floor(config.auth.sessionMaxAge / MS_PER_SECOND), // Convert ms to seconds
+    },
+    callbacks: {
+      /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-unsafe-member-access, no-param-reassign, @typescript-eslint/no-unnecessary-condition -- Auth.js JWT strategy requires extending token and session objects with custom properties, which necessitates the use of `any` types and parameter reassignment */
+      async jwt({ token, user }): Promise<any> {
+        // When user first signs in, user object is provided; on subsequent calls it may be undefined
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- user can be undefined on token refresh
+        if (user) {
+          const { id, email, name } = user;
+          // eslint-disable-next-line @typescript-eslint/dot-notation -- Bracket notation required for index signature properties
+          (token as any)['id'] = id;
+          // eslint-disable-next-line @typescript-eslint/dot-notation -- Bracket notation required for index signature properties
+          (token as any)['email'] = email ?? null;
+          // eslint-disable-next-line @typescript-eslint/dot-notation -- Bracket notation required for index signature properties
+          (token as any)['name'] = name ?? null;
+          // Aggregate roles from all projects
+          try {
+            const roles = await aggregateUserRoles(id);
+            // eslint-disable-next-line @typescript-eslint/dot-notation -- Bracket notation required for index signature properties
+            (token as any)['roles'] = roles;
+          } catch (error) {
+            logger.error({ error, userId: id }, 'Error aggregating user roles in jwt callback');
+            // eslint-disable-next-line @typescript-eslint/dot-notation -- Bracket notation required for index signature properties
+            (token as any)['roles'] = [];
+          }
         }
+        return token;
       },
-    }),
-  ],
-  session: {
-    strategy: 'jwt',
-    maxAge: Math.floor(config.auth.sessionMaxAge / MS_PER_SECOND), // Convert ms to seconds
-  },
-  callbacks: {
-    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-unsafe-member-access, no-param-reassign, @typescript-eslint/no-unnecessary-condition -- Auth.js JWT strategy requires extending token and session objects with custom properties, which necessitates the use of `any` types and parameter reassignment */
-    async jwt({ token, user }): Promise<any> {
-      // When user first signs in, user object is provided; on subsequent calls it may be undefined
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- user can be undefined on token refresh
-      if (user) {
-        const { id, email, name } = user;
-        // eslint-disable-next-line @typescript-eslint/dot-notation -- Bracket notation required for index signature properties
-        (token as any)['id'] = id;
-        // eslint-disable-next-line @typescript-eslint/dot-notation -- Bracket notation required for index signature properties
-        (token as any)['email'] = email ?? null;
-        // eslint-disable-next-line @typescript-eslint/dot-notation -- Bracket notation required for index signature properties
-        (token as any)['name'] = name ?? null;
-        // Aggregate roles from all projects
-        try {
-          const roles = await aggregateUserRoles(id);
-          // eslint-disable-next-line @typescript-eslint/dot-notation -- Bracket notation required for index signature properties
-          (token as any)['roles'] = roles;
-        } catch (error) {
-          logger.error({ error, userId: id }, 'Error aggregating user roles in jwt callback');
-          // eslint-disable-next-line @typescript-eslint/dot-notation -- Bracket notation required for index signature properties
-          (token as any)['roles'] = [];
+      // eslint-disable-next-line @typescript-eslint/require-await -- Session callback must be async for Auth.js compatibility
+      async session({ session, token }) {
+        // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- session.user and token are objects that can be truthy/falsy
+        if (session.user && token) {
+          const { user: sessionUser } = session;
+          const tokenId = (token as any).id as string | undefined;
+          const tokenEmail = (token as any).email as string | null | undefined;
+          const tokenName = (token as any).name as string | null | undefined;
+          const tokenRoles = (token as any).roles as string[] | undefined;
+          if (tokenId !== undefined) {
+            sessionUser.id = tokenId;
+          }
+          (sessionUser as any).email = tokenEmail ?? null;
+          (sessionUser as any).name = tokenName ?? null;
+          (sessionUser as any).roles = tokenRoles ?? [];
         }
-      }
-      return token;
+        return session;
+      },
+      /* eslint-enable */
     },
-    // eslint-disable-next-line @typescript-eslint/require-await -- Session callback must be async for Auth.js compatibility
-    async session({ session, token }) {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- session.user and token are objects that can be truthy/falsy
-      if (session.user && token) {
-        const { user: sessionUser } = session;
-        const tokenId = (token as any).id as string | undefined;
-        const tokenEmail = (token as any).email as string | null | undefined;
-        const tokenName = (token as any).name as string | null | undefined;
-        const tokenRoles = (token as any).roles as string[] | undefined;
-        if (tokenId !== undefined) {
-          sessionUser.id = tokenId;
-        }
-        (sessionUser as any).email = tokenEmail ?? null;
-        (sessionUser as any).name = tokenName ?? null;
-        (sessionUser as any).roles = tokenRoles ?? [];
-      }
-      return session;
+    pages: {
+      signIn: '/login',
     },
-    /* eslint-enable */
-  },
-  pages: {
-    signIn: '/login',
-  },
-  secret: config.auth.sessionSecret,
-  trustHost: true, // Required for proxy environments (set app.set('trust proxy', true) in Express)
-  cookies: {
-    sessionToken: {
-      name: 'authjs.session-token',
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: config.server.isProduction,
-        maxAge: Math.floor(config.auth.sessionMaxAge / MS_PER_SECOND), // Convert ms to seconds
+    secret: config.auth.sessionSecret,
+    trustHost: true, // Required for proxy environments (set app.set('trust proxy', true) in Express)
+    cookies: {
+      sessionToken: {
+        name: 'authjs.session-token',
+        options: {
+          httpOnly: true,
+          sameSite: 'lax',
+          path: '/',
+          secure: config.server.isProduction,
+          maxAge: Math.floor(config.auth.sessionMaxAge / MS_PER_SECOND), // Convert ms to seconds
+        },
       },
     },
-  },
   };
 }

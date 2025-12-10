@@ -1,4 +1,4 @@
-import { authConfig } from '../../src/config/auth.config';
+import { getAuthConfig } from '../../src/config/auth.config';
 import { ProjectService } from '../../src/services/project.service';
 
 // Mock dependencies
@@ -6,7 +6,9 @@ jest.mock('../../src/services/project.service');
 jest.mock('../../src/db', () => ({
   mongoose: {
     connection: {
-      getClient: jest.fn(),
+      getClient: jest.fn(() => ({
+        db: jest.fn(),
+      })),
     },
   },
 }));
@@ -18,6 +20,7 @@ describe('Auth.js Configuration', () => {
 
   describe('Credentials Provider', () => {
     it('should have credentials provider configured', () => {
+      const authConfig = getAuthConfig();
       expect(authConfig.providers).toBeDefined();
       expect(authConfig.providers).toHaveLength(1);
       expect(authConfig.providers[0]).toBeDefined();
@@ -47,6 +50,7 @@ describe('Auth.js Configuration', () => {
         name: 'Test User',
       };
 
+      const authConfig = getAuthConfig();
       expect(authConfig.callbacks?.jwt).toBeDefined();
       if (!authConfig.callbacks?.jwt) {
         throw new Error('JWT callback is not defined');
@@ -71,6 +75,7 @@ describe('Auth.js Configuration', () => {
         name: 'Test User',
       };
 
+      const authConfig = getAuthConfig();
       if (authConfig.callbacks?.jwt) {
         const result = await authConfig.callbacks.jwt({ token, user } as never);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access -- roles is dynamically added to token
@@ -96,6 +101,7 @@ describe('Auth.js Configuration', () => {
         roles: ['admin', 'operator'],
       };
 
+      const authConfig = getAuthConfig();
       expect(authConfig.callbacks?.session).toBeDefined();
       if (!authConfig.callbacks?.session) {
         throw new Error('Session callback is not defined');
@@ -114,10 +120,12 @@ describe('Auth.js Configuration', () => {
 
   describe('Session Configuration', () => {
     it('should use jwt session strategy', () => {
+      const authConfig = getAuthConfig();
       expect(authConfig.session?.strategy).toBe('jwt');
     });
 
     it('should have session maxAge configured', () => {
+      const authConfig = getAuthConfig();
       expect(authConfig.session?.maxAge).toBeDefined();
       expect(typeof authConfig.session?.maxAge).toBe('number');
     });
@@ -125,6 +133,7 @@ describe('Auth.js Configuration', () => {
 
   describe('Cookie Configuration', () => {
     it('should have secure cookies in production', () => {
+      const authConfig = getAuthConfig();
       expect(authConfig.cookies?.sessionToken?.options?.httpOnly).toBe(true);
       expect(authConfig.cookies?.sessionToken?.options?.sameSite).toBe('lax');
     });

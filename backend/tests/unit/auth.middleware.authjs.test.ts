@@ -10,6 +10,25 @@ jest.mock('@auth/express', () => ({
   getSession: jest.fn(),
 }));
 
+// Mock auth config to avoid MongoDB connection requirement
+jest.mock('../../src/config/auth.config', () => ({
+  getAuthConfig: jest.fn(() => ({
+    adapter: {},
+    basePath: '/auth',
+    providers: [],
+    callbacks: {},
+    session: { strategy: 'jwt' as const, maxAge: 86400 },
+    cookies: {
+      sessionToken: {
+        options: {
+          httpOnly: true,
+          sameSite: 'lax' as const,
+        },
+      },
+    },
+  })),
+}));
+
 // Mock User model
 jest.mock('../../src/models/user.model', () => ({
   User: {
@@ -231,9 +250,8 @@ describe('Auth.js Authentication Middleware', () => {
     });
 
     it('should attach user if valid JWT exists when session is not available', async () => {
-      const { optionalAuth: optionalAuthFn } = await import(
-        '../../src/middleware/auth.middleware.authjs'
-      );
+      const { optionalAuth: optionalAuthFn } =
+        await import('../../src/middleware/auth.middleware.authjs');
       const jwt = await import('jsonwebtoken');
       const mockPayload = {
         userId: 'user-id',
@@ -268,9 +286,8 @@ describe('Auth.js Authentication Middleware', () => {
     });
 
     it('should continue without user if JWT is invalid', async () => {
-      const { optionalAuth: optionalAuthFn } = await import(
-        '../../src/middleware/auth.middleware.authjs'
-      );
+      const { optionalAuth: optionalAuthFn } =
+        await import('../../src/middleware/auth.middleware.authjs');
       const jwt = await import('jsonwebtoken');
 
       (getSession as jest.Mock).mockResolvedValue(null);
