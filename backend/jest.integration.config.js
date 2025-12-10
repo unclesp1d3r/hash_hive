@@ -28,15 +28,6 @@ module.exports = {
     // we work around this by ensuring the app loads Auth.js at runtime via
     // the actual Express server, not at Jest module load time
   },
-  extensionsToTreatAsEsm: ['.ts'],
-  transform: {
-    '^.+\\.tsx?$': [
-      'ts-jest',
-      {
-        useESM: true,
-      },
-    ],
-  },
   // Transform @auth packages since they use ESM which Jest doesn't handle natively
   transformIgnorePatterns: [
     // Transform @auth packages and their dependencies (they use ESM)
