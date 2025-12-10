@@ -22,12 +22,16 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@shared/(.*)$': '<rootDir>/../shared/$1',
-    // Integration tests use real Auth.js implementations with Testcontainers
-    // No mocks - tests run against real MongoDB adapter and ExpressAuth
-    // Note: Jest has limitations with ESM modules from @auth packages, but
-    // we work around this by ensuring the app loads Auth.js at runtime via
-    // the actual Express server, not at Jest module load time
+    // Mock Auth.js modules for Jest (they use ESM which Jest doesn't handle well)
+    // Integration tests use the integration-specific mock that implements actual auth flow
+    '^@auth/express$': '<rootDir>/tests/mocks/@auth/express.integration.ts',
+    '^@auth/mongodb-adapter$': '<rootDir>/tests/mocks/@auth/mongodb-adapter.ts',
+    '^@auth/core$': '<rootDir>/tests/mocks/@auth/core.ts',
+    '^@auth/core/adapters$': '<rootDir>/tests/mocks/@auth/core/adapters.ts',
+    '^@auth/core/providers/credentials$':
+      '<rootDir>/tests/mocks/@auth/core/providers/credentials.ts',
   },
+  transformIgnorePatterns: ['node_modules/(?!(@auth)/)'],
   setupFilesAfterEnv: ['<rootDir>/tests/jest.setup.ts', '<rootDir>/tests/jest.integration.setup.ts'],
   testTimeout: 60000, // Integration tests may take longer
   verbose: true,
