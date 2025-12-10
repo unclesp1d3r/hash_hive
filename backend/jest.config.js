@@ -4,6 +4,8 @@ module.exports = {
   // Run tests in a single worker to avoid interference between integration tests
   // that share external resources like Redis and BullMQ queues.
   maxWorkers: 1,
+  // Increased timeout for testcontainers to start
+  testTimeout: 60000,
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   // Exclude integration tests from regular test run (they use test:integration)

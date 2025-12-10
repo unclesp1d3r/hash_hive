@@ -1,0 +1,309 @@
+ci-check	Run mansagroup/nrwl-nx-action@v3	﻿2025-12-10T20:43:16.8120066Z ##[group]Run mansagroup/nrwl-nx-action@v3
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:16.8120368Z with:
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:16.8120646Z   targets: lint,type-check,test,test:integration,test:coverage,test:e2e
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:16.8120973Z   parallel: 5
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:16.8121150Z   all: false
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:16.8121308Z   affected: true
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:16.8121475Z   nxCloud: false
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:16.8121634Z env:
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:16.8121799Z   TESTCONTAINERS_RYUK_DISABLED: false
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:16.8122059Z   DOCKER_HOST: unix:///var/run/docker.sock
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:16.8122390Z   AUTH_SECRET: test-secret-key-minimum-32-characters-long-for-ci
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:16.8122931Z   AUTH_URL: http://localhost:3001
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:16.8123155Z ##[endgroup]
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:16.8656668Z ##[group]🏷 Retrieving Git boundaries (affected command)
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:16.8659730Z Base boundary: 94bf94228609ce02b72f41abd1d6f9428036da04
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:16.8660267Z Head boundary: 6ab63444b329fc983083edefff3e87f8703faf26
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:16.8660706Z ##[endgroup]
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:16.8711435Z [command]/opt/hostedtoolcache/node/20.19.6/x64/bin/npx nx affected --target=lint --base=94bf94228609ce02b72f41abd1d6f9428036da04 --head=6ab63444b329fc983083edefff3e87f8703faf26 --parallel=5
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:17.6643273Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:17.6647101Z  NX   Running target lint for project backend:
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:17.6647507Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:17.6647630Z - backend
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:17.6647824Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:17.6647834Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.0547741Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.0550667Z ##[group]✅ > nx run backend:lint
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.0550985Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.0551287Z > npx eslint "src/**/*.{ts,tsx,js,jsx}"
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.0551634Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.0570266Z ##[endgroup]
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.0570550Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.0572963Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.0573420Z  NX   Successfully ran target lint for project backend
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.0573836Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.0573846Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.0831848Z [command]/opt/hostedtoolcache/node/20.19.6/x64/bin/npx nx affected --target=type-check --base=94bf94228609ce02b72f41abd1d6f9428036da04 --head=6ab63444b329fc983083edefff3e87f8703faf26 --parallel=5
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.8731473Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.8734912Z  NX   Running target type-check for project backend and 1 task it depends on:
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.8735456Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.8735553Z - backend
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.8735669Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:27.8735676Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:29.3604542Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:29.3606248Z ##[group]✅ > nx run shared:build
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:29.3606558Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:29.3606705Z > tsc
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:29.3606863Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:34.6169671Z ##[endgroup]
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:34.6172698Z ##[group]✅ > nx run backend:type-check
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:34.6173063Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:34.6173244Z > tsc --noEmit
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:34.6173442Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:34.6189210Z ##[endgroup]
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:34.6190345Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:34.6190428Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:34.6190989Z  NX   Successfully ran target type-check for project backend and 1 task it depends on
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:34.6191597Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:34.6191618Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:34.6380096Z [command]/opt/hostedtoolcache/node/20.19.6/x64/bin/npx nx affected --target=test --base=94bf94228609ce02b72f41abd1d6f9428036da04 --head=6ab63444b329fc983083edefff3e87f8703faf26 --parallel=5
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:35.4267904Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:35.4270995Z  NX   Running target test for project backend:
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:35.4271394Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:35.4271516Z - backend
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:35.4271689Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:35.4271700Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8280869Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8282191Z ##[group]❌ > nx run backend:test
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8282541Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8282742Z > jest
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8282916Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8283553Z [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/unit/[22m[1mdb.test.ts[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8284585Z   [1m● [22mTest suite failed to run
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8284883Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8285394Z     Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8286541Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8287921Z     If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8288823Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8289350Z     [0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { beforeAll[33m,[39m afterAll } [36mfrom[39m [32m'vitest'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8289900Z      [90m   |[39m [31m[1m^[22m[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8290399Z      [90m 2 |[39m [36mimport[39m mongoose [36mfrom[39m [32m'mongoose'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8291581Z      [90m 3 |[39m [36mimport[39m { [33mMongoDBContainer[39m[33m,[39m type [33mStartedMongoDBContainer[39m } [36mfrom[39m [32m'@testcontainers/mongodb'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8292246Z      [90m 4 |[39m[0m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8292377Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8292698Z       [2mat Object.<anonymous> ([22m../node_modules/vitest/index.cjs[2m:1:7)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8293229Z       [2mat Object.<anonymous> ([22mtests/setup.ts[2m:1:1)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8293470Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8293831Z [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/unit/[22m[1mbase-schema.test.ts[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8294282Z   [1m● [22mTest suite failed to run
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8294455Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8294768Z     Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8295126Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8296222Z     If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8297411Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8298227Z     [0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { beforeAll[33m,[39m afterAll } [36mfrom[39m [32m'vitest'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8299121Z      [90m   |[39m [31m[1m^[22m[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8299601Z      [90m 2 |[39m [36mimport[39m mongoose [36mfrom[39m [32m'mongoose'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8300675Z      [90m 3 |[39m [36mimport[39m { [33mMongoDBContainer[39m[33m,[39m type [33mStartedMongoDBContainer[39m } [36mfrom[39m [32m'@testcontainers/mongodb'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8301638Z      [90m 4 |[39m[0m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8301761Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8302062Z       [2mat Object.<anonymous> ([22m../node_modules/vitest/index.cjs[2m:1:7)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8302700Z       [2mat Object.<anonymous> ([22mtests/setup.ts[2m:1:1)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8302998Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8303431Z [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/unit/[22m[1mauth.middleware.authjs.test.ts[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8303981Z   [1m● [22mTest suite failed to run
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8304204Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8304527Z     Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8304912Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8309034Z     If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8309935Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8310591Z     [0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { beforeAll[33m,[39m afterAll } [36mfrom[39m [32m'vitest'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8311175Z      [90m   |[39m [31m[1m^[22m[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8311782Z      [90m 2 |[39m [36mimport[39m mongoose [36mfrom[39m [32m'mongoose'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8312832Z      [90m 3 |[39m [36mimport[39m { [33mMongoDBContainer[39m[33m,[39m type [33mStartedMongoDBContainer[39m } [36mfrom[39m [32m'@testcontainers/mongodb'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8319333Z      [90m 4 |[39m[0m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8319501Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8319836Z       [2mat Object.<anonymous> ([22m../node_modules/vitest/index.cjs[2m:1:7)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8320513Z       [2mat Object.<anonymous> ([22mtests/setup.ts[2m:1:1)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8320805Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8321207Z [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/unit/[22m[1mmiddleware.test.ts[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8321957Z   [1m● [22mTest suite failed to run
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8322390Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8322837Z     Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8323404Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8324300Z     If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8325173Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8325644Z     [0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { beforeAll[33m,[39m afterAll } [36mfrom[39m [32m'vitest'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8326591Z      [90m   |[39m [31m[1m^[22m[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8327153Z      [90m 2 |[39m [36mimport[39m mongoose [36mfrom[39m [32m'mongoose'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8328181Z      [90m 3 |[39m [36mimport[39m { [33mMongoDBContainer[39m[33m,[39m type [33mStartedMongoDBContainer[39m } [36mfrom[39m [32m'@testcontainers/mongodb'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8328873Z      [90m 4 |[39m[0m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8329069Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8329400Z       [2mat Object.<anonymous> ([22m../node_modules/vitest/index.cjs[2m:1:7)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8330027Z       [2mat Object.<anonymous> ([22mtests/setup.ts[2m:1:1)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8330300Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8330771Z [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/unit/[22m[1mpermission-helpers.test.ts[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8331279Z   [1m● [22mTest suite failed to run
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8331495Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8331858Z     Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8332260Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8333141Z     If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8334009Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8334474Z     [0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { beforeAll[33m,[39m afterAll } [36mfrom[39m [32m'vitest'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8350381Z      [90m   |[39m [31m[1m^[22m[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8351272Z      [90m 2 |[39m [36mimport[39m mongoose [36mfrom[39m [32m'mongoose'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8352893Z      [90m 3 |[39m [36mimport[39m { [33mMongoDBContainer[39m[33m,[39m type [33mStartedMongoDBContainer[39m } [36mfrom[39m [32m'@testcontainers/mongodb'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8353957Z      [90m 4 |[39m[0m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8354166Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8354687Z       [2mat Object.<anonymous> ([22m../node_modules/vitest/index.cjs[2m:1:7)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8355546Z       [2mat Object.<anonymous> ([22mtests/setup.ts[2m:1:1)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8356105Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8356750Z [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/unit/[22m[1mproject.service.test.ts[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8357509Z   [1m● [22mTest suite failed to run
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8357795Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8358310Z     Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8358868Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8360434Z     If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8362000Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8362732Z     [0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { beforeAll[33m,[39m afterAll } [36mfrom[39m [32m'vitest'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8363530Z      [90m   |[39m [31m[1m^[22m[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8364283Z      [90m 2 |[39m [36mimport[39m mongoose [36mfrom[39m [32m'mongoose'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8365762Z      [90m 3 |[39m [36mimport[39m { [33mMongoDBContainer[39m[33m,[39m type [33mStartedMongoDBContainer[39m } [36mfrom[39m [32m'@testcontainers/mongodb'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8367151Z      [90m 4 |[39m[0m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8367414Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8367889Z       [2mat Object.<anonymous> ([22m../node_modules/vitest/index.cjs[2m:1:7)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8368689Z       [2mat Object.<anonymous> ([22mtests/setup.ts[2m:1:1)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8369053Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8369712Z [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/unit/[22m[1mauthz.middleware.authjs.test.ts[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8370433Z   [1m● [22mTest suite failed to run
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8370701Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8371173Z     Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8371696Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8373129Z     If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8374466Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8375185Z     [0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { beforeAll[33m,[39m afterAll } [36mfrom[39m [32m'vitest'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8376118Z      [90m   |[39m [31m[1m^[22m[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8376870Z      [90m 2 |[39m [36mimport[39m mongoose [36mfrom[39m [32m'mongoose'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8378429Z      [90m 3 |[39m [36mimport[39m { [33mMongoDBContainer[39m[33m,[39m type [33mStartedMongoDBContainer[39m } [36mfrom[39m [32m'@testcontainers/mongodb'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8379483Z      [90m 4 |[39m[0m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8379682Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8380188Z       [2mat Object.<anonymous> ([22m../node_modules/vitest/index.cjs[2m:1:7)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8381029Z       [2mat Object.<anonymous> ([22mtests/setup.ts[2m:1:1)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8381416Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8381996Z [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/unit/[22m[1mauth.config.test.ts[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8382705Z   [1m● [22mTest suite failed to run
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8382980Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8383482Z     Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8384040Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8385582Z     If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8387119Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8387894Z     [0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { beforeAll[33m,[39m afterAll } [36mfrom[39m [32m'vitest'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8388728Z      [90m   |[39m [31m[1m^[22m[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8389518Z      [90m 2 |[39m [36mimport[39m mongoose [36mfrom[39m [32m'mongoose'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8391111Z      [90m 3 |[39m [36mimport[39m { [33mMongoDBContainer[39m[33m,[39m type [33mStartedMongoDBContainer[39m } [36mfrom[39m [32m'@testcontainers/mongodb'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8392167Z      [90m 4 |[39m[0m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8392581Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8393090Z       [2mat Object.<anonymous> ([22m../node_modules/vitest/index.cjs[2m:1:7)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8393941Z       [2mat Object.<anonymous> ([22mtests/setup.ts[2m:1:1)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8394312Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8394877Z [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/unit/[22m[1mdatabase.test.ts[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8395552Z   [1m● [22mTest suite failed to run
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8395817Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8396447Z     Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8396977Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8398650Z     If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8399971Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8400705Z     [0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { beforeAll[33m,[39m afterAll } [36mfrom[39m [32m'vitest'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8401560Z      [90m   |[39m [31m[1m^[22m[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8402316Z      [90m 2 |[39m [36mimport[39m mongoose [36mfrom[39m [32m'mongoose'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8403860Z      [90m 3 |[39m [36mimport[39m { [33mMongoDBContainer[39m[33m,[39m type [33mStartedMongoDBContainer[39m } [36mfrom[39m [32m'@testcontainers/mongodb'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8404915Z      [90m 4 |[39m[0m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8405136Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8405696Z       [2mat Object.<anonymous> ([22m../node_modules/vitest/index.cjs[2m:1:7)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8406856Z       [2mat Object.<anonymous> ([22mtests/setup.ts[2m:1:1)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8407270Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8407880Z [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/unit/[22m[1mstorage.test.ts[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8408660Z   [1m● [22mTest suite failed to run
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8408984Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8409517Z     Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8410098Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8411704Z     If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8413202Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8414087Z     [0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { beforeAll[33m,[39m afterAll } [36mfrom[39m [32m'vitest'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8415081Z      [90m   |[39m [31m[1m^[22m[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8416171Z      [90m 2 |[39m [36mimport[39m mongoose [36mfrom[39m [32m'mongoose'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8417893Z      [90m 3 |[39m [36mimport[39m { [33mMongoDBContainer[39m[33m,[39m type [33mStartedMongoDBContainer[39m } [36mfrom[39m [32m'@testcontainers/mongodb'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8419085Z      [90m 4 |[39m[0m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8419314Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8419878Z       [2mat Object.<anonymous> ([22m../node_modules/vitest/index.cjs[2m:1:7)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8420868Z       [2mat Object.<anonymous> ([22mtests/setup.ts[2m:1:1)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8421311Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8421948Z [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/unit/[22m[1mhealth.test.ts[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8422735Z   [1m● [22mTest suite failed to run
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8423047Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8423578Z     Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8424191Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8426273Z     If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8428033Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8428882Z     [0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { beforeAll[33m,[39m afterAll } [36mfrom[39m [32m'vitest'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8429750Z      [90m   |[39m [31m[1m^[22m[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8430580Z      [90m 2 |[39m [36mimport[39m mongoose [36mfrom[39m [32m'mongoose'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8432264Z      [90m 3 |[39m [36mimport[39m { [33mMongoDBContainer[39m[33m,[39m type [33mStartedMongoDBContainer[39m } [36mfrom[39m [32m'@testcontainers/mongodb'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8433700Z      [90m 4 |[39m[0m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8433946Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8434483Z       [2mat Object.<anonymous> ([22m../node_modules/vitest/index.cjs[2m:1:7)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8441627Z       [2mat Object.<anonymous> ([22mtests/setup.ts[2m:1:1)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8442054Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8442641Z [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/unit/[22m[1mconfig.test.ts[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8443357Z   [1m● [22mTest suite failed to run
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8443654Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8444143Z     Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8444728Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8446448Z     If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8447783Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8448535Z     [0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { beforeAll[33m,[39m afterAll } [36mfrom[39m [32m'vitest'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8449335Z      [90m   |[39m [31m[1m^[22m[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8450105Z      [90m 2 |[39m [36mimport[39m mongoose [36mfrom[39m [32m'mongoose'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8451602Z      [90m 3 |[39m [36mimport[39m { [33mMongoDBContainer[39m[33m,[39m type [33mStartedMongoDBContainer[39m } [36mfrom[39m [32m'@testcontainers/mongodb'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8452592Z      [90m 4 |[39m[0m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8452800Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8453287Z       [2mat Object.<anonymous> ([22m../node_modules/vitest/index.cjs[2m:1:7)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8454086Z       [2mat Object.<anonymous> ([22mtests/setup.ts[2m:1:1)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8454436Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8455050Z [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/unit/[22m[1mauth.service.authjs.test.ts[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8455754Z   [1m● [22mTest suite failed to run
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8456165Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8456640Z     Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8457173Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8458706Z     If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8460130Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8460871Z     [0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { beforeAll[33m,[39m afterAll } [36mfrom[39m [32m'vitest'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8461674Z      [90m   |[39m [31m[1m^[22m[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8462446Z      [90m 2 |[39m [36mimport[39m mongoose [36mfrom[39m [32m'mongoose'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8464004Z      [90m 3 |[39m [36mimport[39m { [33mMongoDBContainer[39m[33m,[39m type [33mStartedMongoDBContainer[39m } [36mfrom[39m [32m'@testcontainers/mongodb'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8465070Z      [90m 4 |[39m[0m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8465271Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8465781Z       [2mat Object.<anonymous> ([22m../node_modules/vitest/index.cjs[2m:1:7)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8466775Z       [2mat Object.<anonymous> ([22mtests/setup.ts[2m:1:1)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8467363Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8467985Z [0m[7m[1m[31m FAIL [39m[22m[27m[0m [2mtests/unit/[22m[1mqueue-metrics.test.ts[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8468695Z   [1m● [22mTest suite failed to run
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8468970Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8469475Z     Vitest cannot be imported in a CommonJS module using require(). Please use "import" instead.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8470035Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8471585Z     If you are using "import" in your source code, then it's possible it was bundled into require() automatically by your bundler. In that case, do not bundle CommonJS output since it will never work with Vitest, or use dynamic import() which is available in all CommonJS modules.
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8473167Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8473938Z     [0m[31m[1m>[22m[39m[90m 1 |[39m [36mimport[39m { beforeAll[33m,[39m afterAll } [36mfrom[39m [32m'vitest'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8474802Z      [90m   |[39m [31m[1m^[22m[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8475555Z      [90m 2 |[39m [36mimport[39m mongoose [36mfrom[39m [32m'mongoose'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8477045Z      [90m 3 |[39m [36mimport[39m { [33mMongoDBContainer[39m[33m,[39m type [33mStartedMongoDBContainer[39m } [36mfrom[39m [32m'@testcontainers/mongodb'[39m[33m;[39m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8477672Z      [90m 4 |[39m[0m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8477802Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8478112Z       [2mat Object.<anonymous> ([22m../node_modules/vitest/index.cjs[2m:1:7)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8478654Z       [2mat Object.<anonymous> ([22mtests/setup.ts[2m:1:1)[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8479071Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8479531Z [1mTest Suites: [22m[1m[31m14 failed[39m[22m, 14 total
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8479904Z [1mTests:       [22m0 total
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8480176Z [1mSnapshots:   [22m0 total
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8480489Z [1mTime:[22m        4.006 s
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8481008Z [2mRan all test suites[22m[2m.[22m
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8481764Z ##[endgroup]
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8481958Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8481969Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8482240Z  NX   Running target test for project backend failed
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8482590Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8482678Z Failed tasks:
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8482791Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8482864Z - backend:test
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8482975Z 
+ci-check	Run mansagroup/nrwl-nx-action@v3	2025-12-10T20:43:39.8557238Z ##[error]Error: The process '/opt/hostedtoolcache/node/20.19.6/x64/bin/npx' failed with exit code 1
