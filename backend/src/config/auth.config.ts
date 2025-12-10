@@ -142,15 +142,20 @@ export const authConfig: AuthConfig = {
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- user can be undefined on token refresh
       if (user) {
         const { id, email, name } = user;
+        // eslint-disable-next-line @typescript-eslint/dot-notation -- Bracket notation required for index signature properties
         (token as any)['id'] = id;
+        // eslint-disable-next-line @typescript-eslint/dot-notation -- Bracket notation required for index signature properties
         (token as any)['email'] = email ?? null;
+        // eslint-disable-next-line @typescript-eslint/dot-notation -- Bracket notation required for index signature properties
         (token as any)['name'] = name ?? null;
         // Aggregate roles from all projects
         try {
           const roles = await aggregateUserRoles(id);
+          // eslint-disable-next-line @typescript-eslint/dot-notation -- Bracket notation required for index signature properties
           (token as any)['roles'] = roles;
         } catch (error) {
           logger.error({ error, userId: id }, 'Error aggregating user roles in jwt callback');
+          // eslint-disable-next-line @typescript-eslint/dot-notation -- Bracket notation required for index signature properties
           (token as any)['roles'] = [];
         }
       }
