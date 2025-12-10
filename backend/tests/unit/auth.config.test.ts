@@ -28,7 +28,7 @@ describe('Auth.js Configuration', () => {
     // Express Request and Auth.js Request types
   });
 
-  describe('Session Callback', () => {
+  describe('JWT Callback', () => {
     it('should aggregate roles from all projects', async () => {
       const mockProjects = [
         { _id: { toString: () => 'project1' } },
@@ -40,32 +40,23 @@ describe('Auth.js Configuration', () => {
         .mockResolvedValueOnce(['admin'])
         .mockResolvedValueOnce(['operator']);
 
-      const session = {
-        user: {
-          id: 'user-id',
-          email: 'test@example.com',
-          name: 'Test User',
-        },
-      };
-
+      const token = {};
       const user = {
         id: 'user-id',
         email: 'test@example.com',
         name: 'Test User',
       };
 
-      expect(authConfig.callbacks?.session).toBeDefined();
-      if (!authConfig.callbacks?.session) {
-        throw new Error('Session callback is not defined');
+      expect(authConfig.callbacks?.jwt).toBeDefined();
+      if (!authConfig.callbacks?.jwt) {
+        throw new Error('JWT callback is not defined');
       }
-      const sessionCallback = authConfig.callbacks.session;
-      const result = await sessionCallback({ session, user } as never);
-      if (result.user) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access -- roles is dynamically added to session user
-        expect((result.user as any).roles).toContain('admin');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access -- roles is dynamically added to session user
-        expect((result.user as any).roles).toContain('operator');
-      }
+      const jwtCallback = authConfig.callbacks.jwt;
+      const result = await jwtCallback({ token, user } as never);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access -- roles is dynamically added to token
+      expect((result as any).roles).toContain('admin');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access -- roles is dynamically added to token
+      expect((result as any).roles).toContain('operator');
       expect(ProjectService.getUserProjects).toHaveBeenCalledWith('user-id');
       expect(ProjectService.getUserRolesInProject).toHaveBeenCalledTimes(2);
     });
@@ -73,33 +64,57 @@ describe('Auth.js Configuration', () => {
     it('should handle errors in role aggregation gracefully', async () => {
       (ProjectService.getUserProjects as jest.Mock).mockRejectedValue(new Error('Database error'));
 
-      const session = {
-        user: {
-          id: 'user-id',
-          email: 'test@example.com',
-          name: 'Test User',
-        },
-      };
-
+      const token = {};
       const user = {
         id: 'user-id',
         email: 'test@example.com',
         name: 'Test User',
       };
 
-      if (authConfig.callbacks?.session) {
-        const result = await authConfig.callbacks.session({ session, user } as never);
-        if (result.user) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access -- roles is dynamically added to session user
-          expect((result.user as any).roles).toEqual([]);
-        }
+      if (authConfig.callbacks?.jwt) {
+        const result = await authConfig.callbacks.jwt({ token, user } as never);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access -- roles is dynamically added to token
+        expect((result as any).roles).toEqual([]);
+      }
+    });
+  });
+
+  describe('Session Callback', () => {
+    it('should populate session user from token', async () => {
+      const session = {
+        user: {
+          id: '',
+          email: null,
+          name: null,
+        },
+      };
+
+      const token = {
+        id: 'user-id',
+        email: 'test@example.com',
+        name: 'Test User',
+        roles: ['admin', 'operator'],
+      };
+
+      expect(authConfig.callbacks?.session).toBeDefined();
+      if (!authConfig.callbacks?.session) {
+        throw new Error('Session callback is not defined');
+      }
+      const sessionCallback = authConfig.callbacks.session;
+      const result = await sessionCallback({ session, token } as never);
+      if (result.user) {
+        expect(result.user.id).toBe('user-id');
+        expect(result.user.email).toBe('test@example.com');
+        expect(result.user.name).toBe('Test User');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access -- roles is dynamically added to session user
+        expect((result.user as any).roles).toEqual(['admin', 'operator']);
       }
     });
   });
 
   describe('Session Configuration', () => {
-    it('should use database session strategy', () => {
-      expect(authConfig.session?.strategy).toBe('database');
+    it('should use jwt session strategy', () => {
+      expect(authConfig.session?.strategy).toBe('jwt');
     });
 
     it('should have session maxAge configured', () => {

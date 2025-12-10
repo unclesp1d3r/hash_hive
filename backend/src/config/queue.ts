@@ -88,50 +88,53 @@ export const createQueue = (name: QueueName): Queue => {
     ...defaultQueueOptions,
   });
 
-  // Set up queue event listeners for monitoring
-  const events = new QueueEvents(name, { connection: getConnectionOptions() });
+  // Set up queue event listeners for monitoring (skip in test mode to avoid connection errors during teardown)
+  if (!config.server.isTest) {
+    const events = new QueueEvents(name, { connection: getConnectionOptions() });
 
-  // Ensure we always handle error events so they don't crash the process or
-  // surface as unhandled errors in tests when connections are closed as part
-  // of normal shutdown.
-  events.on('error', (error: Error) => {
-    // Suppress expected "Connection is closed" errors during shutdown
-    if (error.message.includes('Connection is closed')) {
-      logger.debug(
-        { queueName: name },
-        'Queue events connection closed (expected during shutdown)'
-      );
-      return;
-    }
-    logger.error({ queueName: name, error }, 'Queue events error');
-  });
+    // Ensure we always handle error events so they don't crash the process or
+    // surface as unhandled errors in tests when connections are closed as part
+    // of normal shutdown.
+    events.on('error', (error: Error) => {
+      // Suppress expected "Connection is closed" errors during shutdown
+      if (error.message.includes('Connection is closed')) {
+        logger.debug(
+          { queueName: name },
+          'Queue events connection closed (expected during shutdown)'
+        );
+        return;
+      }
+      logger.error({ queueName: name, error }, 'Queue events error');
+    });
 
-  events.on('waiting', ({ jobId }) => {
-    logger.debug({ queueName: name, jobId }, 'Job waiting');
-  });
+    events.on('waiting', ({ jobId }) => {
+      logger.debug({ queueName: name, jobId }, 'Job waiting');
+    });
 
-  events.on('active', ({ jobId }) => {
-    logger.debug({ queueName: name, jobId }, 'Job active');
-  });
+    events.on('active', ({ jobId }) => {
+      logger.debug({ queueName: name, jobId }, 'Job active');
+    });
 
-  events.on('completed', ({ jobId, returnvalue }) => {
-    logger.info({ queueName: name, jobId, returnvalue }, 'Job completed');
-  });
+    events.on('completed', ({ jobId, returnvalue }) => {
+      logger.info({ queueName: name, jobId, returnvalue }, 'Job completed');
+    });
 
-  events.on('failed', ({ jobId, failedReason }) => {
-    logger.error({ queueName: name, jobId, failedReason }, 'Job failed');
-  });
+    events.on('failed', ({ jobId, failedReason }) => {
+      logger.error({ queueName: name, jobId, failedReason }, 'Job failed');
+    });
 
-  events.on('progress', ({ jobId, data }) => {
-    logger.debug({ queueName: name, jobId, progress: data }, 'Job progress');
-  });
+    events.on('progress', ({ jobId, data }) => {
+      logger.debug({ queueName: name, jobId, progress: data }, 'Job progress');
+    });
 
-  events.on('stalled', ({ jobId }) => {
-    logger.warn({ queueName: name, jobId }, 'Job stalled');
-  });
+    events.on('stalled', ({ jobId }) => {
+      logger.warn({ queueName: name, jobId }, 'Job stalled');
+    });
+
+    queueEvents.set(name, events);
+  }
 
   queues.set(name, queue);
-  queueEvents.set(name, events);
 
   return queue;
 };

@@ -132,33 +132,49 @@ export const authConfig: AuthConfig = {
     }),
   ],
   session: {
-    strategy: 'database',
+    strategy: 'jwt',
     maxAge: Math.floor(config.auth.sessionMaxAge / MS_PER_SECOND), // Convert ms to seconds
   },
   callbacks: {
-    async session({ session, user }) {
-      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions, @typescript-eslint/no-unnecessary-condition -- session.user and user are objects that can be truthy/falsy
-      if (session.user && user) {
-        const { user: sessionUser } = session;
+    /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-unsafe-member-access, no-param-reassign, @typescript-eslint/no-unnecessary-condition -- Auth.js JWT strategy requires extending token and session objects with custom properties, which necessitates the use of `any` types and parameter reassignment */
+    async jwt({ token, user }): Promise<any> {
+      // When user first signs in, user object is provided; on subsequent calls it may be undefined
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- user can be undefined on token refresh
+      if (user) {
         const { id, email, name } = user;
-        sessionUser.id = id;
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- MongoDB adapter may return undefined even though model requires these fields
-        sessionUser.email = email ?? null;
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- MongoDB adapter may return undefined even though model requires these fields
-        sessionUser.name = name ?? null;
+        (token as any)['id'] = id;
+        (token as any)['email'] = email ?? null;
+        (token as any)['name'] = name ?? null;
         // Aggregate roles from all projects
         try {
           const roles = await aggregateUserRoles(id);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-type-assertion -- Extending session user with roles
-          (sessionUser as any).roles = roles;
+          (token as any)['roles'] = roles;
         } catch (error) {
-          logger.error({ error, userId: id }, 'Error aggregating user roles in session callback');
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-type-assertion -- Extending session user with roles
-          (sessionUser as any).roles = [];
+          logger.error({ error, userId: id }, 'Error aggregating user roles in jwt callback');
+          (token as any)['roles'] = [];
         }
+      }
+      return token;
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- Session callback must be async for Auth.js compatibility
+    async session({ session, token }) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- session.user and token are objects that can be truthy/falsy
+      if (session.user && token) {
+        const { user: sessionUser } = session;
+        const tokenId = (token as any).id as string | undefined;
+        const tokenEmail = (token as any).email as string | null | undefined;
+        const tokenName = (token as any).name as string | null | undefined;
+        const tokenRoles = (token as any).roles as string[] | undefined;
+        if (tokenId !== undefined) {
+          sessionUser.id = tokenId;
+        }
+        (sessionUser as any).email = tokenEmail ?? null;
+        (sessionUser as any).name = tokenName ?? null;
+        (sessionUser as any).roles = tokenRoles ?? [];
       }
       return session;
     },
+    /* eslint-enable */
   },
   pages: {
     signIn: '/login',
