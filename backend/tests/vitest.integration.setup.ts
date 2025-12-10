@@ -8,3 +8,14 @@
 
 // Note: Retry configuration is handled in vitest.integration.config.ts via the retry option
 
+// Suppress known benign unhandled rejections from ioredis when Redis connections
+// are being closed as part of normal BullMQ shutdown in integration tests.
+// These manifest as "Error: Connection is closed." coming from ioredis
+// event_handler.js after tests complete. We treat them as expected noise
+// rather than test failures.
+process.on('unhandledRejection', (reason) => {
+  if (reason instanceof Error && reason.message === 'Connection is closed.') {
+    // Swallow this specific error; other unhandled rejections should still surface.
+    return;
+  }
+});

@@ -2,6 +2,7 @@ import { MinioContainer, type StartedMinioContainer } from '@testcontainers/mini
 import { ListBucketsCommand } from '@aws-sdk/client-s3';
 import type { StorageService } from '../../src/services/storage.service';
 import { Readable } from 'node:stream';
+import { vi } from 'vitest';
 
 describe('StorageService Integration', () => {
   let minioContainer: StartedMinioContainer;
@@ -28,7 +29,7 @@ describe('StorageService Integration', () => {
       process.env['S3_FORCE_PATH_STYLE'] = 'true';
 
       // Reload config module to pick up new environment
-      jest.resetModules();
+      vi.resetModules();
       const { StorageService: ReloadedStorageService } = await import(
         '../../src/services/storage.service'
       );
