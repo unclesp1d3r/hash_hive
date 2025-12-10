@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "name": "Update LLMs.txt File",
+  "description": "Automatically updates llms.txt to reflect current documentation and specifications following the llmstxt.org specification",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "README.md",
+      "AGENTS.md",
+      "SECURITY.md",
+      "CONTRIBUTING.md",
+      "docs/**/*.md",
+      ".kiro/**/*.md",
+      ".cursor/rules/**/*.mdc"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Update the `llms.txt` file to reflect current documentation and specifications. Follow the llms.txt specification at https://llmstxt.org/.\n\n## Quick Steps\n1. Read existing `llms.txt` if it exists\n2. Scan for markdown files: root `*.md`, `.kiro/**/*.md`, `docs/**/*.md`, `.cursor/rules/**/*.mdc`\n3. Compare with current file references\n4. Update using format: `[Name](path): description`\n5. Output ONLY the complete new file content (or \"NO CHANGE\")\n\n## File Scope (IMPORTANT)\nOnly include these files:\n- Root: `README.md`, `AGENTS.md`, `SECURITY.md`, `CONTRIBUTING.md`\n- `.kiro/**/*.md` files (steering and specs)\n- `docs/*.md` files (top-level docs only, NOT v2_rewrite_implementation_plan subdirs)\n- `.cursor/rules/**/*.mdc` files\n\nEXCLUDE: `docs/v2_rewrite_implementation_plan/**` (too detailed), `node_modules/`, `coverage/`, `.git/`, lockfiles, binaries\n\n## Required Structure\n- An H1 with the name of the project (HashHive)\n- A blockquote with a short summary of the project\n- Zero or more markdown sections with detailed information\n- Zero or more H2 sections containing \"file lists\" of URLs\n  - Each file list is a markdown list with `[name](url)` optionally followed by `: description`\n- Optional section has special meaning—files there can be skipped for shorter context\n\n### Example Structure:\n```markdown\n# HashHive\n> Distributed password cracking platform orchestrating hashcat across multiple agents with campaign management and real-time monitoring\n\n## Core Documentation\n- [README](README.md): Main project documentation and getting started guide\n- [Agents Guide](AGENTS.md): AI assistant guidance for working with this codebase\n- [Contributing](CONTRIBUTING.md): Contribution guidelines and development workflow\n- [Security](SECURITY.md): Security policies and vulnerability reporting\n\n## Specifications  \n- [Product Overview](.kiro/steering/product.md): Core capabilities and target users\n- [Technical Stack](.kiro/steering/tech.md): MERN architecture, libraries, and commands\n- [Project Structure](.kiro/steering/structure.md): Repository layout and naming conventions\n\n## Implementation Plans\n- [MERN Migration](.kiro/specs/mern-migration/requirements.md): Migration requirements from CipherSwarm\n- [System Design](.kiro/specs/mern-migration/design.md): Architecture and data models\n- [Task Breakdown](.kiro/specs/mern-migration/tasks.md): Implementation task list\n\n## Optional\n- [MERN Proposal](docs/MERN_proposal.md): Original migration proposal and rationale\n- [V2 Upgrade Overview](docs/v2-upgrade-overview.md): Version 2 upgrade summary\n```\n\n## Rules\n- Single H1 header only (project name)\n- Sections: Core Documentation → Specifications → Implementation Plans → Optional\n- Descriptions ≤140 chars, no trailing periods\n- Alphabetical order within sections\n- All links must be valid relative paths\n- No duplicates\n- Focus on content useful for AI coding assistants\n\n## FINAL NOTE\nThe goal is to produce a useful file that can be used by AI coding assistants and LLMs to better understand this codebase and product. Examine the various identified documents for relevance and usefulness and only include content, examples, and references that are useful for AI development assistance. Write the complete new llms.txt file content."
+  }
+}

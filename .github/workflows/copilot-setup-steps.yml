@@ -1,0 +1,72 @@
+name: Copilot Setup
+'on':
+  workflow_dispatch:
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    env:
+      # Testcontainers configuration for GitHub Copilot
+      # Ryuk is a container that cleans up resources; enable it for proper cleanup
+      TESTCONTAINERS_RYUK_DISABLED: false
+      # Use the local Docker daemon
+      DOCKER_HOST: unix:///var/run/docker.sock
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.node-version'
+          cache: npm
+
+      - name: Install just
+        uses: extractions/setup-just@v1
+
+      - name: Install root dependencies
+        run: npm install
+
+      - name: Install workspace dependencies
+        run: npm install --workspaces
+
+      - name: Reset NX cache (first run)
+        run: npx nx reset
+
+      - name: Cache NX
+        uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: nx-${{ runner.os }}-${{ hashFiles('**/nx.json', '**/project.json', '**/package-lock.json') }}
+          restore-keys: |
+            nx-${{ runner.os }}-
+
+      # Use NX commands for consistency with main CI workflow
+      # NX automatically handles dependency ordering (shared builds before backend/frontend)
+      - name: Build shared package
+        run: npx nx build shared
+
+      # Use NX run-many for consistency and to leverage caching
+      - name: Run type checking
+        run: npx nx run-many --target=type-check --all
+
+      - name: Verify Docker is available for Testcontainers
+        run: |
+          docker --version
+          docker info
+          echo "Docker socket permissions:"
+          ls -la /var/run/docker.sock
+
+      - name: Pre-pull Docker images for Testcontainers
+        run: |
+          echo "Pulling Docker images used by integration tests..."
+          docker pull mongo:7 &
+          docker pull redis:7-alpine &
+          docker pull minio/minio:latest &
+          wait
+          echo "All images pulled successfully"
+
+      # This step runs NX-powered validation via justfile
+      # The just validate command uses NX internally for consistency
+      - name: Validate setup
+        run: just validate
+
+      - name: Display environment info
+        run: just info

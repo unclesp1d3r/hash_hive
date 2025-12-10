@@ -1,0 +1,70 @@
+# Pre-commit hooks configuration for HashHive
+# See https://pre-commit.com for more information
+#
+# Install: pip install pre-commit
+# Then run: pre-commit install
+# Update hooks: pre-commit autoupdate
+
+repos:
+  # General file quality checks (well-maintained by pre-commit team)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(node_modules/|dist/|\.next/|coverage/|\.git/|package-lock\.json)
+      - id: end-of-file-fixer
+        exclude: ^(node_modules/|dist/|\.next/|coverage/|\.git/|\.hook)
+      - id: check-yaml
+        args: [--unsafe] # Allow custom tags in YAML
+      - id: check-json
+        exclude: ^(node_modules/|dist/|\.next/|coverage/|\.git/|package-lock\.json)
+      - id: check-added-large-files
+        args: [--maxkb=1000] # Warn on files > 1MB
+      - id: check-merge-conflict
+      - id: detect-private-key
+        exclude: ^(\.env\.example|\.env\.local\.example)
+      - id: check-vcs-permalinks
+      - id: check-case-conflict
+      - id: check-illegal-windows-names
+      - id: check-shebang-scripts-are-executable
+      - id: check-symlinks
+      - id: check-vcs-permalinks
+      - id: check-xml
+      - id: check-yaml
+
+  # Local hooks for npm scripts
+  - repo: local
+    hooks:
+      # Format code with Prettier
+      # Use local hook to ensure same Prettier version and config as npm scripts
+      - id: prettier
+        name: Prettier
+        entry: bash -c 'npm run format'
+        language: system
+        types: [file]
+        types_or: [javascript, jsx, ts, tsx, json, yaml]
+        pass_filenames: false
+        always_run: true
+
+      # ESLint linting
+      # Note: Using local hook to respect project's ESLint config
+      # Alternative: https://github.com/pre-commit/mirrors-eslint (requires additional setup)
+      - id: eslint
+        name: ESLint
+        entry: bash -c 'npm run lint'
+        language: system
+        types: [file]
+        types_or: [javascript, jsx, ts, tsx]
+        pass_filenames: false
+        always_run: true
+
+      # Type checking before commit
+      # Note: No well-maintained 3rd party hook exists for tsc, so we use a local hook
+      - id: type-check
+        name: TypeScript Type Check
+        entry: bash -c 'npm run type-check'
+        language: system
+        types: [file]
+        types_or: [javascript, jsx, ts, tsx]
+        pass_filenames: false
+        always_run: true

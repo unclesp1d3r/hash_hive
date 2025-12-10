@@ -137,7 +137,7 @@ Hashcat's Markov mode prioritizes guesses based on statistical likelihood using 
 
 - CipherSwarm will generate per-project `hcstat2` files from cracked passwords.
 - These will be stored and versioned for each campaign or hashlist.
-- Markov-based brute-force will be an *opt-in checkbox* in the Mask Attack Editor UI, requiring no special knowledge to activate.
+- Markov-based brute-force will be an _opt-in checkbox_ in the Mask Attack Editor UI, requiring no special knowledge to activate.
 
 #### Benefits
 

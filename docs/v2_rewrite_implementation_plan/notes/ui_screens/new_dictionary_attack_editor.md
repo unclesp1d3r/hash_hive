@@ -19,8 +19,7 @@ This modal dialog allows users to configure a **Dictionary Attack**, selecting a
  New Dictionary Attack
 </h3>
 <p class="text-sm text-gray-500 dark:text-gray-400">
- Dictionary Attack checks thousands of words from dictionary files as
-    possible passwords.
+ Dictionary Attack checks thousands of words from dictionary files as possible passwords.
 </p>
 ```
 
@@ -186,13 +185,13 @@ Use `POST /api/v1/web/attacks/estimate` to compute updated password count + comp
 
 ```jsonc
 {
-    "attack_mode": "dictionary",
-    "attack_mode_hashcat": 0,
-    "word_list_id": "xyz123", // maps to selected AttackResourceFile
-    "min_length": 1,
-    "max_length": 128,
-    "rule_list_id": "<optional>", // if modifiers selected
-    "pattern": "" // optional
+  "attack_mode": "dictionary",
+  "attack_mode_hashcat": 0,
+  "word_list_id": "xyz123", // maps to selected AttackResourceFile
+  "min_length": 1,
+  "max_length": 128,
+  "rule_list_id": "<optional>", // if modifiers selected
+  "pattern": "", // optional
 }
 ```
 

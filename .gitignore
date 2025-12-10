@@ -39,3 +39,14 @@ logs/
 # Temporary files
 tmp/
 temp/
+**/tsconfig.tsbuildinfo
+
+# Test results
+frontend/test-results/
+frontend/playwright-report/
+
+# NX
+.nx/
+.nx/cache/
+nx-cache/
+.nx/workspace-data/

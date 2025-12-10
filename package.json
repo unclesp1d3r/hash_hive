@@ -1,33 +1,48 @@
 {
-    "name": "hashhive",
-    "version": "1.0.0",
-    "private": true,
-    "description": "HashHive - Distributed password cracking platform",
-    "workspaces": [
-        "backend",
-        "frontend",
-        "shared"
-    ],
-    "scripts": {
-        "dev": "concurrently \"npm run dev -w backend\" \"npm run dev -w frontend\"",
-        "build": "npm run build -w shared && npm run build -w backend && npm run build -w frontend",
-        "lint": "npm run lint --workspaces",
-        "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
-        "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
-        "type-check": "npm run type-check --workspaces",
-        "test": "npm run test --workspaces"
-    },
-    "devDependencies": {
-        "@typescript-eslint/eslint-plugin": "^6.21.0",
-        "@typescript-eslint/parser": "^8.47.0",
-        "concurrently": "^8.2.2",
-        "eslint": "^8.56.0",
-        "eslint-config-prettier": "^9.1.0",
-        "prettier": "^3.2.5",
-        "typescript": "^5.3.3"
-    },
-    "engines": {
-        "node": ">=20.0.0",
-        "npm": ">=10.0.0"
-    }
+  "name": "hashhive",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HashHive - Distributed password cracking platform",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "build": "nx run-many --target=build --all",
+    "lint": "nx run-many --target=lint --all",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
+    "type-check": "nx run-many --target=type-check --all",
+    "test": "nx run-many --target=test --all",
+    "pre-push": "npm run type-check && npm run test -- --silent",
+    "affected:test": "nx affected --target=test",
+    "affected:build": "nx affected --target=build",
+    "graph": "nx graph",
+    "reset": "nx reset",
+    "validate": "nx run-many --targets=lint,type-check,test --all --parallel=3 && nx run backend:test:integration && nx run backend:test:coverage && nx run frontend:test:e2e && npm run format:check",
+    "validate:build": "nx run-many --target=build --all",
+    "validate:cache": "nx reset && npm run build && npm run build",
+    "validate:affected": "nx affected --target=test",
+    "validate:nx": "npx nx graph --file=.nx/nx-graph.json && npx nx show projects --affected --base=main && npm run build && npm run build && npx nx reset",
+    "ci-check": "just ci-check"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@typescript-eslint/eslint-plugin": "^8.47.0",
+    "@typescript-eslint/parser": "^8.47.0",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.39.1",
+    "eslint-config-love": "^134.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.37.5",
+    "nx": "^20.0.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
 }

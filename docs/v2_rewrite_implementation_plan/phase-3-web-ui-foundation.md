@@ -11,12 +11,17 @@ This phase finalizes the web-based UI for CipherSwarm using a modern JSON API ar
 - [Phase 3: Web UI Foundation (Rewritten for SvelteKit)](#phase-3-web-ui-foundation-rewritten-for-sveltekit)
   - [Table of Contents](#table-of-contents)
   - [Summary](#summary)
-  - [Key Architectural Changes & Lessons Learned](#key-architectural-changes--lessons-learned)
+  - [Key Architectural Changes \& Lessons Learned](#key-architectural-changes--lessons-learned)
     - [SPA to SSR Migration Accomplishments](#spa-to-ssr-migration-accomplishments)
+      - [Fundamental Architecture Changes](#fundamental-architecture-changes)
+      - ["Stock Shadcn-Svelte" Philosophy Implementation](#stock-shadcn-svelte-philosophy-implementation)
+      - [SSR Route Migration Complete](#ssr-route-migration-complete)
+      - [SSR Authentication Challenge Identified](#ssr-authentication-challenge-identified)
+      - [Comprehensive Form Migration](#comprehensive-form-migration)
     - [Technology Stack Changes](#technology-stack-changes)
     - [Testing Architecture Improvements](#testing-architecture-improvements)
     - [Component Architecture Established](#component-architecture-established)
-    - [Docker & DevOps Infrastructure](#docker--devops-infrastructure)
+    - [Docker \& DevOps Infrastructure](#docker--devops-infrastructure)
   - [Implementation Tasks](#implementation-tasks)
     - [General Frontend Setup](#general-frontend-setup)
     - [Dashboard Implementation](#dashboard-implementation)
@@ -24,47 +29,100 @@ This phase finalizes the web-based UI for CipherSwarm using a modern JSON API ar
     - [Attack Editor Implementation](#attack-editor-implementation)
     - [Campaign View Implementation](#campaign-view-implementation)
     - [Resource UI Implementation](#resource-ui-implementation)
-    - [User & Project Management](#user--project-management)
+    - [User \& Project Management](#user--project-management)
     - [Toasts and Notifications](#toasts-and-notifications)
-    - [Development & Deployment Infrastructure](#development--deployment-infrastructure)
-  - [Design Goals & User Experience Intent](#design-goals--user-experience-intent)
-    - [Authentication & User Management UX](#authentication--user-management-ux)
+    - [Development \& Deployment Infrastructure](#development--deployment-infrastructure)
+  - [Design Goals \& User Experience Intent](#design-goals--user-experience-intent)
+    - [Authentication \& User Management UX](#authentication--user-management-ux)
+      - [Design Philosophy](#design-philosophy)
+      - [User Interface Patterns](#user-interface-patterns)
     - [Campaign Management UX](#campaign-management-ux)
+      - [Core Design Goals](#core-design-goals)
+      - [Attack Management Patterns](#attack-management-patterns)
+      - [User Workflow Support](#user-workflow-support)
     - [Attack Editor UX](#attack-editor-ux)
+      - [Universal Design Principles](#universal-design-principles)
+      - [Dictionary Attack Interface](#dictionary-attack-interface)
+      - [Mask Attack Interface](#mask-attack-interface)
+      - [Brute Force Interface](#brute-force-interface)
     - [Agent Management UX](#agent-management-ux)
+      - [Agent List Design](#agent-list-design)
+      - [Agent Detail Interface Structure](#agent-detail-interface-structure)
+        - [Settings Tab](#settings-tab)
+        - [Hardware Tab](#hardware-tab)
+        - [Performance Tab](#performance-tab)
+        - [Log Tab](#log-tab)
+        - [Capabilities Tab](#capabilities-tab)
     - [Resource Management UX](#resource-management-ux)
+      - [Resource Browser Design](#resource-browser-design)
+      - [Line-Oriented Editing](#line-oriented-editing)
+      - [Upload Workflow](#upload-workflow)
     - [Crackable Uploads UX](#crackable-uploads-ux)
-    - [Real-Time Updates & Notifications](#real-time-updates--notifications)
+      - [Streamlined Workflow Design](#streamlined-workflow-design)
+      - [User Workflow Support](#user-workflow-support-1)
+    - [Real-Time Updates \& Notifications](#real-time-updates--notifications)
+      - [Server-Sent Events Design](#server-sent-events-design)
+      - [Toast Notification System](#toast-notification-system)
     - [Visual Design System](#visual-design-system)
+      - [Theme Foundation](#theme-foundation)
+      - [Component Patterns](#component-patterns)
     - [Form Handling Philosophy](#form-handling-philosophy)
+      - [SvelteKit Actions Integration](#sveltekit-actions-integration)
+      - [User Feedback Patterns](#user-feedback-patterns)
   - [Visual Theme](#visual-theme)
-  - [DevOps & Build Tasks](#devops--build-tasks)
+  - [DevOps \& Build Tasks](#devops--build-tasks)
   - [Testing Coverage](#testing-coverage)
   - [Template Migration Accomplishments](#template-migration-accomplishments)
     - [Major UI Sections Completed](#major-ui-sections-completed)
     - [Component Architecture Established](#component-architecture-established-1)
     - [Testing Foundation Complete](#testing-foundation-complete)
   - [SPA to SSR Migration Accomplishments](#spa-to-ssr-migration-accomplishments-1)
-    - [Fundamental Architecture Changes](#fundamental-architecture-changes-1)
-    - [SSR Route Implementation Complete](#ssr-route-implementation-complete)
-    - [Form Migration to SvelteKit Actions](#form-migration-to-sveltekit-actions)
-    - ["Stock Shadcn-Svelte" Philosophy Success](#stock-shadcn-svelte-philosophy-success)
-    - [Backend State Management Evolution](#backend-state-management-evolution)
-    - [Testing Architecture Transformation](#testing-architecture-transformation)
+    - [**Fundamental Architecture Changes**](#fundamental-architecture-changes-1)
+    - [**SSR Route Implementation Complete**](#ssr-route-implementation-complete)
+    - [**Form Migration to SvelteKit Actions**](#form-migration-to-sveltekit-actions)
+    - [**"Stock Shadcn-Svelte" Philosophy Success**](#stock-shadcn-svelte-philosophy-success)
+    - [**Backend State Management Evolution**](#backend-state-management-evolution)
+    - [**Testing Architecture Transformation**](#testing-architecture-transformation)
   - [Three-Tier Testing Architecture Accomplishments](#three-tier-testing-architecture-accomplishments)
     - [Testing Layer Implementation](#testing-layer-implementation)
+      - [Layer 1: Backend Tests (`just test-backend`)](#layer-1-backend-tests-just-test-backend)
+      - [Layer 2: Frontend Mocked Tests (`just test-frontend`)](#layer-2-frontend-mocked-tests-just-test-frontend)
+      - [Layer 3: Full E2E Tests (`just test-e2e`)](#layer-3-full-e2e-tests-just-test-e2e)
     - [Docker E2E Infrastructure Implementation](#docker-e2e-infrastructure-implementation)
+      - [Complete Docker Architecture](#complete-docker-architecture)
+      - [Docker Compose E2E Configuration](#docker-compose-e2e-configuration)
     - [E2E Data Seeding Architecture](#e2e-data-seeding-architecture)
+      - [Service Layer Data Seeding](#service-layer-data-seeding)
+      - [Test Data Created](#test-data-created)
     - [Playwright E2E Configuration](#playwright-e2e-configuration)
+      - [Global Setup/Teardown Implementation](#global-setupteardown-implementation)
+      - [E2E Configuration Features](#e2e-configuration-features)
     - [Testing Command Integration](#testing-command-integration)
-    - [Testing Patterns & Lessons Learned](#testing-patterns--lessons-learned)
+      - [Justfile Command Structure](#justfile-command-structure)
+    - [Testing Patterns \& Lessons Learned](#testing-patterns--lessons-learned)
+      - [SSR vs SPA Testing Evolution](#ssr-vs-spa-testing-evolution)
+      - [Mock Data Management](#mock-data-management)
+      - [Docker Infrastructure Lessons](#docker-infrastructure-lessons)
+      - [Test Performance Optimization](#test-performance-optimization)
     - [Current Implementation Status](#current-implementation-status)
+      - [Completed Infrastructure](#completed-infrastructure)
+      - [Pending Implementation](#pending-implementation)
+      - [Next Steps](#next-steps)
   - [SSR Authentication Implementation](#ssr-authentication-implementation)
     - [Problem Statement](#problem-statement)
     - [Authentication Architecture Strategy](#authentication-architecture-strategy)
+      - [1. Session Cookie Management](#1-session-cookie-management)
+      - [2. Server-Side API Client](#2-server-side-api-client)
+      - [3. Login Form Integration](#3-login-form-integration)
     - [Test Environment Integration](#test-environment-integration)
+      - [Environment Detection Pattern](#environment-detection-pattern)
     - [Implementation Phases](#implementation-phases)
+      - [Phase 1: Core Authentication Setup](#phase-1-core-authentication-setup)
+      - [Phase 2: Load Function Updates](#phase-2-load-function-updates)
+      - [Phase 3: Testing Integration](#phase-3-testing-integration)
     - [FastAPI Backend Requirements](#fastapi-backend-requirements)
+      - [Session Endpoint Compatibility](#session-endpoint-compatibility)
+      - [Required Backend Implementation](#required-backend-implementation)
     - [Success Criteria](#success-criteria)
     - [Current Blockers](#current-blockers)
     - [Documentation Update](#documentation-update)
@@ -908,14 +966,16 @@ async def create_e2e_test_users(session: AsyncSession) -> dict[str, int]:
 
 ```typescript
 export default async function globalSetup() {
-    // Start Docker stack with proper error handling
-    execSync('docker compose -f ../docker-compose.e2e.yml up -d --build');
+  // Start Docker stack with proper error handling
+  execSync('docker compose -f ../docker-compose.e2e.yml up -d --build');
 
-    // Wait for services with health checks
-    await waitForServices();
+  // Wait for services with health checks
+  await waitForServices();
 
-    // Seed test data using backend container
-    execSync('docker compose -f ../docker-compose.e2e.yml exec -T backend python scripts/seed_e2e_data.py');
+  // Seed test data using backend container
+  execSync(
+    'docker compose -f ../docker-compose.e2e.yml exec -T backend python scripts/seed_e2e_data.py'
+  );
 }
 ```
 
@@ -1041,27 +1101,27 @@ export async function handle({
 
 ```typescript
 export const load: PageServerLoad = async ({ cookies, locals }) => {
-    // Use session from hooks.server.js
-    const sessionCookie = cookies.get('sessionid') || locals.session;
+  // Use session from hooks.server.js
+  const sessionCookie = cookies.get('sessionid') || locals.session;
 
-    if (!sessionCookie) {
-        throw redirect(302, '/login');
-    }
+  if (!sessionCookie) {
+    throw redirect(302, '/login');
+  }
 
-    try {
-        const response = await serverApi.get('/api/v1/web/campaigns/', {
-            headers: {
-                'Cookie': `sessionid=${sessionCookie}`,
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-        return { campaigns: response.data };
-    } catch (error) {
-        if (error.response?.status === 401) {
-            throw redirect(302, '/login');
-        }
-        throw error(500, 'Failed to load data');
+  try {
+    const response = await serverApi.get('/api/v1/web/campaigns/', {
+      headers: {
+        Cookie: `sessionid=${sessionCookie}`,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    });
+    return { campaigns: response.data };
+  } catch (error) {
+    if (error.response?.status === 401) {
+      throw redirect(302, '/login');
     }
+    throw error(500, 'Failed to load data');
+  }
 };
 ```
 
@@ -1071,26 +1131,22 @@ export const load: PageServerLoad = async ({ cookies, locals }) => {
 
 ```typescript
 export class ServerApiClient {
-    async authenticatedRequest(
-        endpoint: string,
-        options: RequestInit,
-        cookies: Cookies
-    ) {
-        const sessionCookie = cookies.get('sessionid');
+  async authenticatedRequest(endpoint: string, options: RequestInit, cookies: Cookies) {
+    const sessionCookie = cookies.get('sessionid');
 
-        if (!sessionCookie) {
-            throw new Error('No session cookie found');
-        }
-
-        return fetch(`${this.baseURL}${endpoint}`, {
-            ...options,
-            headers: {
-                ...options.headers,
-                'Cookie': `sessionid=${sessionCookie}`,
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
+    if (!sessionCookie) {
+      throw new Error('No session cookie found');
     }
+
+    return fetch(`${this.baseURL}${endpoint}`, {
+      ...options,
+      headers: {
+        ...options.headers,
+        Cookie: `sessionid=${sessionCookie}`,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    });
+  }
 }
 ```
 
@@ -1100,42 +1156,42 @@ export class ServerApiClient {
 
 ```typescript
 export const actions: Actions = {
-    default: async ({ request, cookies }) => {
-        const form = await superValidate(request, zod(loginSchema));
+  default: async ({ request, cookies }) => {
+    const form = await superValidate(request, zod(loginSchema));
 
-        if (!form.valid) {
-            return fail(400, { form });
-        }
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/v1/web/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form.data)
-            });
-
-            if (!response.ok) {
-                return fail(401, { form, message: 'Invalid credentials' });
-            }
-
-            // Extract and set session cookie
-            const setCookieHeader = response.headers.get('set-cookie');
-            const sessionMatch = setCookieHeader?.match(/sessionid=([^;]+)/);
-
-            if (sessionMatch) {
-                cookies.set('sessionid', sessionMatch[1], {
-                    httpOnly: true,
-                    secure: true,
-                    sameSite: 'strict',
-                    maxAge: 60 * 60 * 24 * 7 // 7 days
-                });
-            }
-
-            throw redirect(303, '/');
-        } catch (error) {
-            return fail(500, { form, message: 'Login failed' });
-        }
+    if (!form.valid) {
+      return fail(400, { form });
     }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/web/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form.data),
+      });
+
+      if (!response.ok) {
+        return fail(401, { form, message: 'Invalid credentials' });
+      }
+
+      // Extract and set session cookie
+      const setCookieHeader = response.headers.get('set-cookie');
+      const sessionMatch = setCookieHeader?.match(/sessionid=([^;]+)/);
+
+      if (sessionMatch) {
+        cookies.set('sessionid', sessionMatch[1], {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'strict',
+          maxAge: 60 * 60 * 24 * 7, // 7 days
+        });
+      }
+
+      throw redirect(303, '/');
+    } catch (error) {
+      return fail(500, { form, message: 'Login failed' });
+    }
+  },
 };
 ```
 
@@ -1145,18 +1201,16 @@ export const actions: Actions = {
 
 ```typescript
 export const load: PageServerLoad = async ({ cookies }) => {
-    // Bypass authentication in test environments
-    if (process.env.NODE_ENV === 'test' ||
-        process.env.PLAYWRIGHT_TEST ||
-        process.env.CI) {
-        return {
-            campaigns: mockCampaignData,
-            user: mockUserData
-        };
-    }
+  // Bypass authentication in test environments
+  if (process.env.NODE_ENV === 'test' || process.env.PLAYWRIGHT_TEST || process.env.CI) {
+    return {
+      campaigns: mockCampaignData,
+      user: mockUserData,
+    };
+  }
 
-    // Normal authentication flow
-    return authenticatedLoad(cookies);
+  // Normal authentication flow
+  return authenticatedLoad(cookies);
 };
 ```
 

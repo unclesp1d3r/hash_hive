@@ -3,6 +3,12 @@ dist
 build
 .next
 coverage
+test-results
 *.log
 .env
 .env.*
+# Ignore markdown docs from Prettier checks (per project preference)
+*.md
+**/*.md
+# Ignore Next.js generated files
+frontend/next-env.d.ts

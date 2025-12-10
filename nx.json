@@ -1,0 +1,114 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "targetDefaults": {
+    "build": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["dependencies", "configuration", "default"],
+      "outputs": ["{projectRoot}/dist/**", "{projectRoot}/.next/**"]
+    },
+    "test": {
+      "cache": true,
+      "inputs": ["testing", "dependencies"],
+      "outputs": ["{projectRoot}/coverage/**"]
+    },
+    "test:integration": {
+      "cache": true,
+      "inputs": ["testing", "dependencies", "docker"],
+      "outputs": ["{projectRoot}/coverage/**"]
+    },
+    "test:e2e": {
+      "cache": true,
+      "inputs": ["testing", "dependencies", "default"]
+    },
+    "test:coverage": {
+      "cache": true,
+      "inputs": ["testing", "dependencies"],
+      "outputs": ["{projectRoot}/coverage/**"]
+    },
+    "lint": {
+      "cache": true,
+      "inputs": ["configuration", "default"]
+    },
+    "type-check": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["configuration", "dependencies", "default"]
+    }
+  },
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "dependencies": [
+      "{projectRoot}/package.json",
+      "{workspaceRoot}/package-lock.json",
+      "{workspaceRoot}/package.json"
+    ],
+    "configuration": [
+      "{projectRoot}/tsconfig*.json",
+      "{workspaceRoot}/tsconfig.base.json",
+      "{projectRoot}/eslint.config.*",
+      "{workspaceRoot}/eslint.config.mjs",
+      "{projectRoot}/jest*.config.*",
+      "{workspaceRoot}/.prettierrc.json",
+      "{workspaceRoot}/.prettierignore"
+    ],
+    "docker": [
+      "{projectRoot}/Dockerfile",
+      "{projectRoot}/.dockerignore",
+      "{workspaceRoot}/docker-compose.yml"
+    ],
+    "production": [
+      "dependencies",
+      "configuration",
+      "default",
+      "!{projectRoot}/**/*.spec.ts",
+      "!{projectRoot}/**/*.test.{ts,tsx,js,jsx}",
+      "!{projectRoot}/**/*.spec.{ts,tsx,js,jsx}",
+      "!{projectRoot}/tsconfig.spec.json",
+      "!{projectRoot}/jest.config.*",
+      "!{projectRoot}/.eslintrc.json",
+      "!{projectRoot}/.eslintrc.js"
+    ],
+    "testing": [
+      "dependencies",
+      "configuration",
+      "default",
+      "{projectRoot}/**/*.test.{ts,tsx,js,jsx}",
+      "{projectRoot}/**/*.spec.{ts,tsx,js,jsx}",
+      "{projectRoot}/jest.config.*",
+      "{projectRoot}/tsconfig.spec.json"
+    ],
+    "sharedGlobals": [
+      "{workspaceRoot}/package.json",
+      "{workspaceRoot}/package-lock.json",
+      "{workspaceRoot}/tsconfig.base.json",
+      "{workspaceRoot}/eslint.config.mjs",
+      "{workspaceRoot}/.prettierrc.json",
+      "{workspaceRoot}/.prettierignore",
+      "{workspaceRoot}/nx.json"
+    ]
+  },
+  "tasksRunnerOptions": {
+    "default": {
+      "runner": "nx/tasks-runners/default",
+      "options": {
+        "cacheableOperations": [
+          "build",
+          "test",
+          "lint",
+          "type-check",
+          "test:integration",
+          "test:e2e",
+          "test:coverage"
+        ],
+        "cacheDirectory": ".nx/cache",
+        "parallel": 3
+      }
+    }
+  },
+  "defaultBase": "main",
+  "workspaceLayout": {
+    "appsDir": "",
+    "libsDir": ""
+  }
+}

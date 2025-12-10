@@ -1,0 +1,26 @@
+{
+  "enabled": true,
+  "name": "Documentation Sync on Source Changes",
+  "description": "Monitors TypeScript source files, configuration files, and API specifications across the repository. When changes are detected, prompts the agent to review and update relevant documentation in README.md or the /docs folder to keep documentation in sync with code changes.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "backend/src/**/*.ts",
+      "frontend/app/**/*.tsx",
+      "frontend/components/**/*.tsx",
+      "frontend/lib/**/*.ts",
+      "shared/src/**/*.ts",
+      "openapi/*.yaml",
+      "package.json",
+      "backend/package.json",
+      "frontend/package.json",
+      "tsconfig*.json",
+      "docker-compose.yml"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Source files have been modified. Please review the changes and determine if any documentation needs to be updated. Check:\n\n1. README.md - Does it need updates for new features, changed commands, or updated architecture?\n2. /docs folder - Are there specific documentation files that should be updated to reflect these code changes?\n3. API documentation - If API contracts changed, ensure openapi specs and related docs are in sync\n4. Architecture diagrams - Do any mermaid diagrams need updates?\n\nAnalyze the changed files and update the appropriate documentation to keep it accurate and current with the codebase."
+  }
+}

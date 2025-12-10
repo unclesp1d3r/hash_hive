@@ -181,14 +181,14 @@ The attack should be submitted with the following fields:
 
 ```jsonc
 {
-    "attack_mode": "mask",
-    "attack_mode_hashcat": 3,
-    "increment_mode": false,
-    "mask_list": ["?u?1?1?d?d?dPhotos?s"],
-    "custom_charset_1": "12",
-    "custom_charset_2": "",
-    "custom_charset_3": "",
-    "custom_charset_4": "",
-    "rule_list_id": "<optional: if any modificator is selected>"
+  "attack_mode": "mask",
+  "attack_mode_hashcat": 3,
+  "increment_mode": false,
+  "mask_list": ["?u?1?1?d?d?dPhotos?s"],
+  "custom_charset_1": "12",
+  "custom_charset_2": "",
+  "custom_charset_3": "",
+  "custom_charset_4": "",
+  "rule_list_id": "<optional: if any modificator is selected>",
 }
 ```

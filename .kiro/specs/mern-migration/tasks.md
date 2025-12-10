@@ -9,58 +9,58 @@
   - Configure environment variable management with dotenv and validation
   - _Requirements: 1.1, 1.2, 13.1, 13.2_
 
-- [ ] 2. Backend core infrastructure
-  - [ ] 2.1 Set up Express server with TypeScript
+- [-] 2. Backend core infrastructure
+  - [x] 2.1 Set up Express server with TypeScript
     - Create Express application with middleware pipeline
     - Implement request logging with Pino and request ID generation
     - Configure CORS and security headers
     - Set up health check endpoint at /health
     - _Requirements: 1.1, 13.4_
 
-  - [ ] 2.2 Implement MongoDB connection and base models
+  - [x] 2.2 Implement MongoDB connection and base models
     - Configure Mongoose with TypeScript type inference
     - Create base schema with timestamps and soft delete support
     - Implement connection management with retry logic
     - Set up database indexes for common query patterns
     - _Requirements: 1.1, 1.3_
 
-  - [ ] 2.3 Set up Redis and BullMQ infrastructure
+  - [x] 2.3 Set up Redis and BullMQ infrastructure
     - Configure Redis connection with health checks
     - Initialize BullMQ queue manager with default queues
     - Implement queue monitoring and metrics collection
     - Create dead-letter queue handling
     - _Requirements: 1.3, 6.2_
 
-  - [ ] 2.4 Implement S3/MinIO storage service
+  - [x] 2.4 Implement S3/MinIO storage service
     - Configure S3 client with MinIO for development
     - Create StorageService abstraction for file operations
     - Implement upload, download, and delete operations
     - Add presigned URL generation for secure downloads
     - _Requirements: 1.4, 7.1_
 
-- [ ] 3. Authentication and authorization system
-  - [ ] 3.1 Implement user model and authentication service
+- [x] 3. Authentication and authorization system
+  - [x] 3.1 Implement user model and authentication service
     - Create User Mongoose model with password hashing
     - Implement AuthService with login, logout, and token generation
     - Add JWT token generation and validation
     - Implement session management with HttpOnly cookies
     - _Requirements: 2.1, 2.2, 2.5_
 
-  - [ ] 3.2 Create authentication middleware
+  - [x] 3.2 Create authentication middleware
     - Implement JWT validation middleware for API routes
     - Create session validation middleware for web routes
     - Add request user context injection
     - Implement token refresh logic
     - _Requirements: 2.1, 2.2_
 
-  - [ ] 3.3 Implement role-based access control
+  - [x] 3.3 Implement role-based access control
     - Create Role and ProjectUser models
     - Implement authorization middleware with role checking
     - Add project-scoped permission validation
     - Create permission helper utilities
     - _Requirements: 2.3, 2.4_
 
-  - [ ] 3.4 Write authentication tests
+  - [x] 3.4 Write authentication tests
     - Test login flow with valid and invalid credentials
     - Test JWT token generation and validation
     - Test session cookie management

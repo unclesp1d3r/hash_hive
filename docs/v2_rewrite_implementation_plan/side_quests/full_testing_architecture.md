@@ -448,26 +448,29 @@ end
 **Original TypeScript/Playwright reference implementation:**
 
 ```typescript
-import { execSync } from "child_process";
-import fetch from "node-fetch";
+import { execSync } from 'child_process';
+import fetch from 'node-fetch';
 
 async function globalSetup() {
-    console.log("Starting Docker Compose E2E stack...");
-    execSync("docker compose -f docker-compose.e2e.yml up -d --wait", { stdio: 'inherit' });
+  console.log('Starting Docker Compose E2E stack...');
+  execSync('docker compose -f docker-compose.e2e.yml up -d --wait', { stdio: 'inherit' });
 
-    // Wait for backend health check
-    let ready = false;
-    while (!ready) {
-        try {
-            const res = await fetch("http://localhost:8000/api/v1/web/health/overview");
-            if (res.ok) ready = true;
-        } catch {
-            await new Promise(r => setTimeout(r, 1000));
-        }
+  // Wait for backend health check
+  let ready = false;
+  while (!ready) {
+    try {
+      const res = await fetch('http://localhost:8000/api/v1/web/health/overview');
+      if (res.ok) ready = true;
+    } catch {
+      await new Promise((r) => setTimeout(r, 1000));
     }
+  }
 
-    console.log("Seeding E2E test data...");
-    execSync("docker compose -f docker-compose.e2e.yml exec backend python scripts/seed_e2e_data.py", { stdio: 'inherit' });
+  console.log('Seeding E2E test data...');
+  execSync(
+    'docker compose -f docker-compose.e2e.yml exec backend python scripts/seed_e2e_data.py',
+    { stdio: 'inherit' }
+  );
 }
 
 export default globalSetup;
@@ -492,11 +495,11 @@ end
 **Original TypeScript/Playwright reference implementation:**
 
 ```typescript
-import { execSync } from "child_process";
+import { execSync } from 'child_process';
 
 async function globalTeardown() {
-    console.log("Stopping Docker Compose E2E stack...");
-    execSync("docker compose -f docker-compose.e2e.yml down -v", { stdio: 'inherit' });
+  console.log('Stopping Docker Compose E2E stack...');
+  execSync('docker compose -f docker-compose.e2e.yml down -v', { stdio: 'inherit' });
 }
 
 export default globalTeardown;
@@ -539,14 +542,14 @@ import globalSetup from './playwright/global-setup';
 import globalTeardown from './playwright/global-teardown';
 
 export default defineConfig({
-    testDir: 'e2e-fullstack',
-    globalSetup,
-    globalTeardown,
-    use: {
-        baseURL: 'http://localhost:5173',
-        // Configure for real backend integration
-    },
-    // Other E2E specific configuration
+  testDir: 'e2e-fullstack',
+  globalSetup,
+  globalTeardown,
+  use: {
+    baseURL: 'http://localhost:5173',
+    // Configure for real backend integration
+  },
+  // Other E2E specific configuration
 });
 ```
 
@@ -593,15 +596,15 @@ end
 import { test, expect } from '@playwright/test';
 
 test('complete user authentication flow', async ({ page }) => {
-    // Use seeded test user credentials
-    await page.goto('/login');
-    await page.fill('[name=username]', 'e2e-test-user');
-    await page.fill('[name=password]', 'test-password');
-    await page.click('button[type=submit]');
+  // Use seeded test user credentials
+  await page.goto('/login');
+  await page.fill('[name=username]', 'e2e-test-user');
+  await page.fill('[name=password]', 'test-password');
+  await page.click('button[type=submit]');
 
-    // Should redirect to dashboard with real backend data
-    await expect(page).toHaveURL('/');
-    await expect(page.locator('[data-testid=campaign-count]')).toBeVisible();
+  // Should redirect to dashboard with real backend data
+  await expect(page).toHaveURL('/');
+  await expect(page.locator('[data-testid=campaign-count]')).toBeVisible();
 });
 ```
 

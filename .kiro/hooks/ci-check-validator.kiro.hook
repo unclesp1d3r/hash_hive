@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "CI Check Validator",
+  "description": "Runs `just ci-check` to validate code quality including type-checking, formatting, linting, and tests. Analyzes any failures or warnings and fixes them, then re-runs ci-check. Repeats until all checks pass successfully.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run `just ci-check` to validate code quality. Analyze the output carefully for any failures or warnings including:\n- Type-checking violations\n- Formatting issues  \n- Test failures\n- Linting errors\n- Any other CI check failures\n\nIf there are any issues:\n1. Fix the identified problems in the codebase\n2. Run `just ci-check` again to verify the fixes\n3. Repeat this process until all checks pass successfully without any failures or warnings\n\nContinue iterating until the output shows all checks passing cleanly."
+  }
+}

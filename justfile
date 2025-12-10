@@ -1,20 +1,312 @@
 # HashHive justfile - Common development commands
 
+set windows-shell := ["powershell.exe", "-c"]
+set shell := ["bash", "-c"]
+set dotenv-load := true
+
 # Show available recipes
 default:
-    @just --list
+    @just --choose
+
+# -----------------------------
+# 🔧 Setup & Installation
+# -----------------------------
+
+# Update uv and pnpm dependencies
+[unix]
+update-deps:
+    cd {{ justfile_dir() }}
+    npm update --all --include=dev
+    pre-commit autoupdate
+
+[windows]
+update-deps:
+    cd {{ justfile_dir() }}
+    npm update --all --include=dev
+    pre-commit autoupdate
 
 # Install all dependencies
 install:
     npm install
 
 # Complete setup (install deps, copy env files, start docker)
+[unix]
 setup:
-    ./scripts/setup.sh
+    #!/usr/bin/env bash
+    # HashHive Setup - Unix
+    # Check Node.js major version (require 20+)
+    NODE_MAJOR_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+    if [ "$NODE_MAJOR_VERSION" -lt 20 ]; then
+        echo "Node.js 20+ is required. Current version: $(node -v)" >&2
+        exit 1
+    fi
+
+    npm install
+    npm install --workspaces
+
+    if [ ! -f backend/.env ]; then
+        cp backend/.env.example backend/.env
+    fi
+
+    if [ ! -f frontend/.env ]; then
+        cp frontend/.env.example frontend/.env
+    fi
+
+    docker compose up -d
+    sleep 5
+    docker compose ps
+
+    if command -v pre-commit >/dev/null 2>&1; then
+        pre-commit install
+    fi
+
+    bash scripts/install-git-hooks.sh
+
+    echo "Setup complete."
+
+[windows]
+setup:
+    #!pwsh.exe
+    # HashHive Setup - Windows (PowerShell)
+    $nodeVersionOutput = node -v
+    if (-not $nodeVersionOutput) {
+      Write-Error "Node.js is not installed or not on PATH. Please install Node.js 20+ first."
+      exit 1
+    }
+
+    $nodeMajorVersion = [int]($nodeVersionOutput.TrimStart('v').Split('.')[0])
+    if ($nodeMajorVersion -lt 20) {
+      Write-Error "Node.js 20+ is required. Current version: $nodeVersionOutput"
+      exit 1
+    }
+
+    npm install
+    npm install --workspaces
+
+    if (-not (Test-Path "backend/.env")) {
+      Copy-Item "backend/.env.example" "backend/.env"
+    }
+
+    if (-not (Test-Path "frontend/.env")) {
+      Copy-Item "frontend/.env.example" "frontend/.env"
+    }
+
+    docker compose up -d
+    Start-Sleep -Seconds 5
+    docker compose ps
+
+    if (Get-Command pre-commit -ErrorAction SilentlyContinue) {
+      pre-commit install
+    }
+
+    # Install Git hooks (requires bash - available via Git Bash, WSL, or similar)
+    if (Get-Command bash -ErrorAction SilentlyContinue) {
+      bash scripts/install-git-hooks.sh
+    } else {
+      Write-Warning "bash not found - skipping Git hooks installation. Install Git Bash or WSL to enable."
+    }
+
+    Write-Output "Setup complete."
 
 # Validate project setup
+[unix]
 validate:
-    ./scripts/validate-setup.sh
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    NODE_MAJOR_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+    if [ "$NODE_MAJOR_VERSION" -lt 20 ]; then
+        echo "Node.js 20+ required. Current: $(node -v)" >&2
+        exit 1
+    fi
+
+    NPM_MAJOR_VERSION=$(npm -v | cut -d'.' -f1)
+    if [ "$NPM_MAJOR_VERSION" -lt 10 ]; then
+        echo "npm 10+ required. Current: $(npm -v)" >&2
+        exit 1
+    fi
+
+    if ! command -v docker >/dev/null 2>&1; then
+        echo "Docker not found" >&2
+        exit 1
+    fi
+
+    if ! command -v docker compose >/dev/null 2>&1; then
+        echo "Docker Compose not found" >&2
+        exit 1
+    fi
+
+    for dir in backend frontend shared openapi; do
+        if [ ! -d "$dir" ]; then
+            echo "Missing directory: $dir" >&2
+            exit 1
+        fi
+    done
+
+    for pkg in package.json backend/package.json frontend/package.json shared/package.json; do
+        if [ ! -f "$pkg" ]; then
+            echo "Missing: $pkg" >&2
+            exit 1
+        fi
+    done
+
+    for tsconfig in tsconfig.base.json backend/tsconfig.json frontend/tsconfig.json shared/tsconfig.json; do
+        if [ ! -f "$tsconfig" ]; then
+            echo "Missing: $tsconfig" >&2
+            exit 1
+        fi
+    done
+
+    if [ ! -f backend/.env.example ]; then
+        echo "Missing: backend/.env.example" >&2
+        exit 1
+    fi
+
+    if [ ! -f frontend/.env.example ]; then
+        echo "Missing: frontend/.env.example" >&2
+        exit 1
+    fi
+
+    if [ ! -f docker-compose.yml ]; then
+        echo "Missing: docker-compose.yml" >&2
+        exit 1
+    fi
+
+    if [ ! -d node_modules ]; then
+        echo "Root dependencies not installed (run: npm install)" >&2
+        exit 1
+    fi
+
+    if [ ! -d backend/node_modules ]; then
+        echo "Backend dependencies not installed (run: npm install -w backend)" >&2
+        exit 1
+    fi
+
+    if [ ! -d frontend/node_modules ]; then
+        echo "Frontend dependencies not installed (run: npm install -w frontend)" >&2
+        exit 1
+    fi
+
+[windows]
+validate:
+    #!pwsh.exe
+    # HashHive validation - Windows (PowerShell)
+    $nodeVersionOutput = node -v
+    if (-not $nodeVersionOutput) {
+        Write-Error "Node.js is not installed or not on PATH. Please install Node.js 20+ first."
+        exit 1
+    }
+
+    $nodeMajorVersion = [int]($nodeVersionOutput.TrimStart('v').Split('.')[0])
+    if ($nodeMajorVersion -lt 20) {
+        Write-Error "Node.js 20+ required. Current: $nodeVersionOutput"
+        exit 1
+    }
+
+    $npmVersionOutput = npm -v
+    $npmMajorVersion = [int]($npmVersionOutput.Split('.')[0])
+    if ($npmMajorVersion -lt 10) {
+        Write-Error "npm 10+ required. Current: $npmVersionOutput"
+        exit 1
+    }
+
+    if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+        Write-Error "Docker not found"
+        exit 1
+    }
+
+    if (-not (docker compose version 2>$null)) {
+        Write-Error "Docker Compose not found"
+        exit 1
+    }
+
+    $requiredDirs = @("backend", "frontend", "shared", "openapi")
+    foreach ($dir in $requiredDirs) {
+      if (-not (Test-Path $dir -PathType Container)) {
+        Write-Error "Missing directory: $dir"
+        exit 1
+      }
+    }
+
+    $requiredPackages = @("package.json", "backend/package.json", "frontend/package.json", "shared/package.json")
+    foreach ($pkg in $requiredPackages) {
+        if (-not (Test-Path $pkg -PathType Leaf)) {
+            Write-Error "Missing: $pkg"
+            exit 1
+        }
+    }
+
+    $requiredTsconfigs = @("tsconfig.base.json", "backend/tsconfig.json", "frontend/tsconfig.json", "shared/tsconfig.json")
+    foreach ($tsconfig in $requiredTsconfigs) {
+        if (-not (Test-Path $tsconfig -PathType Leaf)) {
+            Write-Error "Missing: $tsconfig"
+            exit 1
+        }
+    }
+
+
+    if (-not (Test-Path "backend/.env.example" -PathType Leaf)) {
+        Write-Error "Missing: backend/.env.example"
+        exit 1
+    }
+
+    if (-not (Test-Path "frontend/.env.example" -PathType Leaf)) {
+        Write-Error "Missing: frontend/.env.example"
+        exit 1
+    }
+
+    if (-not (Test-Path "docker-compose.yml" -PathType Leaf)) {
+        Write-Error "Missing: docker-compose.yml"
+        exit 1
+    }
+
+    if (-not (Test-Path "node_modules" -PathType Container)) {
+        Write-Warning "Root dependencies not installed (run: npm install)"
+        exit 1
+    }
+
+    if (-not (Test-Path "backend/node_modules" -PathType Container)) {
+        Write-Warning "Backend dependencies not installed (run: npm install -w backend)"
+        exit 1
+    }
+
+    if (-not (Test-Path "frontend/node_modules" -PathType Container)) {
+        Write-Warning "Frontend dependencies not installed (run: npm install -w frontend)"
+    }
+
+# Copy environment files from examples
+env-setup:
+    cp backend/.env.example backend/.env
+    cp frontend/.env.example frontend/.env
+
+# Install pre-commit hooks
+[unix]
+install-hooks:
+    #!/usr/bin/env bash
+    pre-commit install
+    if [ -f scripts/install-git-hooks.sh ]; then
+        bash scripts/install-git-hooks.sh
+    else
+        echo "Note: scripts/install-git-hooks.sh not found - skipping additional hooks"
+    fi
+
+[windows]
+install-hooks:
+    #!pwsh.exe
+    pre-commit install
+    if (Test-Path "scripts/install-git-hooks.sh") {
+        if (Get-Command bash -ErrorAction SilentlyContinue) {
+            bash scripts/install-git-hooks.sh
+        } else {
+            Write-Warning "bash not found - skipping Git hooks installation. Install Git Bash or WSL to enable."
+        }
+    } else {
+        Write-Output "Note: scripts/install-git-hooks.sh not found - skipping additional hooks"
+    }
+
+# -----------------------------
+# 🚀 Development Environment
+# -----------------------------
 
 # Start development servers (backend + frontend)
 dev:
@@ -28,47 +320,45 @@ dev-backend:
 dev-frontend:
     npm run dev -w frontend
 
-# Build all packages
-build:
-    npm run build
+# Run backend in production mode
+start-backend:
+    npm run start -w backend
 
-# Build specific package
-build-backend:
-    npm run build -w backend
+# Run frontend in production mode
+start-frontend:
+    npm run start -w frontend
 
-build-frontend:
-    npm run build -w frontend
+# Show environment info
+[unix]
+info:
+    @echo "Node version: $(node -v)"
+    @echo "npm version: $(npm -v)"
+    @echo "Docker version: $(docker --version)"
+    @echo ""
+    @echo "Services:"
+    @docker compose ps
 
-build-shared:
-    npm run build -w shared
+[windows]
+info:
+    #!pwsh.exe
+    Write-Output "Node version: $(node -v)"
+    Write-Output "npm version: $(npm -v)"
+    Write-Output "Docker version: $(docker --version)"
+    Write-Output ""
+    Write-Output "Services:"
+    docker compose ps
 
-# Run all tests
-test:
-    npm test
+# Restart a specific service
+restart service:
+    docker compose restart {{ service }}
 
-# Run backend tests
-test-backend:
-    npm run test -w backend
+# -----------------------------
+# 🧹 Linting, Typing, Dep Check
+# -----------------------------
 
-# Run frontend tests
-test-frontend:
-    npm run test -w frontend
-
-# Run integration tests
-test-integration:
-    npm run test:integration -w backend
-
-# Run E2E tests
-test-e2e:
-    npm run test:e2e -w frontend
-
-# Run tests in watch mode
-test-watch:
-    npm run test:watch -w backend
-
-# Lint all code
+# Lint all code (NX-powered)
 lint:
-    npm run lint
+    npx nx run-many --target=lint --all
 
 # Format all code
 format:
@@ -78,9 +368,89 @@ format:
 format-check:
     npm run format:check
 
-# Run TypeScript type checking
+# Run TypeScript type checking across all workspaces (NX-powered)
 type-check:
-    npm run type-check
+    npx nx run-many --target=type-check --all
+
+# -----------------------------
+# 🧪 Testing & Coverage
+# -----------------------------
+
+# Run all tests (NX-powered)
+test:
+    npx nx run-many --target=test --all
+
+# Run backend tests
+test-backend:
+    npx nx run backend:test
+
+# Run frontend tests
+test-frontend:
+    npx nx run frontend:test
+
+# Run integration tests
+test-integration:
+    npx nx run backend:test:integration
+
+# Run E2E tests
+test-e2e:
+    npx nx run frontend:test:e2e
+
+# Run tests in watch mode
+test-watch:
+    npm run test:watch -w backend
+
+# Generate coverage report
+coverage:
+    npx nx run backend:test:coverage
+
+# -----------------------------
+# 📦 Build & Clean
+# -----------------------------
+
+# Build all packages (NX-powered)
+build:
+    npx nx run-many --target=build --all
+
+# Build specific package
+build-backend:
+    npx nx run backend:build
+
+build-frontend:
+    npx nx run frontend:build
+
+build-shared:
+    npx nx run shared:build
+
+# Clean build artifacts and dependencies
+[unix]
+clean:
+    #!/usr/bin/env bash
+    rm -rf node_modules
+    rm -rf backend/node_modules backend/dist
+    rm -rf frontend/node_modules frontend/.next
+    rm -rf shared/node_modules shared/dist
+    rm -rf coverage
+
+[windows]
+clean:
+    #!pwsh.exe
+    Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force backend/node_modules, backend/dist -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force frontend/node_modules, frontend/.next -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force shared/node_modules, shared/dist -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force coverage -ErrorAction SilentlyContinue
+
+# Clean Docker volumes
+clean-docker:
+    docker compose down -v
+
+# Full clean (code + docker)
+clean-all: clean clean-docker
+
+# -----------------------------
+# 🐳 Docker & Infrastructure
+# -----------------------------
 
 # Start Docker services
 docker-up:
@@ -96,7 +466,7 @@ docker-logs:
 
 # View logs for specific service
 docker-logs-service service:
-    docker compose logs -f {{service}}
+    docker compose logs -f {{ service }}
 
 # Reset Docker volumes and restart
 docker-reset:
@@ -107,41 +477,34 @@ docker-reset:
 docker-status:
     docker compose ps
 
-# Clean build artifacts and dependencies
-clean:
-    rm -rf node_modules
-    rm -rf backend/node_modules backend/dist
-    rm -rf frontend/node_modules frontend/.next
-    rm -rf shared/node_modules shared/dist
-    rm -rf coverage
-
-# Clean Docker volumes
-clean-docker:
-    docker compose down -v
-
-# Full clean (code + docker)
-clean-all: clean clean-docker
-
-# Copy environment files from examples
-env-setup:
-    cp backend/.env.example backend/.env
-    cp frontend/.env.example frontend/.env
-
-# Run backend in production mode
-start-backend:
-    npm run start -w backend
-
-# Run frontend in production mode
-start-frontend:
-    npm run start -w frontend
-
-# Generate coverage report
-coverage:
-    npm run test:coverage -w backend
-
 # Open MinIO console
+[unix]
 minio-console:
-    open http://localhost:9001
+    #!/usr/bin/env bash
+    URL="http://localhost:9001"
+    if command -v open >/dev/null 2>&1; then
+        open "$URL"
+    elif command -v xdg-open >/dev/null 2>&1; then
+        xdg-open "$URL"
+    else
+        echo "Error: No suitable command found to open URL. Install 'xdg-open' (Linux) or use 'open' (macOS)" >&2
+        exit 1
+    fi
+
+[windows]
+minio-console:
+    #!pwsh.exe
+    $url = "http://localhost:9001"
+    try {
+        Start-Process $url
+    } catch {
+        Write-Error "Failed to open URL: $url"
+        exit 1
+    }
+
+# -----------------------------
+# 🗄️ Database Tasks
+# -----------------------------
 
 # Connect to MongoDB shell
 mongo-shell:
@@ -151,15 +514,241 @@ mongo-shell:
 redis-cli:
     docker compose exec redis redis-cli
 
-# Show environment info
-info:
-    @echo "Node version: $(node -v)"
-    @echo "npm version: $(npm -v)"
-    @echo "Docker version: $(docker --version)"
-    @echo ""
-    @echo "Services:"
-    @docker compose ps
+# -----------------------------
+# 🤖 CI Workflow
+# -----------------------------
+# Run the full CI check locally or in GitHub Actions (NX-powered).
+# This runs ALL targets (not affected-only) - useful for pre-commit or main branch CI.
+# For PR simulation, use 'just ci-affected' which runs only affected targets.
+# This relies on Jest + Testcontainers to provision MongoDB, Redis, and MinIO
 
-# Restart a specific service
-restart service:
-    docker compose restart {{service}}
+# for the backend test suites, so no docker-compose step is required.
+ci-check:
+    npx nx run-many --targets=lint,type-check,test --all --parallel=3
+    npx nx run backend:test:integration
+    npx nx run backend:test:coverage
+    npx nx run frontend:test:e2e
+    npm run format:check
+
+# NX-specific commands
+affected-test:
+    npx nx affected --target=test
+
+affected-build:
+    npx nx affected --target=build
+
+graph:
+    npx nx graph
+
+reset-cache:
+    npx nx reset
+
+# -----------------------------
+# 🔍 NX Affected Detection
+# -----------------------------
+# Commands to help developers understand what would run in CI
+
+# Show which projects are affected compared to main branch
+[unix]
+affected-projects:
+    npx nx show projects --affected --base=origin/main
+
+[windows]
+affected-projects:
+    npx nx show projects --affected --base=origin/main
+
+# Preview what CI would run for current changes
+affected-ci-preview:
+    npx nx affected --targets=lint,type-check,test --base=origin/main --dry-run
+
+# Check if backend is affected (useful for conditional logic)
+[unix]
+affected-backend-check:
+    #!/usr/bin/env bash
+    if npx nx show projects --affected --base=origin/main | grep -q "backend"; then
+        echo "Backend is affected"
+        exit 0
+    else
+        echo "Backend is not affected"
+        exit 1
+    fi
+
+[windows]
+affected-backend-check:
+    #!pwsh.exe
+    $affected = npx nx show projects --affected --base=origin/main
+    if ($affected -match "backend") {
+        Write-Output "Backend is affected"
+        exit 0
+    } else {
+        Write-Output "Backend is not affected"
+        exit 1
+    fi
+
+# Simulate full CI workflow locally (runs affected targets)
+ci-affected:
+    npx nx affected --targets=lint,type-check,test --base=origin/main --parallel=3
+    npx nx affected --target=test:integration --base=origin/main --parallel=3
+    npx nx affected --target=test:coverage --base=origin/main --parallel=3
+    npx nx affected --target=test:e2e --base=origin/main --parallel=3
+    npm run format:check
+
+# Validate NX caching behavior with timing
+[unix]
+validate-cache:
+    #!/usr/bin/env bash
+    npx nx reset
+    echo "First build (cache miss):"
+    time npm run build
+    echo "Second build (cache hit):"
+    time npm run build
+
+[windows]
+validate-cache:
+    #!pwsh.exe
+    npx nx reset
+    Write-Output "First build (cache miss):"
+    $start1 = Get-Date
+    npm run build
+    $end1 = Get-Date
+    Write-Output "Duration: $(($end1 - $start1).TotalSeconds) seconds"
+    Write-Output "Second build (cache hit):"
+    $start2 = Get-Date
+    npm run build
+    $end2 = Get-Date
+    Write-Output "Duration: $(($end2 - $start2).TotalSeconds) seconds"
+
+# -----------------------------
+# 🔧 Advanced NX Features
+# -----------------------------
+# Commands for inspecting, debugging, and optimizing NX caching behavior
+
+# Show cache configuration for a project
+cache-config project:
+    npx nx show project {{project}} --json | jq '.targets'
+
+# Show what inputs affect a specific target
+cache-inputs project target:
+    npx nx show project {{project}} --json | jq '.targets.{{target}}.inputs'
+
+# Run tests with custom parallelism (useful for powerful machines)
+test-parallel count:
+    npx nx run-many --target=test --all --parallel={{count}}
+
+# Run builds with maximum parallelism
+build-max-parallel:
+    npx nx run-many --target=build --all --parallel=10
+
+# Run a target with verbose logging to debug cache misses
+debug-cache project target:
+    NX_VERBOSE_LOGGING=true npx nx run {{project}}:{{target}}
+
+# Show cache statistics
+cache-stats:
+    @echo "NX Cache Directory:"
+    @du -sh .nx/cache 2>/dev/null || echo "No cache yet"
+    @echo ""
+    @echo "Cached projects:"
+    @ls -la .nx/cache 2>/dev/null | tail -n +4 || echo "No cache yet"
+
+# Build backend Docker image with BuildKit caching
+docker-build-cached:
+    DOCKER_BUILDKIT=1 docker build --cache-from hashhive-backend:latest -t hashhive-backend:latest backend/
+
+# Build with cache export for CI
+docker-build-cache-export:
+    DOCKER_BUILDKIT=1 docker build --cache-from hashhive-backend:latest --cache-to type=local,dest=.docker-cache -t hashhive-backend:latest backend/
+
+# Connect to NX Cloud (interactive)
+nx-cloud-connect:
+    npx nx connect-to-nx-cloud
+
+# Show NX Cloud status
+nx-cloud-status:
+    @if grep -q "nxCloudAccessToken" nx.json; then \
+        echo "NX Cloud: Enabled"; \
+    else \
+        echo "NX Cloud: Not configured"; \
+        echo "Run 'just nx-cloud-connect' to enable distributed caching"; \
+    fi
+
+# Benchmark cache performance (runs build twice and compares)
+[unix]
+benchmark-cache:
+    #!/usr/bin/env bash
+    npx nx reset
+    echo "=== First run (cache miss) ==="
+    time npm run build
+    echo ""
+    echo "=== Second run (cache hit) ==="
+    time npm run build
+    echo ""
+    echo "Expected: Second run should be 10-100x faster"
+
+[windows]
+benchmark-cache:
+    #!pwsh.exe
+    npx nx reset
+    Write-Output "=== First run (cache miss) ==="
+    $start1 = Get-Date
+    npm run build
+    $end1 = Get-Date
+    $duration1 = ($end1 - $start1).TotalSeconds
+    Write-Output "Duration: $duration1 seconds"
+    Write-Output ""
+    Write-Output "=== Second run (cache hit) ==="
+    $start2 = Get-Date
+    npm run build
+    $end2 = Get-Date
+    $duration2 = ($end2 - $start2).TotalSeconds
+    Write-Output "Duration: $duration2 seconds"
+    Write-Output ""
+    $speedup = [math]::Round($duration1 / $duration2, 2)
+    Write-Output "Speedup: ${speedup}x faster"
+    Write-Output "Expected: 10-100x faster"
+
+# -----------------------------
+# ✅ Validation & Optimization
+# -----------------------------
+# Commands for validating NX setup and optimizing performance
+
+# Comprehensive NX validation (runs dependency graph check, affected detection, cache verification, and displays statistics)
+validate-nx:
+    npm run validate:nx
+
+# Full validation including NX validation plus ci-check (ensures everything works end-to-end)
+validate-all:
+    npm run validate:nx
+    just ci-check
+
+# Generate a report showing cache statistics, affected projects, and performance metrics
+[unix]
+optimization-report:
+    #!/usr/bin/env bash
+    echo "=== NX Cache Statistics ==="
+    just cache-stats
+    echo ""
+    echo "=== Affected Projects ==="
+    just affected-projects
+    echo ""
+    echo "=== Recent Build Times ==="
+    echo "Run 'just benchmark-cache' to measure build performance"
+
+[windows]
+optimization-report:
+    #!pwsh.exe
+    Write-Output "=== NX Cache Statistics ==="
+    just cache-stats
+    Write-Output ""
+    Write-Output "=== Affected Projects ==="
+    just affected-projects
+    Write-Output ""
+    Write-Output "=== Recent Build Times ==="
+    Write-Output "Run 'just benchmark-cache' to measure build performance"
+
+# -----------------------------
+# 📚 Documentation
+# -----------------------------
+# -----------------------------
+# 🚢 Production Build & Deployment
+# -----------------------------

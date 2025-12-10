@@ -1,0 +1,25 @@
+{
+  "enabled": true,
+  "name": "Format Code on Save",
+  "description": "Monitors for source code file saves and automatically runs `just format` to format the code and maintain consistent styling across the project",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.json",
+      "**/*.md",
+      "**/*.yaml",
+      "**/*.yml"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "just format"
+  },
+  "workspaceFolderName": "hash_hive",
+  "shortName": "format-on-save"
+}
