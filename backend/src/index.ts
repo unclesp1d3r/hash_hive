@@ -403,6 +403,18 @@ app.use('/health', healthRouter);
 // to ensure mongoose.connection.getClient() is called after mongoose.connect() completes
 let authRouterMounted = false;
 
+/**
+ * Mount Auth.js routes on the Express app
+ * This function should be called after the database connection is established
+ * to ensure mongoose.connection.getClient() is available
+ */
+export function mountAuthRoutes(): void {
+  if (!authRouterMounted) {
+    app.use('/auth', ExpressAuth(getAuthConfig()));
+    authRouterMounted = true;
+  }
+}
+
 // API routes
 app.use('/api/v1/web', webRouter);
 // app.use('/api/v1/agent', agentRouter);
@@ -418,10 +430,7 @@ if (require.main === module) {
     .then(() => {
       // Mount Auth.js routes after database connection is established
       // This ensures mongoose.connection.getClient() is called after mongoose.connect() completes
-      if (!authRouterMounted) {
-        app.use('/auth', ExpressAuth(getAuthConfig()));
-        authRouterMounted = true;
-      }
+      mountAuthRoutes();
 
       // Initialize BullMQ queues after Redis is connected
       initializeQueues();
