@@ -60,17 +60,20 @@ async function validateUserPassword(
   if (password.length < STRONG_MIN_PASSWORD_LENGTH && user.password_requires_upgrade !== true) {
     // eslint-disable-next-line no-param-reassign -- Mongoose document must be mutated to save changes
     user.password_requires_upgrade = true;
-    await user.save();
-    logger.warn(
-      { userId: user._id.toString(), email: user.email },
-      'User logged in with weak password; flagged for upgrade'
-    );
   }
 
   // Update last login timestamp
   // eslint-disable-next-line no-param-reassign -- Mongoose document must be mutated to save changes
   user.last_login_at = new Date();
+  // Save once with both updates to avoid race conditions
   await user.save();
+  
+  if (password.length < STRONG_MIN_PASSWORD_LENGTH && user.password_requires_upgrade === true) {
+    logger.warn(
+      { userId: user._id.toString(), email: user.email },
+      'User logged in with weak password; flagged for upgrade'
+    );
+  }
 
   return true;
 }

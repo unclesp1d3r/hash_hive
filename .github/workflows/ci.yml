@@ -93,9 +93,22 @@ jobs:
           targets: lint,type-check,test,test:integration,test:coverage,test:e2e
           parallel: 5
 
+      # Check if backend coverage file exists before uploading
+      # Only upload if backend tests actually ran (coverage file exists)
+      - name: Check if backend coverage exists
+        id: check-coverage
+        run: |
+          if [ -f backend/coverage/lcov.info ] || [ -f backend/coverage/coverage.lcov ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
       # Upload coverage only if tests ran and coverage directory exists
-      # Use if: always() to ensure upload even if tests fail
+      # Use if: always() to ensure upload even if tests fail, but only if coverage exists
       - name: Upload coverage reports to Codecov
+        if: always() && steps.check-coverage.outputs.exists == 'true'
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

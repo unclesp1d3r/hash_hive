@@ -48,46 +48,60 @@ async function loginWithCredentials(
     requestBody.csrfToken = csrfToken;
   }
 
-  // Don't follow redirects automatically - handle them manually to capture all cookies
+  // Make initial login request
   const loginResponse = await agent.post('/auth/signin/credentials').send(requestBody);
 
-  // If there's a redirect, follow it manually to capture cookies
+  // Extract and add cookies from login response
+  const loginSetCookies = loginResponse.headers['set-cookie'] || [];
+  const loginCookies = Array.isArray(loginSetCookies) ? loginSetCookies : loginSetCookies ? [loginSetCookies] : [];
+  loginCookies.forEach((cookieStr: string) => {
+    if (cookieStr) {
+      // Try adding with different URLs to ensure it's accessible
+      try {
+        agent.jar.setCookie(cookieStr, 'http://localhost:3001');
+      } catch {
+        // Ignore
+      }
+      try {
+        agent.jar.setCookie(cookieStr, 'http://localhost');
+      } catch {
+        // Ignore
+      }
+    }
+  });
+
+  // Follow redirect if present
   let finalResponse = loginResponse;
   if (loginResponse.status === 302 && loginResponse.headers.location) {
     const location = loginResponse.headers.location;
-    // Handle both absolute and relative URLs
     const redirectPath = location.startsWith('http') ? new URL(location).pathname : location;
     finalResponse = await agent.get(redirectPath);
+    
+    // Extract and add cookies from redirect response
+    const redirectSetCookies = finalResponse.headers['set-cookie'] || [];
+    const redirectCookies = Array.isArray(redirectSetCookies) ? redirectSetCookies : redirectSetCookies ? [redirectSetCookies] : [];
+    redirectCookies.forEach((cookieStr: string) => {
+      if (cookieStr) {
+        try {
+          agent.jar.setCookie(cookieStr, 'http://localhost:3001');
+        } catch {
+          // Ignore
+        }
+        try {
+          agent.jar.setCookie(cookieStr, 'http://localhost');
+        } catch {
+          // Ignore
+        }
+      }
+    });
   }
 
-  // Extract cookies from Set-Cookie headers in all responses
-  const allSetCookies: string[] = [];
-  
-  // Get cookies from login response
-  const loginCookies = loginResponse.headers['set-cookie'] || [];
-  if (Array.isArray(loginCookies)) {
-    allSetCookies.push(...loginCookies);
-  } else if (loginCookies) {
-    allSetCookies.push(loginCookies);
+  // Get cookies from jar
+  let agentCookies = agent.jar.getCookies('http://localhost:3001');
+  if (agentCookies.length === 0) {
+    agentCookies = agent.jar.getCookies('http://localhost');
   }
-  
-  // Get cookies from redirect response if different
-  if (finalResponse !== loginResponse) {
-    const redirectCookies = finalResponse.headers['set-cookie'] || [];
-    if (Array.isArray(redirectCookies)) {
-      allSetCookies.push(...redirectCookies);
-    } else if (redirectCookies) {
-      allSetCookies.push(redirectCookies);
-    }
-  }
-
-  // Extract just the name=value part from Set-Cookie headers
-  const cookies = allSetCookies
-    .map((cookieHeader: string) => {
-      const [nameValue] = cookieHeader.split(';');
-      return nameValue.trim();
-    })
-    .filter((cookie) => cookie.length > 0);
+  const cookies = agentCookies.map((cookie) => `${cookie.key}=${cookie.value}`);
 
   return { response: finalResponse, agent, cookies };
 }
@@ -230,6 +244,9 @@ describe('Auth.js Authentication Integration Tests', () => {
       // Login to get session - agent maintains cookies automatically
       const { agent } = await loginWithCredentials('test@example.com', 'password123');
 
+      // Wait a bit to ensure session is fully established
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       // Get current user - use the same agent to maintain cookies
       const response = await agent.get('/api/v1/web/auth/me');
 
@@ -326,6 +343,9 @@ describe('Auth.js Authentication Integration Tests', () => {
       // Login to get session - agent maintains cookies automatically
       const { agent } = await loginWithCredentials('test@example.com', 'password123');
 
+      // Wait a bit to ensure session is fully established
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       // Get current user - roles should be aggregated from both projects - use the same agent
       const response = await agent.get('/api/v1/web/auth/me');
 
@@ -356,11 +376,12 @@ describe('Auth.js Authentication Integration Tests', () => {
       expect([200, 302]).toContain(response.status);
 
       // Wait a bit for async save operations to complete
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      // The save happens in validateUserPassword, so we need to wait for it
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Verify password_requires_upgrade flag was set
-      // Refresh the user document to get the latest state
-      const updatedUser = await User.findById(user._id).select('+password_requires_upgrade');
+      // Refresh the user document to get the latest state - use lean() to get fresh data
+      const updatedUser = await User.findById(user._id).select('+password_requires_upgrade').lean();
       expect(updatedUser).not.toBeNull();
       expect(updatedUser?.password_requires_upgrade).toBe(true);
     });
