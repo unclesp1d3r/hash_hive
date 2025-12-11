@@ -57,7 +57,9 @@ async function validateUserPassword(
 
   // Flag weak passwords for upgrade (does not block login)
   const STRONG_MIN_PASSWORD_LENGTH = 12;
-  if (password.length < STRONG_MIN_PASSWORD_LENGTH && user.password_requires_upgrade !== true) {
+  const wasFlagJustSet =
+    password.length < STRONG_MIN_PASSWORD_LENGTH && user.password_requires_upgrade !== true;
+  if (wasFlagJustSet) {
     // eslint-disable-next-line no-param-reassign -- Mongoose document must be mutated to save changes
     user.password_requires_upgrade = true;
   }
@@ -67,8 +69,9 @@ async function validateUserPassword(
   user.last_login_at = new Date();
   // Save once with both updates to avoid race conditions
   await user.save();
-  
-  if (password.length < STRONG_MIN_PASSWORD_LENGTH && user.password_requires_upgrade === true) {
+
+  // Only log warning when flag was just set (not on subsequent logins with already-flagged password)
+  if (wasFlagJustSet) {
     logger.warn(
       { userId: user._id.toString(), email: user.email },
       'User logged in with weak password; flagged for upgrade'
