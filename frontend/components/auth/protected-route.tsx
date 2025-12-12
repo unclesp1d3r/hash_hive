@@ -18,7 +18,7 @@ interface ProtectedRouteProps {
  */
 function getUserRoles(session: ReturnType<typeof useSession>['data']): string[] {
   const user = session?.user;
-  if (user === null || user === undefined) {
+  if (user === undefined) {
     return [];
   }
   return (user as { roles?: string[] }).roles ?? [];
@@ -32,7 +32,7 @@ function getUserRoles(session: ReturnType<typeof useSession>['data']): string[] 
  * @returns `true` if `requiredRole` is not provided or is present in `userRoles`, `false` otherwise.
  */
 function checkRoleAccess(userRoles: string[], requiredRole: string | undefined): boolean {
-  if (requiredRole === null || requiredRole === undefined || requiredRole === '') {
+  if (requiredRole === undefined || requiredRole === '') {
     return true;
   }
   return userRoles.includes(requiredRole);
@@ -86,6 +86,7 @@ export function ProtectedRoute({
   }
 
   // Check role if required
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- status is checked for type narrowing
   if (status === 'authenticated') {
     const userRoles = getUserRoles(session);
     if (!checkRoleAccess(userRoles, requiredRole)) {

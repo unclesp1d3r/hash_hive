@@ -8,6 +8,61 @@ const API_URL = typeof envApiUrl === 'string' ? envApiUrl : 'http://localhost:30
 const HTTP_STATUS_OK = 200;
 const HTTP_STATUS_REDIRECT = 302;
 
+// Helper to validate credentials
+function isValidCredentials(
+  email: unknown,
+  password: unknown,
+): email is string {
+  return (
+    typeof email === 'string' &&
+    email !== '' &&
+    typeof password === 'string' &&
+    password !== ''
+  );
+}
+
+// Helper to authenticate user with backend
+async function authenticateUser(email: string, password: string): Promise<unknown> {
+  // First, get CSRF token from backend (Auth.js requires this)
+  await fetch(`${API_URL}/auth/signin/credentials`, {
+    method: 'GET',
+    credentials: 'include',
+  });
+
+  // Call backend Auth.js signin endpoint
+  const response = await fetch(`${API_URL}/auth/signin/credentials`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      email,
+      password,
+    }),
+    credentials: 'include',
+    redirect: 'manual',
+  });
+
+  // Check if authentication was successful (302 redirect or 200 OK)
+  if (response.status !== HTTP_STATUS_OK && response.status !== HTTP_STATUS_REDIRECT) {
+    return null;
+  }
+
+  // Get user info from backend /api/v1/web/auth/me
+  const sessionResponse = await fetch(`${API_URL}/api/v1/web/auth/me`, {
+    credentials: 'include',
+  });
+
+  if (!sessionResponse.ok) {
+    return null;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Response is unknown from backend
+  const sessionData = await sessionResponse.json();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Response structure is dynamic
+  return sessionData.user ?? null;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- NextAuth returns a handler function
 const handler = NextAuth({
   providers: [
@@ -17,59 +72,17 @@ const handler = NextAuth({
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
+      // Reduce complexity by extracting validation and fetch logic
       async authorize(credentials) {
         const email = credentials?.email;
         const password = credentials?.password;
 
-        if (
-          typeof email !== 'string' ||
-          email === '' ||
-          typeof password !== 'string' ||
-          password === ''
-        ) {
+        if (!isValidCredentials(email, password)) {
           return null;
         }
 
         try {
-          // First, get CSRF token from backend (Auth.js requires this)
-          await fetch(`${API_URL}/auth/signin/credentials`, {
-            method: 'GET',
-            credentials: 'include',
-          });
-
-          // Call backend Auth.js signin endpoint
-          const response = await fetch(`${API_URL}/auth/signin/credentials`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-              email,
-              password,
-            }),
-            credentials: 'include',
-            redirect: 'manual',
-          });
-
-          // Check if authentication was successful (302 redirect or 200 OK)
-          if (response.status !== HTTP_STATUS_OK && response.status !== HTTP_STATUS_REDIRECT) {
-            return null;
-          }
-
-          // Get user info from backend /api/v1/web/auth/me
-          const sessionResponse = await fetch(`${API_URL}/api/v1/web/auth/me`, {
-            credentials: 'include',
-          });
-
-          if (!sessionResponse.ok) {
-            return null;
-          }
-
-
-          const sessionData = (await sessionResponse.json()) as { user?: unknown };
-          const { user: userData } = sessionData;
-
-          return userData ?? null;
+          return await authenticateUser(email, password);
         } catch {
           return null;
         }
@@ -78,7 +91,9 @@ const handler = NextAuth({
   ],
   callbacks: {
     jwt({ token, user }) {
-      if (user !== null && user !== undefined) {
+      // user is only present on initial sign-in
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- user is optional based on callback timing
+      if (user !== undefined) {
         const { id, email, name, roles } = user;
         // eslint-disable-next-line no-param-reassign -- NextAuth requires mutating token object
         token.id = id;
@@ -93,7 +108,9 @@ const handler = NextAuth({
     },
     session({ session, token }) {
       const { user } = session;
-      if (user !== null && user !== undefined) {
+      // user object exists in all valid sessions
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- user could theoretically be undefined
+      if (user !== undefined) {
         const { id: tokenId, email: tokenEmail, name: tokenName, roles: tokenRoles } = token;
 
         user.id = typeof tokenId === 'string' ? tokenId : '';

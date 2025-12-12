@@ -10,7 +10,8 @@ import { signIn } from '../../lib/auth';
 const MIN_PASSWORD_LENGTH = 1;
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().email() is the recommended pattern for now
+  email: z.string().email({ message: 'Invalid email address' }),
   password: z.string().min(MIN_PASSWORD_LENGTH, { message: 'Password is required' }),
 });
 
@@ -48,8 +49,7 @@ export function LoginForm(): React.ReactElement {
         redirect: false,
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- signIn result may have error property
-      if (result?.error) {
+      if (result?.error !== undefined) {
         setError('Invalid email or password');
         setIsLoading(false);
         return;
@@ -85,12 +85,13 @@ export function LoginForm(): React.ReactElement {
           id="email"
           type="email"
           {...register('email')}
-          aria-invalid={errors.email ? 'true' : 'false'}
+          aria-invalid={errors.email === undefined ? 'false' : 'true'}
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
           disabled={isLoading}
         />
-        {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- errors.email may be undefined */}
-        {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
+        {errors.email?.message !== undefined && (
+          <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+        )}
       </div>
 
       <div>
@@ -105,8 +106,9 @@ export function LoginForm(): React.ReactElement {
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
           disabled={isLoading}
         />
-        {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- errors.password may be undefined */}
-        {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
+        {errors.password?.message !== undefined && (
+          <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+        )}
       </div>
 
       <button
