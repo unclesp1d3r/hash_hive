@@ -10,6 +10,7 @@ import { logger } from './utils/logger';
 import { connectDatabase, disconnectDatabase } from './db';
 import { connectRedis, disconnectRedis } from './db/redis';
 import { initializeQueues, closeQueues } from './config/queue';
+import { isRelaxedStartupEnabled } from './config/startup';
 import { requestIdMiddleware } from './middleware/request-id';
 import { securityHeadersMiddleware } from './middleware/security-headers';
 import { errorHandler } from './middleware/error-handler';
@@ -411,36 +412,39 @@ app.use('/api/v1/web', webRouter);
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
-// Start server only if this file is run directly (not imported)
-if (require.main === module) {
-  // Initialize all infrastructure before starting server
-  Promise.all([connectDatabase(), connectRedis()])
-    .then(() => {
-      // Mount Auth.js routes after database connection is established
-      // This ensures mongoose.connection.getClient() is called after mongoose.connect() completes
-      mountAuthRoutes();
+async function startInfrastructureAndListen(): Promise<ReturnType<typeof app.listen>> {
+  if (isRelaxedStartupEnabled()) {
+    logger.warn(
+      {
+        mongoUri: config.mongodb.uri,
+        redisHost: config.redis.host,
+        redisPort: config.redis.port,
+      },
+      'Starting backend in relaxed mode (skipping MongoDB/Redis initialization)'
+    );
+  } else {
+    await Promise.all([connectDatabase(), connectRedis()]);
 
-      // Initialize BullMQ queues after Redis is connected
-      initializeQueues();
+    // Mount Auth.js routes after database connection is established
+    // This ensures mongoose.connection.getClient() is called after mongoose.connect() completes
+    mountAuthRoutes();
 
-      const server = app.listen(config.server.port, () => {
-        logger.info(
-          {
-            port: config.server.port,
-            env: config.server.env,
-            baseUrl: config.server.baseUrl,
-          },
-          '🚀 HashHive Backend started successfully'
-        );
-      });
+    // Initialize BullMQ queues after Redis is connected
+    initializeQueues();
+  }
 
-      // Store server reference for graceful shutdown
-      setupGracefulShutdown(server);
-    })
-    .catch((error: unknown) => {
-      logger.fatal({ error }, 'Failed to start server');
-      process.exit(EXIT_CODE_FAILURE);
-    });
+  const server = app.listen(config.server.port, () => {
+    logger.info(
+      {
+        port: config.server.port,
+        env: config.server.env,
+        baseUrl: config.server.baseUrl,
+      },
+      '🚀 HashHive Backend started successfully'
+    );
+  });
+
+  return server;
 }
 
 function setupGracefulShutdown(server: ReturnType<typeof app.listen>): void {
@@ -488,6 +492,16 @@ function setupGracefulShutdown(server: ReturnType<typeof app.listen>): void {
     logger.fatal({ reason, promise }, 'Unhandled rejection');
     process.exit(EXIT_CODE_FAILURE);
   });
+}
+
+export async function startServer(): Promise<void> {
+  try {
+    const server = await startInfrastructureAndListen();
+    setupGracefulShutdown(server);
+  } catch (error: unknown) {
+    logger.fatal({ error }, 'Failed to start server');
+    process.exit(EXIT_CODE_FAILURE);
+  }
 }
 
 export { app };

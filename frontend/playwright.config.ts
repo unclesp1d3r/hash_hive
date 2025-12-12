@@ -51,9 +51,17 @@ if (!isCI) {
       reuseExistingServer: true,
     },
     {
-      command: 'npm run dev --prefix ../backend',
-      url: 'http://localhost:3001',
+      // Use the backend "start" script (no file watching) so Playwright isn't affected by restarts.
+      command: 'npm run start --prefix ../backend',
+      // Playwright webServer readiness checks expect a 2xx/3xx response.
+      // Backend returns 200 at /health, while / returns 404.
+      url: 'http://localhost:3001/health',
       reuseExistingServer: true,
+      env: {
+        // Backend dependencies (MongoDB/Redis) may not be running during local `just ci-check`.
+        // This enables a lightweight backend startup so Playwright can run UI checks.
+        HASHHIVE_RELAXED_STARTUP: '1',
+      },
     },
   ];
 }

@@ -19,7 +19,7 @@
     "dev": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsx watch src/index.ts",
+        "command": "node --watch --import tsx src/main.ts",
         "cwd": "backend"
       },
       "cache": false
@@ -27,7 +27,7 @@
     "start": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "node dist/index.js",
+        "command": "node --import tsx src/main.ts",
         "cwd": "backend"
       },
       "cache": false
@@ -35,7 +35,7 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "jest",
+        "command": "jest --config jest.config.cjs",
         "cwd": "backend"
       },
       "cache": true,
@@ -53,7 +53,7 @@
     "test:coverage": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "jest --coverage",
+        "command": "jest --config jest.config.cjs --coverage",
         "cwd": "backend"
       },
       "dependsOn": ["build"]

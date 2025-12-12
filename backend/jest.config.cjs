@@ -28,6 +28,7 @@ module.exports = {
     '!src/**/*.test.ts',
     '!src/**/*.spec.ts',
     '!src/index.ts',
+    '!src/main.ts',
     '!src/examples/**/*.ts',
     '!src/auth.sandbox.ts', // Sandbox file, not production code
   ],

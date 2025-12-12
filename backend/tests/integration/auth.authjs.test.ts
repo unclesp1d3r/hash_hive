@@ -38,32 +38,61 @@ async function loginWithCredentials(
     }
   }
 
-  // Auth.js with JWT strategy redirects on successful login (302)
-  // Include CSRF token in request body if available
-  const requestBody: { email: string; password: string; csrfToken?: string } = {
+  // Auth.js expects sign-in requests to look like a browser form submission.
+  // Use `application/x-www-form-urlencoded` and request a JSON response (redirect=false)
+  // so we can reliably capture the Set-Cookie header in tests.
+  const requestBody: {
+    email: string;
+    password: string;
+    csrfToken?: string;
+    callbackUrl: string;
+    redirect: 'false';
+  } = {
     email,
     password,
+    // Use an existing route to avoid redirecting to a non-existent page.
+    callbackUrl: '/health',
+    redirect: 'false',
   };
   if (csrfToken) {
     requestBody.csrfToken = csrfToken;
   }
 
-  // Make initial login request
-  const loginResponse = await agent.post('/auth/signin/credentials').send(requestBody);
+  // Make initial login request.
+  // Auth.js credentials flow performs authentication in the callback action.
+  // Depending on the adapter/framework integration, the endpoint may be `/auth/callback/credentials`.
+  // Fall back to `/auth/signin/credentials` if the callback route isn't available.
+  let loginResponse = await agent
+    .post('/auth/callback/credentials')
+    .set('Accept', 'application/json')
+    .type('form')
+    .send(requestBody);
+
+  if (loginResponse.status === 404) {
+    loginResponse = await agent
+      .post('/auth/signin/credentials')
+      .set('Accept', 'application/json')
+      .type('form')
+      .send(requestBody);
+  }
 
   // Extract and add cookies from login response
   const loginSetCookies = loginResponse.headers['set-cookie'] || [];
-  const loginCookies = Array.isArray(loginSetCookies) ? loginSetCookies : loginSetCookies ? [loginSetCookies] : [];
+  const loginCookies = Array.isArray(loginSetCookies)
+    ? loginSetCookies
+    : loginSetCookies
+      ? [loginSetCookies]
+      : [];
   loginCookies.forEach((cookieStr: string) => {
     if (cookieStr) {
       // Try adding with different URLs to ensure it's accessible
       try {
-        agent.jar.setCookie(cookieStr, 'http://localhost:3001');
+        agent.jar.setCookie(cookieStr, 'http://127.0.0.1:3001');
       } catch {
         // Ignore
       }
       try {
-        agent.jar.setCookie(cookieStr, 'http://localhost');
+        agent.jar.setCookie(cookieStr, 'http://127.0.0.1');
       } catch {
         // Ignore
       }
@@ -76,19 +105,23 @@ async function loginWithCredentials(
     const location = loginResponse.headers.location;
     const redirectPath = location.startsWith('http') ? new URL(location).pathname : location;
     finalResponse = await agent.get(redirectPath);
-    
+
     // Extract and add cookies from redirect response
     const redirectSetCookies = finalResponse.headers['set-cookie'] || [];
-    const redirectCookies = Array.isArray(redirectSetCookies) ? redirectSetCookies : redirectSetCookies ? [redirectSetCookies] : [];
+    const redirectCookies = Array.isArray(redirectSetCookies)
+      ? redirectSetCookies
+      : redirectSetCookies
+        ? [redirectSetCookies]
+        : [];
     redirectCookies.forEach((cookieStr: string) => {
       if (cookieStr) {
         try {
-          agent.jar.setCookie(cookieStr, 'http://localhost:3001');
+          agent.jar.setCookie(cookieStr, 'http://127.0.0.1:3001');
         } catch {
           // Ignore
         }
         try {
-          agent.jar.setCookie(cookieStr, 'http://localhost');
+          agent.jar.setCookie(cookieStr, 'http://127.0.0.1');
         } catch {
           // Ignore
         }
@@ -97,9 +130,9 @@ async function loginWithCredentials(
   }
 
   // Get cookies from jar
-  let agentCookies = agent.jar.getCookies('http://localhost:3001');
+  let agentCookies = agent.jar.getCookies('http://127.0.0.1:3001');
   if (agentCookies.length === 0) {
-    agentCookies = agent.jar.getCookies('http://localhost');
+    agentCookies = agent.jar.getCookies('http://127.0.0.1');
   }
   const cookies = agentCookies.map((cookie) => `${cookie.key}=${cookie.value}`);
 
@@ -127,7 +160,9 @@ describe('Auth.js Authentication Integration Tests', () => {
 
       // Set Auth.js required environment variables
       process.env['AUTH_SECRET'] = 'test-secret-key-minimum-32-characters-long';
-      process.env['AUTH_URL'] = 'http://localhost:3001';
+      // Supertest uses 127.0.0.1 as the request host; Auth.js may set cookies scoped to AUTH_URL,
+      // so keep these aligned to ensure session cookies persist in integration tests.
+      process.env['AUTH_URL'] = 'http://127.0.0.1:3001';
 
       // Connect to databases
       await connectDatabase();
@@ -174,25 +209,20 @@ describe('Auth.js Authentication Integration Tests', () => {
         status: 'active',
       });
 
-      const { response, agent, cookies: cookieArray } = await loginWithCredentials(
-        'test@example.com',
-        'password123'
-      );
+      const { response, agent } = await loginWithCredentials('test@example.com', 'password123');
 
-      // After redirect, should be 200 or check cookies from redirect response
-      const finalStatus = response.status;
-      expect([200, 302]).toContain(finalStatus);
+      // After login, Auth.js may respond with a redirect (302) or a JSON success response (200).
+      expect([200, 302]).toContain(response.status);
 
-      // With JWT strategy, sessions are stored in JWT tokens, not in the database
-      // The MongoDB adapter is used for user/account management, but sessions are JWT-based
-      // Verify user exists and session cookie is present
+      // Verify the user exists.
       const user = await User.findOne({ email: 'test@example.com' });
       expect(user).not.toBeNull();
-      
-      // With JWT strategy, we don't expect database sessions
-      // Instead, verify that a session cookie was set in the agent's cookie jar
-      const hasSessionCookie = cookieArray.length > 0;
-      expect(hasSessionCookie).toBe(true);
+
+      // Rather than introspecting the cookie jar (which can be brittle across Auth.js versions),
+      // verify that the authenticated session is usable on a protected endpoint.
+      const meResponse = await agent.get('/api/v1/web/auth/me');
+      expect(meResponse.status).toBe(200);
+      expect(meResponse.body.user.email).toBe('test@example.com');
     });
 
     it('should return 401 with invalid credentials', async () => {
@@ -279,10 +309,7 @@ describe('Auth.js Authentication Integration Tests', () => {
       });
 
       // Login to get session - agent maintains cookies automatically
-      const { agent: loginAgent } = await loginWithCredentials(
-        'test@example.com',
-        'password123'
-      );
+      const { agent: loginAgent } = await loginWithCredentials('test@example.com', 'password123');
 
       // Logout - get CSRF token first using the same agent
       const csrfResponse = await loginAgent.get('/auth/csrf');
