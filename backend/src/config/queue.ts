@@ -17,6 +17,37 @@ export const QUEUE_NAMES = {
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
 
 /**
+ * Check if an error is a "Connection is closed" error from BullMQ/ioredis.
+ * Handles both direct errors and wrapped errors where BullMQ prefixes the message
+ * with "Unhandled error" and puts the actual error in the context property.
+ */
+function isConnectionClosedError(error: Error): boolean {
+  // Check direct error message
+  if (error.message.includes('Connection is closed')) {
+    return true;
+  }
+
+  // Check wrapped errors - BullMQ can wrap errors with "Unhandled error" prefix
+  // and put the actual error in the context property
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-unsafe-assignment -- Error context is not typed
+  const errorWithContext = error as any;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment -- Error context property is not typed and may not exist
+  const context = errorWithContext.context;
+  if (context !== undefined && context !== null && context instanceof Error) {
+    if (context.message.includes('Connection is closed')) {
+      return true;
+    }
+  }
+
+  // Check error.cause (standard Error cause property)
+  if (error.cause instanceof Error && error.cause.message.includes('Connection is closed')) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * BullMQ connection configuration
  */
 const getConnectionOptions = (): ConnectionOptions => {
@@ -41,32 +72,6 @@ const getConnectionOptions = (): ConnectionOptions => {
 const queues = new Map<QueueName, Queue>();
 const queueEvents = new Map<QueueName, QueueEvents>();
 const workers = new Map<string, Worker>();
-
-/**
- * Helper to detect and suppress expected connection-closed errors that can
- * occur during normal shutdown when Redis connections are being torn down.
- */
-const isConnectionClosedError = (error: Error & { context?: Error }): boolean => {
-  const errorMessage = error.message;
-  const contextMessage = error.context?.message ?? '';
-
-  const hasConnectionClosedMessage =
-    errorMessage.includes('Connection is closed') ||
-    contextMessage.includes('Connection is closed');
-
-  // BullMQ sometimes wraps the underlying error in an "Unhandled error" wrapper
-  // while keeping the original message in the context object, so we treat both
-  // forms as equivalent for suppression purposes.
-  if (hasConnectionClosedMessage) {
-    return true;
-  }
-
-  if (errorMessage.includes('Unhandled error') && contextMessage.includes('Connection is closed')) {
-    return true;
-  }
-
-  return false;
-};
 
 const DEFAULT_JOB_ATTEMPTS = 3;
 const DEFAULT_BACKOFF_DELAY_MS = 1000;
@@ -114,31 +119,16 @@ export const createQueue = (name: QueueName): Queue => {
     ...defaultQueueOptions,
   });
 
-  // Ensure we always handle queue-level error events so they don't crash the
-  // process or surface as unhandled errors in tests when connections are
-  // closed as part of normal shutdown.
-  queue.on('error', (error: Error & { context?: Error }) => {
-    if (isConnectionClosedError(error)) {
-      logger.debug({ queueName: name }, 'Queue connection closed (expected during shutdown)');
-      return;
-    }
-    logger.error({ queueName: name, error }, 'Queue error');
-  });
-
-  // Queue events are helpful for observability, but can introduce noisy
-  // connection-close errors in test environments due to rapid setup/teardown.
-  // Skip creating QueueEvents during tests to keep CI stable.
+  // Set up queue event listeners for monitoring (skip in test mode to avoid connection errors during teardown)
   if (!config.server.isTest) {
-    // Set up queue event listeners for monitoring
     const events = new QueueEvents(name, { connection: getConnectionOptions() });
 
     // Ensure we always handle error events so they don't crash the process or
     // surface as unhandled errors in tests when connections are closed as part
     // of normal shutdown.
-    events.on('error', (error: Error & { context?: Error }) => {
+    events.on('error', (error: Error) => {
       // Suppress expected "Connection is closed" errors during shutdown
-      // BullMQ may wrap errors as "Unhandled error. (Error: Connection is closed...)"
-      // and may put the actual error in the context property
+      // BullMQ can wrap errors with "Unhandled error" prefix and put the actual error in context
       if (isConnectionClosedError(error)) {
         logger.debug(
           { queueName: name },
@@ -397,7 +387,7 @@ export const closeQueues = async (): Promise<void> => {
     } catch (error) {
       // Ignore errors during shutdown as they're expected when connections are closing
       // Only log if it's not a connection closed error
-      if (error instanceof Error && !error.message.includes('Connection is closed')) {
+      if (error instanceof Error && !isConnectionClosedError(error)) {
         logger.error({ error }, 'Error closing worker');
       }
     }
@@ -407,6 +397,7 @@ export const closeQueues = async (): Promise<void> => {
   workers.clear();
 
   // Close all queue events - keep error handlers attached during and after close
+  // The error handler suppresses expected "Connection is closed" errors during shutdown
   const eventsClosePromises = Array.from(queueEvents.entries()).map(async ([queueName, events]) => {
     try {
       // Close while error handler is still active; do not remove listeners to avoid
@@ -414,7 +405,7 @@ export const closeQueues = async (): Promise<void> => {
       await events.close();
     } catch (error) {
       // Ignore connection closed errors during shutdown as they're expected
-      if (error instanceof Error && !error.message.includes('Connection is closed')) {
+      if (error instanceof Error && !isConnectionClosedError(error)) {
         logger.error({ queueName, error }, 'Error closing queue events');
       }
     }
@@ -429,7 +420,7 @@ export const closeQueues = async (): Promise<void> => {
       await queue.close();
     } catch (error) {
       // Ignore connection closed errors during shutdown
-      if (error instanceof Error && !error.message.includes('Connection is closed')) {
+      if (error instanceof Error && !isConnectionClosedError(error)) {
         logger.error({ error }, 'Error closing queue');
       }
     }

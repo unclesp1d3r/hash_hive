@@ -1,4 +1,4 @@
-import 'express-async-errors';
+// Express 5 has native async error handling - no need for express-async-errors
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -10,11 +10,14 @@ import { logger } from './utils/logger';
 import { connectDatabase, disconnectDatabase } from './db';
 import { connectRedis, disconnectRedis } from './db/redis';
 import { initializeQueues, closeQueues } from './config/queue';
+import { isRelaxedStartupEnabled } from './config/startup';
 import { requestIdMiddleware } from './middleware/request-id';
 import { securityHeadersMiddleware } from './middleware/security-headers';
 import { errorHandler } from './middleware/error-handler';
 import { healthRouter } from './routes/health';
 import { webRouter } from './routes';
+import { ExpressAuth } from '@auth/express';
+import { getAuthConfig } from './config/auth.config';
 
 // HTTP status / exit code constants to avoid magic numbers
 const HTTP_STATUS_SERVER_ERROR_THRESHOLD = 500;
@@ -108,6 +111,7 @@ app.use(securityHeadersMiddleware);
 app.use(cookieParser());
 
 // Body parsing middleware
+// Apply to all routes including /auth - ExpressAuth requires parsed request bodies
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -350,6 +354,12 @@ app.use((req, res, next) => {
     return;
   }
 
+  // Skip CSRF protection for Auth.js routes - ExpressAuth handles CSRF internally
+  if (req.path.startsWith('/auth/')) {
+    next();
+    return;
+  }
+
   // Health check endpoints: generate CSRF tokens for GET/HEAD/OPTIONS, skip CSRF for other methods
   if (req.path.startsWith('/health')) {
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
@@ -369,8 +379,30 @@ app.use((req, res, next) => {
   validateCsrfToken(req, res, next);
 });
 
+// Set trust proxy for HTTPS detection behind proxies (required for Auth.js)
+// Must be set BEFORE mounting ExpressAuth middleware
+app.set('trust proxy', true);
+
 // Health check endpoint
 app.use('/health', healthRouter);
+
+// Mount Auth.js routes at /auth
+// ExpressAuth with basePath: '/auth' should be mounted at /auth (matches sandbox pattern)
+// Note: ExpressAuth mounting is deferred until after database connection is established
+// to ensure mongoose.connection.getClient() is called after mongoose.connect() completes
+let authRouterMounted = false;
+
+/**
+ * Mount Auth.js routes on the Express app
+ * This function should be called after the database connection is established
+ * to ensure mongoose.connection.getClient() is available
+ */
+export function mountAuthRoutes(): void {
+  if (!authRouterMounted) {
+    app.use('/auth', ExpressAuth(getAuthConfig()));
+    authRouterMounted = true;
+  }
+}
 
 // API routes
 app.use('/api/v1/web', webRouter);
@@ -380,32 +412,39 @@ app.use('/api/v1/web', webRouter);
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
-// Start server only if this file is run directly (not imported)
-if (require.main === module) {
-  // Initialize all infrastructure before starting server
-  Promise.all([connectDatabase(), connectRedis()])
-    .then(() => {
-      // Initialize BullMQ queues after Redis is connected
-      initializeQueues();
+async function startInfrastructureAndListen(): Promise<ReturnType<typeof app.listen>> {
+  if (isRelaxedStartupEnabled()) {
+    logger.warn(
+      {
+        mongoUri: config.mongodb.uri,
+        redisHost: config.redis.host,
+        redisPort: config.redis.port,
+      },
+      'Starting backend in relaxed mode (skipping MongoDB/Redis initialization)'
+    );
+  } else {
+    await Promise.all([connectDatabase(), connectRedis()]);
 
-      const server = app.listen(config.server.port, () => {
-        logger.info(
-          {
-            port: config.server.port,
-            env: config.server.env,
-            baseUrl: config.server.baseUrl,
-          },
-          '🚀 HashHive Backend started successfully'
-        );
-      });
+    // Mount Auth.js routes after database connection is established
+    // This ensures mongoose.connection.getClient() is called after mongoose.connect() completes
+    mountAuthRoutes();
 
-      // Store server reference for graceful shutdown
-      setupGracefulShutdown(server);
-    })
-    .catch((error: unknown) => {
-      logger.fatal({ error }, 'Failed to start server');
-      process.exit(EXIT_CODE_FAILURE);
-    });
+    // Initialize BullMQ queues after Redis is connected
+    initializeQueues();
+  }
+
+  const server = app.listen(config.server.port, () => {
+    logger.info(
+      {
+        port: config.server.port,
+        env: config.server.env,
+        baseUrl: config.server.baseUrl,
+      },
+      '🚀 HashHive Backend started successfully'
+    );
+  });
+
+  return server;
 }
 
 function setupGracefulShutdown(server: ReturnType<typeof app.listen>): void {
@@ -453,6 +492,16 @@ function setupGracefulShutdown(server: ReturnType<typeof app.listen>): void {
     logger.fatal({ reason, promise }, 'Unhandled rejection');
     process.exit(EXIT_CODE_FAILURE);
   });
+}
+
+export async function startServer(): Promise<void> {
+  try {
+    const server = await startInfrastructureAndListen();
+    setupGracefulShutdown(server);
+  } catch (error: unknown) {
+    logger.fatal({ error }, 'Failed to start server');
+    process.exit(EXIT_CODE_FAILURE);
+  }
 }
 
 export { app };

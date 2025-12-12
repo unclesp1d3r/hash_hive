@@ -3,30 +3,25 @@ import { baseSchemaOptions } from './base.schema';
 import type { IUser } from './user.model';
 
 export interface ISession extends Document {
-  session_id: string;
-  user_id: Types.ObjectId | IUser;
-  data: Record<string, unknown>;
-  expires_at: Date;
+  sessionToken: string;
+  userId: Types.ObjectId | IUser;
+  expires: Date;
   created_at: Date;
 }
 
 const sessionSchema = new Schema<ISession>(
   {
-    session_id: {
+    sessionToken: {
       type: String,
       required: true,
       unique: true,
     },
-    user_id: {
+    userId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },
-    data: {
-      type: Schema.Types.Mixed,
-      default: {},
-    },
-    expires_at: {
+    expires: {
       type: Date,
       required: true,
     },
@@ -40,10 +35,10 @@ const sessionSchema = new Schema<ISession>(
   }
 );
 
-// TTL index on expires_at to automatically delete expired sessions. Field-level index flag removed to avoid duplication.
+// TTL index on expires to automatically delete expired sessions. Field-level index flag removed to avoid duplication.
 // eslint-disable-next-line @typescript-eslint/no-magic-numbers -- Mongoose index direction (1 = ascending) and TTL (0 = immediate expiration)
-sessionSchema.index({ expires_at: 1 }, { expireAfterSeconds: 0 });
+sessionSchema.index({ expires: 1 }, { expireAfterSeconds: 0 });
 
-// unique: true on session_id already creates an index; removed redundant explicit index.
+// unique: true on sessionToken already creates an index; removed redundant explicit index.
 
 export const Session = model<ISession>('Session', sessionSchema);
