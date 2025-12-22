@@ -50,7 +50,7 @@ jobs:
         with:
           fetch-depth: 0 # Full history needed for accurate affected detection
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v6
         with:
           node-version-file: '.node-version'
           cache: npm
