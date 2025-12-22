@@ -11,7 +11,7 @@ jobs:
       # Use the local Docker daemon
       DOCKER_HOST: unix:///var/run/docker.sock
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v5
         with:
