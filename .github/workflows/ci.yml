@@ -46,7 +46,7 @@ jobs:
       # Use the local Docker daemon
       DOCKER_HOST: unix:///var/run/docker.sock
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Full history needed for accurate affected detection
 
