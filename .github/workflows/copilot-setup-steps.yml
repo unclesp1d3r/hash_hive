@@ -19,7 +19,7 @@ jobs:
           cache: npm
 
       - name: Install just
-        uses: extractions/setup-just@v1
+        uses: extractions/setup-just@v3
 
       - name: Install root dependencies
         run: npm install
