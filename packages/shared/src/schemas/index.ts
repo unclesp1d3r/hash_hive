@@ -1,3 +1,132 @@
-// Zod schemas generated from Drizzle tables via drizzle-zod.
-// Populated in Task 2.3.
-export {};
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { z } from 'zod';
+import {
+  agentErrors,
+  agents,
+  attacks,
+  campaigns,
+  hashItems,
+  hashLists,
+  hashTypes,
+  maskLists,
+  operatingSystems,
+  projects,
+  projectUsers,
+  ruleLists,
+  tasks,
+  users,
+  wordLists,
+} from '../db/schema.js';
+
+// ─── Users ──────────────────────────────────────────────────────────
+
+export const insertUserSchema = createInsertSchema(users);
+export const selectUserSchema = createSelectSchema(users);
+
+// ─── Projects ───────────────────────────────────────────────────────
+
+export const insertProjectSchema = createInsertSchema(projects);
+export const selectProjectSchema = createSelectSchema(projects);
+
+// ─── Project Users ──────────────────────────────────────────────────
+
+export const insertProjectUserSchema = createInsertSchema(projectUsers);
+export const selectProjectUserSchema = createSelectSchema(projectUsers);
+
+// ─── Operating Systems ──────────────────────────────────────────────
+
+export const insertOperatingSystemSchema = createInsertSchema(operatingSystems);
+export const selectOperatingSystemSchema = createSelectSchema(operatingSystems);
+
+// ─── Agents ─────────────────────────────────────────────────────────
+
+export const insertAgentSchema = createInsertSchema(agents);
+export const selectAgentSchema = createSelectSchema(agents);
+
+// ─── Agent Errors ───────────────────────────────────────────────────
+
+export const insertAgentErrorSchema = createInsertSchema(agentErrors);
+export const selectAgentErrorSchema = createSelectSchema(agentErrors);
+
+// ─── Hash Types ─────────────────────────────────────────────────────
+
+export const insertHashTypeSchema = createInsertSchema(hashTypes);
+export const selectHashTypeSchema = createSelectSchema(hashTypes);
+
+// ─── Hash Lists ─────────────────────────────────────────────────────
+
+export const insertHashListSchema = createInsertSchema(hashLists);
+export const selectHashListSchema = createSelectSchema(hashLists);
+
+// ─── Hash Items ─────────────────────────────────────────────────────
+
+export const insertHashItemSchema = createInsertSchema(hashItems);
+export const selectHashItemSchema = createSelectSchema(hashItems);
+
+// ─── Word Lists ─────────────────────────────────────────────────────
+
+export const insertWordListSchema = createInsertSchema(wordLists);
+export const selectWordListSchema = createSelectSchema(wordLists);
+
+// ─── Rule Lists ─────────────────────────────────────────────────────
+
+export const insertRuleListSchema = createInsertSchema(ruleLists);
+export const selectRuleListSchema = createSelectSchema(ruleLists);
+
+// ─── Mask Lists ─────────────────────────────────────────────────────
+
+export const insertMaskListSchema = createInsertSchema(maskLists);
+export const selectMaskListSchema = createSelectSchema(maskLists);
+
+// ─── Campaigns ──────────────────────────────────────────────────────
+
+export const insertCampaignSchema = createInsertSchema(campaigns);
+export const selectCampaignSchema = createSelectSchema(campaigns);
+
+// ─── Attacks ────────────────────────────────────────────────────────
+
+export const insertAttackSchema = createInsertSchema(attacks);
+export const selectAttackSchema = createSelectSchema(attacks);
+
+// ─── Tasks ──────────────────────────────────────────────────────────
+
+export const insertTaskSchema = createInsertSchema(tasks);
+export const selectTaskSchema = createSelectSchema(tasks);
+
+// ─── Custom API Schemas ─────────────────────────────────────────────
+
+export const loginRequestSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+});
+
+export const createCampaignRequestSchema = insertCampaignSchema.pick({
+  projectId: true,
+  name: true,
+  description: true,
+  hashListId: true,
+  priority: true,
+});
+
+export const agentHeartbeatSchema = z.object({
+  status: z.enum(['online', 'busy', 'error']),
+  capabilities: z
+    .object({
+      hashcatVersion: z.string(),
+      gpuDevices: z.array(
+        z.object({
+          name: z.string(),
+          memory: z.number(),
+          computeCapability: z.string(),
+        })
+      ),
+    })
+    .optional(),
+  deviceInfo: z
+    .object({
+      cpuUsage: z.number(),
+      memoryUsage: z.number(),
+      temperature: z.number().optional(),
+    })
+    .optional(),
+});
