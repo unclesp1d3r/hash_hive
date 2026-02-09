@@ -1,0 +1,288 @@
+openapi: 3.1.0
+info:
+  title: HashHive Agent API
+  description: Token-authenticated REST API for Go-based hashcat agents
+  version: 1.0.0
+
+servers:
+  - url: /api/v1/agent
+    description: Agent API base path
+
+paths:
+  /sessions:
+    post:
+      operationId: createAgentSession
+      summary: Authenticate agent and obtain session token
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  description: Agent auth token
+                  example: "agent-secret-token-abc123"
+      responses:
+        "200":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessionToken:
+                    type: string
+                    description: JWT session token for subsequent requests
+                  config:
+                    type: object
+                    properties:
+                      agentId:
+                        type: integer
+                      projectId:
+                        type: integer
+        "401":
+          $ref: "#/components/responses/AuthError"
+
+  /heartbeat:
+    post:
+      operationId: sendHeartbeat
+      summary: Send agent heartbeat with status and capabilities
+      tags: [Monitoring]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Heartbeat"
+      responses:
+        "200":
+          $ref: "#/components/responses/Acknowledged"
+        "401":
+          $ref: "#/components/responses/AuthError"
+
+  /tasks/next:
+    post:
+      operationId: getNextTask
+      summary: Request the next available task matching agent capabilities
+      tags: [Tasks]
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Next task or null if none available
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task:
+                    oneOf:
+                      - $ref: "#/components/schemas/TaskDescriptor"
+                      - type: "null"
+        "401":
+          $ref: "#/components/responses/AuthError"
+
+  /tasks/{taskId}/report:
+    post:
+      operationId: reportTaskProgress
+      summary: Report task progress, results, and errors
+      tags: [Tasks]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskReport"
+      responses:
+        "200":
+          $ref: "#/components/responses/Acknowledged"
+        "401":
+          $ref: "#/components/responses/AuthError"
+
+  /errors:
+    post:
+      operationId: reportAgentError
+      summary: Report an agent error
+      tags: [Monitoring]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentError"
+      responses:
+        "200":
+          $ref: "#/components/responses/Acknowledged"
+        "401":
+          $ref: "#/components/responses/AuthError"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Heartbeat:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [online, busy, error]
+        capabilities:
+          type: object
+          properties:
+            hashcatVersion:
+              type: string
+            gpuDevices:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  memory:
+                    type: number
+                  computeCapability:
+                    type: string
+        deviceInfo:
+          type: object
+          properties:
+            cpuUsage:
+              type: number
+            memoryUsage:
+              type: number
+            temperature:
+              type: number
+
+    TaskDescriptor:
+      type: object
+      properties:
+        id:
+          type: integer
+        attackId:
+          type: integer
+        campaignId:
+          type: integer
+        mode:
+          type: integer
+          description: hashcat attack mode
+        hashTypeId:
+          type: integer
+        workRange:
+          type: object
+          properties:
+            start:
+              type: integer
+            end:
+              type: integer
+        resources:
+          type: object
+          properties:
+            hashListUrl:
+              type: string
+              format: uri
+            wordlistUrl:
+              type: string
+              format: uri
+            rulelistUrl:
+              type: string
+              format: uri
+            masklistUrl:
+              type: string
+              format: uri
+
+    TaskReport:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [running, completed, failed, exhausted]
+        progress:
+          type: object
+          properties:
+            keyspaceProgress:
+              type: number
+            speed:
+              type: number
+            temperature:
+              type: number
+        results:
+          type: array
+          description: Batch of cracked hash results
+          items:
+            type: object
+            required: [hashValue, plaintext]
+            properties:
+              hashValue:
+                type: string
+              plaintext:
+                type: string
+        errors:
+          type: array
+          items:
+            type: string
+
+    AgentError:
+      type: object
+      required: [severity, message]
+      properties:
+        severity:
+          type: string
+          enum: [warning, error, fatal]
+        message:
+          type: string
+        context:
+          type: object
+          additionalProperties: true
+        taskId:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+  responses:
+    Acknowledged:
+      description: Request acknowledged
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              acknowledged:
+                type: boolean
+                example: true
+
+    AuthError:
+      description: Authentication failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

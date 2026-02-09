@@ -138,22 +138,22 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Test project-scoped authorization
     - _Requirements: 2.4, 12.1_
 
-- [ ] 6. Agent management system
-  - [ ] 6.1 Extend Drizzle schema for agents
+- [x] 6. Agent management system
+  - [x] 6.1 Extend Drizzle schema for agents
     - Add agents, agent_errors, operating_systems tables to schema.ts
     - Include capabilities, hardware_profile as jsonb fields
     - Generate and apply Drizzle migration
     - Generate Zod schemas with drizzle-zod
     - _Requirements: 1.6, 1.7, 3.1, 3.2, 3.3_
 
-  - [ ] 6.2 Implement AgentService
+  - [x] 6.2 Implement AgentService
     - Create AgentService with registration and authentication
     - Implement capability detection and storage logic
     - Add heartbeat processing with status tracking
     - Implement agent error logging
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-  - [ ] 6.3 Create Agent API endpoints
+  - [x] 6.3 Create Agent API endpoints
     - Implement POST /api/v1/agent/sessions for token authentication
     - Implement POST /api/v1/agent/heartbeat with capability updates
     - Implement POST /api/v1/agent/tasks/next for task pulling
@@ -161,14 +161,14 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Use Drizzle batch operations or raw Bun.SQL for hash result submissions
     - _Requirements: 4.2, 4.3, 4.5_
 
-  - [ ] 6.4 Create OpenAPI specification for Agent API
+  - [x] 6.4 Create OpenAPI specification for Agent API
     - Define all Agent API endpoints in openapi/agent-api.yaml
     - Document request/response schemas with examples
     - Add authentication and error response definitions
     - Include batch operation schemas for hash submissions
     - _Requirements: 4.1, 4.3_
 
-  - [ ] 6.5 Create Dashboard API endpoints for agents
+  - [x] 6.5 Create Dashboard API endpoints for agents
     - Implement GET /api/v1/dashboard/agents with filtering and pagination
     - Implement GET /api/v1/dashboard/agents/:id with details and metrics
     - Implement PATCH /api/v1/dashboard/agents/:id for status updates
