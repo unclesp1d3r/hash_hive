@@ -36,8 +36,8 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Export TypeScript types using z.infer<typeof schema>
     - _Requirements: 1.7, 1.8_
 
-- [ ] 3. Backend foundation with Bun and Hono
-  - [ ] 3.1 Initialize backend package
+- [x] 3. Backend foundation with Bun and Hono
+  - [x] 3.1 Initialize backend package
     - Create backend package with Bun runtime configuration
     - Set up Hono application running on Bun.serve()
     - Configure Pino for structured logging with request IDs
@@ -45,28 +45,28 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Add health check endpoint at /health
     - _Requirements: 1.1, 1.2, 13.4_
 
-  - [ ] 3.2 Set up Drizzle ORM connection
+  - [x] 3.2 Set up Drizzle ORM connection
     - Configure Drizzle client with PostgreSQL connection
     - Implement connection pooling and retry logic
     - Create database utilities for transactions
     - Add connection health checks
     - _Requirements: 1.3, 1.6_
 
-  - [ ] 3.3 Configure BullMQ and Redis
+  - [x] 3.3 Configure BullMQ and Redis
     - Set up Redis connection with health checks
     - Initialize BullMQ queue manager with default queues
     - Implement queue monitoring and metrics collection
     - Create dead-letter queue handling
     - _Requirements: 6.2_
 
-  - [ ] 3.4 Set up MinIO S3 client
+  - [x] 3.4 Set up MinIO S3 client
     - Configure S3 client for MinIO in development
     - Create StorageService abstraction for file operations
     - Implement upload, download, and delete operations
     - Add presigned URL generation for secure downloads
     - _Requirements: 7.1_
 
-  - [ ]* 3.5 Write backend foundation tests
+  - [x]* 3.5 Write backend foundation tests
     - Test health check endpoint
     - Test database connection and retry logic
     - Test Redis connection
