@@ -11,8 +11,8 @@ This document defines the requirements for reimplementing CipherSwarm as HashHiv
 
 ## Glossary
 
-- **HashHive**: The MERN-based reimplementation of CipherSwarm
-- **CipherSwarm**: The legacy Rails 8 application being replaced
+- **HashHive**: The TypeScript-based reimplementation of CipherSwarm using Bun, Hono, PostgreSQL, and React
+- **CipherSwarm**: The legacy Rails application being replaced
 - **Agent**: A distributed worker node running hashcat for password cracking
 - **Campaign**: A coordinated set of attacks targeting a specific hash list
 - **Attack**: A single hashcat execution configuration with specific parameters
@@ -25,7 +25,6 @@ This document defines the requirements for reimplementing CipherSwarm as HashHiv
 - **Web API**: Session-based HTTP API for operator UI
 - **Control API**: RESTful API for automation and scripting
 - **Keyspace**: The total search space for a hashcat attack
-- **ODM**: Object-Document Mapper for MongoDB (Mongoose)
 - **SSE**: Server-Sent Events for real-time updates
 - **MCP**: Model Context Protocol for AI tool integration
 

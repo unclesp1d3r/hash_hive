@@ -2,17 +2,20 @@
 
 ## Overview
 
-HashHive is a greenfield MERN implementation that replaces the Rails-based CipherSwarm platform. The system orchestrates distributed password cracking across multiple agents using hashcat, providing campaign management, intelligent task distribution, real-time monitoring, and comprehensive resource management. The architecture uses TypeScript throughout, with **Fastify** for high-performance HTTP, **MongoDB** for data persistence, **BullMQ/Redis** for job queuing, **S3-compatible storage** (MinIO) for binary artifacts, and **React 19 + Vite** for the operator-facing web UI.
+HashHive is a modern TypeScript implementation that replaces the Rails-based CipherSwarm platform. The system orchestrates distributed password cracking across multiple agents using hashcat, providing campaign management, intelligent task distribution, real-time monitoring, and comprehensive resource management. The architecture uses TypeScript throughout, with **Bun** as the runtime and package manager, **Hono** framework running natively on Bun.serve(), **PostgreSQL with Drizzle ORM** for data persistence, **BullMQ/Redis** for job queuing, **MinIO** (S3-compatible storage) for binary artifacts, and **React 19 + Vite** for the operator-facing web UI.
 
 **Key Architectural Principles:**
 
-- **Zod schemas as single source of truth**: All data shapes defined in `shared/` package, types inferred via `z.infer<typeof schema>`
-- **No premature abstraction**: Fastify route handlers can call Mongoose models directly; service layers only when needed
-- **Bulk operations for Agent API**: Use `insertMany()` and `bulkWrite({ ordered: false })` for hash submissions
-- **High-throughput Agent API**: Must handle 10K req/s bursts with write concern `{ w: 1, j: false }`
+- **Drizzle schemas as single source of truth**: All database tables defined in `shared/db/schema.ts`, Zod schemas generated via drizzle-zod, types inferred via `z.infer<typeof schema>`
+- **No premature abstraction**: Hono route handlers can call Drizzle queries directly; service layers only when needed
+- **Bulk operations for Agent API**: Use Drizzle batch inserts or raw Bun.SQL for hash submissions
+- **Queue-based task distribution**: BullMQ/Redis for task queuing and assignment
+- **Periodic burst traffic**: Agent API handles periodic bursts when agents submit results, request work, and send heartbeats
 - **Low-traffic Dashboard API**: Standard REST for 1-3 concurrent users
-- **Real-time via WebSockets**: @fastify/websocket for dashboard updates (agent heartbeats, crack results)
-- **Turborepo + pnpm**: Monorepo with workspace packages (backend, frontend, shared, openapi)
+- **Real-time via WebSockets**: hono/websocket for dashboard updates (agent heartbeats, crack results)
+- **MinIO for artifacts**: S3-compatible storage for hash lists, wordlists, rulelists, and masklists
+- **Turborepo + Bun workspaces**: Monorepo with workspace packages (backend, frontend, shared, openapi)
+- **Optimize for correctness and clarity**: Not premature scale; private lab environment with 7 cracking rigs
 
 ## Architecture
 
@@ -34,14 +37,14 @@ HashHive is a greenfield MERN implementation that replaces the Rails-based Ciphe
                      │ HTTP/WebSocket
                      ▼
 ┌─────────────────────────────────────────────────────────────┐
-│         Node.js Backend (Fastify + TypeScript)               │
+│         Bun Backend (Hono + TypeScript)                      │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │  API Layer (Fastify Routes)                         │    │
+│  │  API Layer (Hono Routes)                            │    │
 │  │  - Dashboard API (/api/v1/dashboard/*)              │    │
 │  │    Session-based auth, 1-3 concurrent users         │    │
 │  │  - Agent API (/api/v1/agent/*)                      │    │
-│  │    Token-based auth, 10K req/s bursts               │    │
-│  │    Bulk operations (insertMany, bulkWrite)          │    │
+│  │    Token-based auth, batch operations               │    │
+│  │    Bulk inserts (Drizzle batch or raw Bun.SQL)     │    │
 │  └─────────────────────────────────────────────────────┘    │
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │  Service Layer (Optional - only when needed)        │    │
@@ -51,18 +54,18 @@ HashHive is a greenfield MERN implementation that replaces the Rails-based Ciphe
 │  │  - EventService (WebSocket broadcasting)            │    │
 │  └─────────────────────────────────────────────────────┘    │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │  Data Access Layer (Mongoose Models)                │    │
+│  │  Data Access Layer (Drizzle ORM)                    │    │
 │  │  - Direct calls from routes when simple             │    │
-│  │  - Compound indexes for hot query paths             │    │
-│  │  - Write concern: { w: 1, j: false } for Agent API  │    │
+│  │  - Indexes for hot query paths                      │    │
+│  │  - Batch operations for Agent API                   │    │
 │  └─────────────────────────────────────────────────────┘    │
 └──┴─────────────────────────────────────────────────────┴────┘
        │                    │                    │
        ▼                    ▼                    ▼
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│  MongoDB    │    │ Redis/BullMQ│    │ MinIO (S3)  │
-│  (Primary   │    │ (Queues &   │    │ (Binary     │
-│   Data)     │    │  Pub/Sub)   │    │  Artifacts) │
+│ PostgreSQL  │    │ Redis/BullMQ│    │ MinIO (S3)  │
+│ (Primary    │    │ (Queues &   │    │ (Binary     │
+│  Data)      │    │  Pub/Sub)   │    │  Artifacts) │
 └─────────────┘    └─────────────┘    └─────────────┘
                            ▲
                            │ Task Pull (REST)
@@ -78,13 +81,14 @@ HashHive is a greenfield MERN implementation that replaces the Rails-based Ciphe
 
 **Backend:**
 
-- Node.js LTS with TypeScript (for MongoDB driver compatibility)
-- Fastify for HTTP server (high-performance, schema-based validation)
-- Mongoose for MongoDB ODM
-- Zod for all data shapes (single source of truth in `shared/` package)
-- BullMQ for job queues
+- Bun (latest stable, currently 1.3.x) as runtime, package manager, and test runner
+- Hono framework running natively on Bun.serve()
+- PostgreSQL with Drizzle ORM for type-safe database access
+- Drizzle table definitions in `shared/db/schema.ts` as single source of truth
+- drizzle-zod for generating Zod schemas from Drizzle tables
+- Zod for all data validation with types inferred via `z.infer<typeof schema>`
+- hono/websocket for real-time updates
 - Pino for structured logging
-- @fastify/websocket for real-time updates
 
 **Frontend:**
 
@@ -99,19 +103,17 @@ HashHive is a greenfield MERN implementation that replaces the Rails-based Ciphe
 
 **Infrastructure:**
 
-- MongoDB 6+ for document storage
-- Redis 7+ for caching and queues
-- MinIO (S3-compatible) for objects
-- Docker Compose for local development (MongoDB, Redis, MinIO)
+- PostgreSQL for primary data storage
+- Redis for BullMQ job queues
+- MinIO (S3-compatible) for binary artifacts (hash lists, wordlists, rulelists, masklists)
+- Docker Compose for local development (PostgreSQL, Redis, MinIO)
 
 **Tooling:**
 
-- pnpm for package management (exclusively)
+- Bun for package management (exclusively, no npm, yarn, or pnpm)
 - Turborepo for monorepo orchestration and caching
-- Vitest for all tests (no Jest)
-- Testcontainers for integration tests
-- Oxlint for linting (fallback to Biome if needed)
-- Oxfmt/Prettier for formatting
+- bun:test for all tests (Bun's built-in test runner)
+- Biome for linting, formatting, and import sorting
 
 ## Components and Interfaces
 
@@ -135,7 +137,7 @@ HashHive is a greenfield MERN implementation that replaces the Rails-based Ciphe
 
 **Dependencies:**
 
-- User model (Mongoose)
+- Drizzle ORM for user queries
 - bcrypt for password hashing
 - jsonwebtoken for JWT operations
 
@@ -157,7 +159,7 @@ HashHive is a greenfield MERN implementation that replaces the Rails-based Ciphe
 
 **Dependencies:**
 
-- Project, ProjectUser, Role models
+- Drizzle ORM for projects, project_users, roles tables
 - AuthService for user validation
 
 #### 3. AgentService
@@ -178,7 +180,7 @@ HashHive is a greenfield MERN implementation that replaces the Rails-based Ciphe
 
 **Dependencies:**
 
-- Agent, AgentError, OperatingSystem models
+- Drizzle ORM for agents, agent_errors, operating_systems tables
 - EventService for status broadcasts
 
 #### 4. CampaignService
@@ -200,7 +202,7 @@ HashHive is a greenfield MERN implementation that replaces the Rails-based Ciphe
 
 **Dependencies:**
 
-- Campaign, Attack models
+- Drizzle ORM for campaigns, attacks tables
 - TaskDistributionService for task generation
 - HashAnalysisService for validation
 
@@ -223,7 +225,7 @@ HashHive is a greenfield MERN implementation that replaces the Rails-based Ciphe
 
 **Dependencies:**
 
-- Task, Attack models
+- Drizzle ORM for tasks, attacks tables
 - BullMQ for queue operations
 - AgentService for capability matching
 
@@ -232,7 +234,7 @@ HashHive is a greenfield MERN implementation that replaces the Rails-based Ciphe
 **Responsibilities:**
 
 - Resource metadata management
-- File upload to object storage
+- File upload to MinIO (S3-compatible storage)
 - Hash list parsing and validation
 - Resource access control
 
@@ -245,8 +247,8 @@ HashHive is a greenfield MERN implementation that replaces the Rails-based Ciphe
 
 **Dependencies:**
 
-- HashList, WordList, RuleList, MaskList models
-- S3 client for object storage
+- Drizzle ORM for hash_lists, word_lists, rule_lists, mask_lists tables
+- MinIO S3 client for object storage
 - HashAnalysisService for hash type detection
 
 #### 7. HashAnalysisService
@@ -265,7 +267,7 @@ HashHive is a greenfield MERN implementation that replaces the Rails-based Ciphe
 
 **Dependencies:**
 
-- HashType model
+- Drizzle ORM for hash_types table
 - name-that-hash library integration
 
 #### 8. EventService
@@ -273,9 +275,9 @@ HashHive is a greenfield MERN implementation that replaces the Rails-based Ciphe
 **Responsibilities:**
 
 - Real-time event broadcasting
-- WebSocket/SSE connection management
+- WebSocket connection management
 - Event filtering and routing
-- Event persistence for replay
+- Event persistence for replay (optional)
 
 **Key Methods:**
 
@@ -286,8 +288,9 @@ HashHive is a greenfield MERN implementation that replaces the Rails-based Ciphe
 
 **Dependencies:**
 
-- WebSocket or SSE infrastructure
-- Redis for pub/sub
+- hono/websocket for WebSocket infrastructure
+- Redis for pub/sub (optional for multi-instance deployments)
+- PostgreSQL for event persistence (optional)
 
 ### API Endpoints
 
@@ -403,7 +406,7 @@ GET /events/stream?projectId=:id
 #### Agent API (/api/v1/agent/*)
 
 **Authentication:** Token-based (JWT)
-**Traffic:** High-throughput (10K req/s bursts)
+**Traffic:** Batch operations for periodic bursts
 **Pattern:** Bulk operations, defined by OpenAPI spec
 
 Defined in `openapi/agent-api.yaml`:
@@ -424,25 +427,25 @@ POST /agent/tasks/next
 POST /agent/tasks/:id/report
   Body: { progress, status, results: Hash[], errors }
   Response: { acknowledged: true }
-  Note: Uses bulkWrite({ ordered: false }) for hash results
+  Note: Uses Drizzle batch inserts or raw Bun.SQL for hash results
 ```
 
 ## Data Models
 
-### MongoDB Collections
+### PostgreSQL Tables
 
 #### users
 
 ```typescript
 {
-  _id: ObjectId,
-  email: string (unique),
-  password_hash: string,
-  name: string,
-  status: 'active' | 'disabled',
-  last_login_at: Date,
-  created_at: Date,
-  updated_at: Date
+  id: serial PRIMARY KEY,
+  email: varchar(255) UNIQUE NOT NULL,
+  password_hash: varchar(255) NOT NULL,
+  name: varchar(255) NOT NULL,
+  status: varchar(20) DEFAULT 'active', // 'active' | 'disabled'
+  last_login_at: timestamp,
+  created_at: timestamp DEFAULT now(),
+  updated_at: timestamp DEFAULT now()
 }
 ```
 
@@ -450,17 +453,14 @@ POST /agent/tasks/:id/report
 
 ```typescript
 {
-  _id: ObjectId,
-  name: string,
-  description: string,
-  slug: string (unique),
-  settings: {
-    default_priority: number,
-    max_agents: number
-  },
-  created_by: ObjectId (ref: users),
-  created_at: Date,
-  updated_at: Date
+  id: serial PRIMARY KEY,
+  name: varchar(255) NOT NULL,
+  description: text,
+  slug: varchar(255) UNIQUE NOT NULL,
+  settings: jsonb DEFAULT '{}',
+  created_by: integer REFERENCES users(id),
+  created_at: timestamp DEFAULT now(),
+  updated_at: timestamp DEFAULT now()
 }
 ```
 
@@ -468,11 +468,12 @@ POST /agent/tasks/:id/report
 
 ```typescript
 {
-  _id: ObjectId,
-  user_id: ObjectId (ref: users),
-  project_id: ObjectId (ref: projects),
-  roles: string[],
-  created_at: Date
+  id: serial PRIMARY KEY,
+  user_id: integer REFERENCES users(id) NOT NULL,
+  project_id: integer REFERENCES projects(id) NOT NULL,
+  roles: text[] NOT NULL,
+  created_at: timestamp DEFAULT now(),
+  UNIQUE(user_id, project_id)
 }
 ```
 
@@ -480,29 +481,18 @@ POST /agent/tasks/:id/report
 
 ```typescript
 {
-  _id: ObjectId,
-  name: string,
-  project_id: ObjectId (ref: projects),
-  operating_system_id: ObjectId (ref: operating_systems),
-  auth_token: string (indexed),
-  status: 'online' | 'offline' | 'busy' | 'error',
-  capabilities: {
-    hashcat_version: string,
-    gpu_devices: [{
-      name: string,
-      memory: number,
-      compute_capability: string
-    }],
-    cpu_info: {
-      cores: number,
-      model: string
-    }
-  },
-  hardware_profile: object,
-  last_seen_at: Date,
-  current_task_id: ObjectId (ref: tasks),
-  created_at: Date,
-  updated_at: Date
+  id: serial PRIMARY KEY,
+  name: varchar(255) NOT NULL,
+  project_id: integer REFERENCES projects(id) NOT NULL,
+  operating_system_id: integer REFERENCES operating_systems(id),
+  auth_token: varchar(255) UNIQUE NOT NULL,
+  status: varchar(20) DEFAULT 'offline', // 'online' | 'offline' | 'busy' | 'error'
+  capabilities: jsonb DEFAULT '{}',
+  hardware_profile: jsonb DEFAULT '{}',
+  last_seen_at: timestamp,
+  current_task_id: integer REFERENCES tasks(id),
+  created_at: timestamp DEFAULT now(),
+  updated_at: timestamp DEFAULT now()
 }
 ```
 
@@ -510,19 +500,19 @@ POST /agent/tasks/:id/report
 
 ```typescript
 {
-  _id: ObjectId,
-  project_id: ObjectId (ref: projects),
-  name: string,
-  description: string,
-  hash_list_id: ObjectId (ref: hash_lists),
-  status: 'draft' | 'running' | 'paused' | 'completed' | 'failed',
-  priority: number,
-  metadata: object,
-  created_by: ObjectId (ref: users),
-  started_at: Date,
-  completed_at: Date,
-  created_at: Date,
-  updated_at: Date
+  id: serial PRIMARY KEY,
+  project_id: integer REFERENCES projects(id) NOT NULL,
+  name: varchar(255) NOT NULL,
+  description: text,
+  hash_list_id: integer REFERENCES hash_lists(id) NOT NULL,
+  status: varchar(20) DEFAULT 'draft', // 'draft' | 'running' | 'paused' | 'completed' | 'failed'
+  priority: integer DEFAULT 5,
+  metadata: jsonb DEFAULT '{}',
+  created_by: integer REFERENCES users(id),
+  started_at: timestamp,
+  completed_at: timestamp,
+  created_at: timestamp DEFAULT now(),
+  updated_at: timestamp DEFAULT now()
 }
 ```
 
@@ -530,25 +520,21 @@ POST /agent/tasks/:id/report
 
 ```typescript
 {
-  _id: ObjectId,
-  campaign_id: ObjectId (ref: campaigns),
-  project_id: ObjectId (ref: projects),
-  mode: number (hashcat mode),
-  hash_type_id: ObjectId (ref: hash_types),
-  wordlist_id: ObjectId (ref: word_lists),
-  rulelist_id: ObjectId (ref: rule_lists),
-  masklist_id: ObjectId (ref: mask_lists),
-  advanced_configuration: {
-    custom_charset: string[],
-    increment_mode: boolean,
-    optimized_kernel: boolean
-  },
-  keyspace: string,
-  status: 'pending' | 'running' | 'completed' | 'failed',
-  dependencies: ObjectId[] (ref: attacks),
-  template_id: ObjectId (ref: templates),
-  created_at: Date,
-  updated_at: Date
+  id: serial PRIMARY KEY,
+  campaign_id: integer REFERENCES campaigns(id) NOT NULL,
+  project_id: integer REFERENCES projects(id) NOT NULL,
+  mode: integer NOT NULL, // hashcat mode
+  hash_type_id: integer REFERENCES hash_types(id),
+  wordlist_id: integer REFERENCES word_lists(id),
+  rulelist_id: integer REFERENCES rule_lists(id),
+  masklist_id: integer REFERENCES mask_lists(id),
+  advanced_configuration: jsonb DEFAULT '{}',
+  keyspace: varchar(255),
+  status: varchar(20) DEFAULT 'pending', // 'pending' | 'running' | 'completed' | 'failed'
+  dependencies: integer[], // array of attack IDs
+  template_id: integer,
+  created_at: timestamp DEFAULT now(),
+  updated_at: timestamp DEFAULT now()
 }
 ```
 
@@ -556,30 +542,20 @@ POST /agent/tasks/:id/report
 
 ```typescript
 {
-  _id: ObjectId,
-  attack_id: ObjectId (ref: attacks),
-  campaign_id: ObjectId (ref: campaigns),
-  agent_id: ObjectId (ref: agents),
-  status: 'pending' | 'assigned' | 'running' | 'completed' | 'failed',
-  work_range: {
-    skip: number,
-    limit: number
-  },
-  progress: {
-    percent: number,
-    speed: number,
-    eta_seconds: number
-  },
-  result_stats: {
-    hashes_cracked: number,
-    total_hashes: number
-  },
-  assigned_at: Date,
-  started_at: Date,
-  completed_at: Date,
-  failure_reason: string,
-  created_at: Date,
-  updated_at: Date
+  id: serial PRIMARY KEY,
+  attack_id: integer REFERENCES attacks(id) NOT NULL,
+  campaign_id: integer REFERENCES campaigns(id) NOT NULL,
+  agent_id: integer REFERENCES agents(id),
+  status: varchar(20) DEFAULT 'pending', // 'pending' | 'assigned' | 'running' | 'completed' | 'failed'
+  work_range: jsonb DEFAULT '{}', // { skip: number, limit: number }
+  progress: jsonb DEFAULT '{}', // { percent: number, speed: number, eta_seconds: number }
+  result_stats: jsonb DEFAULT '{}', // { hashes_cracked: number, total_hashes: number }
+  assigned_at: timestamp,
+  started_at: timestamp,
+  completed_at: timestamp,
+  failure_reason: text,
+  created_at: timestamp DEFAULT now(),
+  updated_at: timestamp DEFAULT now()
 }
 ```
 
@@ -587,24 +563,16 @@ POST /agent/tasks/:id/report
 
 ```typescript
 {
-  _id: ObjectId,
-  project_id: ObjectId (ref: projects),
-  name: string,
-  hash_type_id: ObjectId (ref: hash_types),
-  source: 'upload' | 'import' | 'api',
-  file_ref: {
-    bucket: string,
-    key: string,
-    size: number
-  },
-  statistics: {
-    total_hashes: number,
-    cracked_hashes: number,
-    unique_hashes: number
-  },
-  status: 'uploading' | 'parsing' | 'ready' | 'error',
-  created_at: Date,
-  updated_at: Date
+  id: serial PRIMARY KEY,
+  project_id: integer REFERENCES projects(id) NOT NULL,
+  name: varchar(255) NOT NULL,
+  hash_type_id: integer REFERENCES hash_types(id),
+  source: varchar(50) DEFAULT 'upload', // 'upload' | 'import' | 'api'
+  file_ref: jsonb DEFAULT '{}', // { bucket: string, key: string, size: number }
+  statistics: jsonb DEFAULT '{}', // { total_hashes: number, cracked_hashes: number, unique_hashes: number }
+  status: varchar(20) DEFAULT 'uploading', // 'uploading' | 'parsing' | 'ready' | 'error'
+  created_at: timestamp DEFAULT now(),
+  updated_at: timestamp DEFAULT now()
 }
 ```
 
@@ -612,95 +580,173 @@ POST /agent/tasks/:id/report
 
 ```typescript
 {
-  _id: ObjectId,
-  hash_list_id: ObjectId (ref: hash_lists),
-  hash_value: string (indexed),
-  plaintext: string,
-  cracked_at: Date,
-  metadata: {
-    salt: string,
-    username: string
-  },
-  created_at: Date
+  id: serial PRIMARY KEY,
+  hash_list_id: integer REFERENCES hash_lists(id) NOT NULL,
+  hash_value: varchar(255) NOT NULL,
+  plaintext: text,
+  cracked_at: timestamp,
+  metadata: jsonb DEFAULT '{}', // { salt: string, username: string }
+  created_at: timestamp DEFAULT now()
 }
+CREATE INDEX idx_hash_items_hash_value ON hash_items(hash_value);
+CREATE INDEX idx_hash_items_hash_list_id ON hash_items(hash_list_id);
 ```
 
-### Mongoose Schema Definitions
+### Drizzle Schema Definitions
 
-All models use Mongoose with TypeScript type inference:
+All tables are defined using Drizzle ORM in `shared/db/schema.ts` as the single source of truth:
 
 ```typescript
-import { Schema, model, Document } from 'mongoose';
+import { pgTable, serial, varchar, text, timestamp, integer, jsonb, boolean } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 
-interface IUser extends Document {
-  email: string;
-  password_hash: string;
-  name: string;
-  status: 'active' | 'disabled';
-  last_login_at: Date;
-}
+// Users table
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  status: varchar('status', { length: 20 }).default('active'),
+  lastLoginAt: timestamp('last_login_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
 
-const userSchema = new Schema<IUser>({
-  email: { type: String, required: true, unique: true },
-  password_hash: { type: String, required: true },
-  name: { type: String, required: true },
-  status: { type: String, enum: ['active', 'disabled'], default: 'active' },
-  last_login_at: Date
-}, { timestamps: true });
+// Projects table
+export const projects = pgTable('projects', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  slug: varchar('slug', { length: 255 }).notNull().unique(),
+  settings: jsonb('settings').default('{}'),
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
 
-export const User = model<IUser>('User', userSchema);
+// Agents table
+export const agents = pgTable('agents', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  projectId: integer('project_id').references(() => projects.id).notNull(),
+  operatingSystemId: integer('operating_system_id').references(() => operatingSystems.id),
+  authToken: varchar('auth_token', { length: 255 }).notNull().unique(),
+  status: varchar('status', { length: 20 }).default('offline'),
+  capabilities: jsonb('capabilities').default('{}'),
+  hardwareProfile: jsonb('hardware_profile').default('{}'),
+  lastSeenAt: timestamp('last_seen_at'),
+  currentTaskId: integer('current_task_id').references(() => tasks.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+// Campaigns table
+export const campaigns = pgTable('campaigns', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').references(() => projects.id).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  hashListId: integer('hash_list_id').references(() => hashLists.id).notNull(),
+  status: varchar('status', { length: 20 }).default('draft'),
+  priority: integer('priority').default(5),
+  metadata: jsonb('metadata').default('{}'),
+  createdBy: integer('created_by').references(() => users.id),
+  startedAt: timestamp('started_at'),
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+// Define relations
+export const usersRelations = relations(users, ({ many }) => ({
+  projects: many(projectUsers),
+  createdProjects: many(projects),
+  createdCampaigns: many(campaigns)
+}));
+
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [projects.createdBy],
+    references: [users.id]
+  }),
+  members: many(projectUsers),
+  agents: many(agents),
+  campaigns: many(campaigns)
+}));
 ```
 
 ### Zod Validation Schemas
 
-**Single source of truth in `shared/` package:**
+**Single source of truth using drizzle-zod:**
 
 ```typescript
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
+import { users, projects, campaigns, agents } from './db/schema';
 
-// All types inferred from Zod schemas
-export const LoginRequestSchema = z.object({
+// Generate base schemas from Drizzle tables
+export const insertUserSchema = createInsertSchema(users);
+export const selectUserSchema = createSelectSchema(users);
+
+export const insertProjectSchema = createInsertSchema(projects);
+export const selectProjectSchema = createSelectSchema(projects);
+
+export const insertCampaignSchema = createInsertSchema(campaigns);
+export const selectCampaignSchema = createSelectSchema(campaigns);
+
+// Infer TypeScript types from Zod schemas
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type SelectUser = z.infer<typeof selectUserSchema>;
+
+export type InsertProject = z.infer<typeof insertProjectSchema>;
+export type SelectProject = z.infer<typeof selectProjectSchema>;
+
+export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
+export type SelectCampaign = z.infer<typeof selectCampaignSchema>;
+
+// Custom validation schemas for API requests
+export const loginRequestSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8)
 });
-export type LoginRequest = z.infer<typeof LoginRequestSchema>;
+export type LoginRequest = z.infer<typeof loginRequestSchema>;
 
-export const CreateCampaignSchema = z.object({
-  projectId: z.string(),
-  name: z.string().min(1).max(255),
-  description: z.string().optional(),
-  hashListId: z.string(),
-  priority: z.number().int().min(0).max(10).default(5)
+export const createCampaignSchema = insertCampaignSchema.pick({
+  projectId: true,
+  name: true,
+  description: true,
+  hashListId: true,
+  priority: true
 });
-export type CreateCampaign = z.infer<typeof CreateCampaignSchema>;
+export type CreateCampaign = z.infer<typeof createCampaignSchema>;
 
-export const AgentHeartbeatSchema = z.object({
+export const agentHeartbeatSchema = z.object({
   status: z.enum(['online', 'busy', 'error']),
   capabilities: z.object({
-    hashcat_version: z.string(),
-    gpu_devices: z.array(z.object({
+    hashcatVersion: z.string(),
+    gpuDevices: z.array(z.object({
       name: z.string(),
       memory: z.number(),
-      compute_capability: z.string()
+      computeCapability: z.string()
     }))
   }),
   deviceInfo: z.object({
-    cpu_usage: z.number(),
-    memory_usage: z.number(),
+    cpuUsage: z.number(),
+    memoryUsage: z.number(),
     temperature: z.number().optional()
   })
 });
-export type AgentHeartbeat = z.infer<typeof AgentHeartbeatSchema>;
+export type AgentHeartbeat = z.infer<typeof agentHeartbeatSchema>;
 
-// Fastify route validation
-import { FastifyRequest, FastifyReply } from 'fastify';
+// Hono route validation
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
 
-fastify.post('/campaigns', {
-  schema: {
-    body: zodToJsonSchema(CreateCampaignSchema)
-  }
-}, async (request: FastifyRequest, reply: FastifyReply) => {
-  const data = CreateCampaignSchema.parse(request.body);
+const app = new Hono();
+
+app.post('/campaigns', zValidator('json', createCampaignSchema), async (c) => {
+  const data = c.req.valid('json');
+  // data is fully typed as CreateCampaign
   // ...
 });
 ```
@@ -800,39 +846,56 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
 
 ### Backend Testing
 
-**Vitest for all tests (no Jest):**
+**bun:test for all tests:**
 
 - Service layer business logic
 - Utility functions and helpers
 - Validation schemas
-- Model methods
+- Drizzle queries and relations
 
-**Integration Tests (Vitest + Testcontainers):**
+**Integration Tests (bun:test + Testcontainers):**
 
 - API endpoint contracts
-- Database operations (MongoDB)
+- Database operations (PostgreSQL)
 - Queue operations (Redis/BullMQ)
 - S3 storage operations (MinIO)
 
 **Test Structure:**
 
 ```typescript
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
 import { GenericContainer, StartedTestContainer } from 'testcontainers';
 
 describe('CampaignService', () => {
-  let mongoContainer: StartedTestContainer;
+  let postgresContainer: StartedTestContainer;
   let redisContainer: StartedTestContainer;
+  let minioContainer: StartedTestContainer;
 
   beforeAll(async () => {
-    mongoContainer = await new GenericContainer('mongo:6')
-      .withExposedPorts(27017)
+    postgresContainer = await new GenericContainer('postgres:16')
+      .withExposedPorts(5432)
+      .withEnvironment({
+        POSTGRES_PASSWORD: 'test',
+        POSTGRES_DB: 'hashhive_test'
+      })
       .start();
-    // Connect to test database
+
+    redisContainer = await new GenericContainer('redis:7')
+      .withExposedPorts(6379)
+      .start();
+
+    minioContainer = await new GenericContainer('minio/minio')
+      .withExposedPorts(9000)
+      .withCommand(['server', '/data'])
+      .start();
+
+    // Connect to test database and run migrations
   });
 
   afterAll(async () => {
-    await mongoContainer.stop();
+    await postgresContainer.stop();
+    await redisContainer.stop();
+    await minioContainer.stop();
   });
 
   describe('createCampaign', () => {
@@ -852,7 +915,7 @@ describe('CampaignService', () => {
         campaignService.createCampaign({
           projectId: testProjectId,
           name: 'Test',
-          hashListId: 'invalid'
+          hashListId: 999999
         })
       ).rejects.toThrow('RESOURCE_NOT_FOUND');
     });
@@ -862,7 +925,7 @@ describe('CampaignService', () => {
 
 ### Frontend Testing
 
-**Component Tests (Vitest + Testing Library):**
+**Component Tests (bun:test + Testing Library):**
 
 - UI component rendering
 - User interactions
@@ -879,7 +942,7 @@ describe('CampaignService', () => {
 **Test Example:**
 
 ```typescript
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -917,7 +980,7 @@ describe('CampaignWizard', () => {
 Using the OpenAPI specification:
 
 ```typescript
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import { validateAgainstSchema } from 'openapi-validator';
 
 describe('Agent API Contract', () => {
@@ -973,11 +1036,11 @@ rails runner scripts/export_wordlists.rb > data/wordlists.ndjson
 
 ### Phase 2: Data Transformation
 
-**Transform to MongoDB Documents:**
+**Transform to PostgreSQL Rows:**
 
 ```typescript
 // Transform users
-async function transformUsers(railsUsers: RailsUser[]): Promise<MongoUser[]> {
+async function transformUsers(railsUsers: RailsUser[]): Promise<PostgresUser[]> {
   return railsUsers.map(user => ({
     email: user.email,
     password_hash: user.encrypted_password,
@@ -992,8 +1055,8 @@ async function transformUsers(railsUsers: RailsUser[]): Promise<MongoUser[]> {
 // Transform campaigns with attack references
 async function transformCampaigns(
   railsCampaigns: RailsCampaign[],
-  idMapping: Map<number, ObjectId>
-): Promise<MongoCampaign[]> {
+  idMapping: Map<number, number>
+): Promise<PostgresCampaign[]> {
   return railsCampaigns.map(campaign => ({
     project_id: idMapping.get(campaign.project_id),
     name: campaign.name,
@@ -1008,31 +1071,33 @@ async function transformCampaigns(
 }
 ```
 
-### Phase 3: Import to MongoDB
+### Phase 3: Import to PostgreSQL
 
 **Import Scripts:**
 
 ```typescript
-import { MongoClient } from 'mongodb';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import { readFile } from 'fs/promises';
+import { users, projects, campaigns } from './shared/db/schema';
 
 async function importData() {
-  const client = await MongoClient.connect(process.env.MONGO_URL);
-  const db = client.db('hashhive');
+  const client = postgres(process.env.DATABASE_URL);
+  const db = drizzle(client);
 
   // Import users
-  const users = await loadNDJSON('data/users.ndjson');
-  const transformedUsers = await transformUsers(users);
-  await db.collection('users').insertMany(transformedUsers);
+  const railsUsers = await loadNDJSON('data/users.ndjson');
+  const transformedUsers = await transformUsers(railsUsers);
+  await db.insert(users).values(transformedUsers);
 
   // Import projects
-  const projects = await loadNDJSON('data/projects.ndjson');
-  const transformedProjects = await transformProjects(projects);
-  await db.collection('projects').insertMany(transformedProjects);
+  const railsProjects = await loadNDJSON('data/projects.ndjson');
+  const transformedProjects = await transformProjects(railsProjects);
+  await db.insert(projects).values(transformedProjects);
 
-  // Continue for all collections...
+  // Continue for all tables...
 
-  await client.close();
+  await client.end();
 }
 ```
 
@@ -1071,13 +1136,13 @@ async function validateMigration() {
 1. Schedule maintenance window
 2. Set Rails to read-only mode
 3. Run final data export
-4. Transform and import to MongoDB
+4. Transform and import to PostgreSQL
 5. Run validation checks
-6. Start MERN services (HashHive)
+6. Start HashHive services (Bun backend + React frontend)
 7. Verify critical workflows
 8. Update agent configurations to point to HashHive
 9. Monitor for issues
 
 **Note:** Agents are self-contained and specific to each system. If HashHive encounters issues, agents can simply be reconfigured to point back to CipherSwarm without complex rollback procedures.
 
-This design provides a comprehensive blueprint for the MERN migration, covering architecture, components, data models, error handling, testing, and migration strategy. Implementation should proceed incrementally with continuous validation against requirements.
+This design provides a comprehensive blueprint for the HashHive migration, covering architecture, components, data models, error handling, testing, and migration strategy. Implementation should proceed incrementally with continuous validation against requirements.

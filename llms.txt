@@ -18,11 +18,11 @@
 
 ## Implementation Plans
 
-- [Migration Requirements](.kiro/specs/mern-migration/requirements.md): Migration requirements from CipherSwarm
 - [System Design](.kiro/specs/mern-migration/design.md): Architecture, data models, and API designs
-- [Task Breakdown](.kiro/specs/mern-migration/tasks.md): Implementation task list with progress tracking
+- [Migration Requirements](.kiro/specs/mern-migration/requirements.md): TypeScript stack migration requirements from CipherSwarm
 - [Task 1 Summary](.kiro/specs/mern-migration/TASK_1_SUMMARY.md): Project foundation and infrastructure setup completion
 - [Task 2.2 Summary](.kiro/specs/mern-migration/TASK_2.2_SUMMARY.md): Database connection and base models implementation completion
+- [Task Breakdown](.kiro/specs/mern-migration/tasks.md): Implementation task list with progress tracking
 
 ## Implementation Guides
 
