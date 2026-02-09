@@ -125,6 +125,27 @@ export const createQueue = (name: QueueName): Queue => {
     logger.error({ queueName: name, error }, 'Queue error');
   });
 
+  // Also add error handler to the queue's internal Redis client to catch
+  // connection-closed errors that may be emitted directly from ioredis during
+  // shutdown, which wouldn't be caught by the queue-level error handler.
+  queue.client
+    .then((client) => {
+      client.on('error', (error: Error) => {
+        if (error.message.includes('Connection is closed')) {
+          logger.debug(
+            { queueName: name },
+            'Queue Redis client connection closed (expected during shutdown)'
+          );
+          return;
+        }
+        logger.error({ queueName: name, error }, 'Queue Redis client error');
+      });
+    })
+    .catch((error: unknown) => {
+      // Ignore errors getting the client during shutdown
+      logger.debug({ queueName: name, error }, 'Could not attach error handler to queue client');
+    });
+
   // Queue events are helpful for observability, but can introduce noisy
   // connection-close errors in test environments due to rapid setup/teardown.
   // Skip creating QueueEvents during tests to keep CI stable.
