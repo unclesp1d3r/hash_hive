@@ -2,12 +2,12 @@
 
 ## Introduction
 
-This document defines the requirements for migrating CipherSwarm from a Rails 8 monolith to a modern MERN stack implementation called HashHive. The migration preserves all core capabilities while modernizing the technology stack with **Fastify**, **Node.js**, **MongoDB**, **React 19 + Vite**, and **TypeScript** throughout. The system orchestrates distributed password cracking using hashcat across multiple agents in a private lab environment (7 cracking rigs), managing campaigns, attacks, tasks, and resources with comprehensive monitoring and project-based multi-tenancy.
+This document defines the requirements for reimplementing CipherSwarm as HashHive using a modern TypeScript stack. The migration preserves all core capabilities while modernizing with **Bun**, **Hono**, **PostgreSQL with Drizzle**, and **React 19 + Vite**. The system orchestrates distributed password cracking using hashcat across multiple agents in a private lab environment (7 cracking rigs), managing campaigns, attacks, tasks, and resources with comprehensive monitoring and project-based multi-tenancy.
 
-**Key Performance Requirements:**
-- Agent API must handle sustained bursts of 10K requests/second during productive cracking runs
-- Dashboard serves 1-3 concurrent human users
-- Bulk operations (insertMany, bulkWrite) for hash result ingestion
+**Key Architectural Principles:**
+- Optimize for correctness, clarity, and developer experience (not premature scale)
+- Batch operations for agent hash submissions
+- Schema flows from Drizzle table definitions
 
 ## Glossary
 
@@ -33,18 +33,19 @@ This document defines the requirements for migrating CipherSwarm from a Rails 8 
 
 ### Requirement 1: Technology Stack Migration
 
-**User Story:** As a platform maintainer, I want to migrate from Rails/PostgreSQL to MERN stack with Fastify and Node.js, so that we have a unified TypeScript codebase with Zod schemas as the single source of truth.
+**User Story:** As a platform maintainer, I want to migrate from Rails/PostgreSQL to a modern TypeScript stack with Bun and Drizzle, so that we have type-safe database access with Drizzle schemas as the single source of truth.
 
 #### Acceptance Criteria
 
-1. THE HashHive Backend SHALL use Node.js LTS with TypeScript, Fastify framework, and MongoDB with Mongoose ODM
-2. THE HashHive Frontend SHALL use React 19 with Vite, TypeScript, Tailwind CSS, and shadcn/ui component library
-3. THE HashHive System SHALL use Turborepo with pnpm workspaces for monorepo management
-4. THE HashHive System SHALL use BullMQ with Redis for background job processing and task queue management
-5. THE HashHive System SHALL use S3-compatible object storage (MinIO) via @aws-sdk/client-s3 for binary artifacts
-6. THE HashHive System SHALL define all data shapes as Zod schemas in the `shared/` package with TypeScript types inferred via `z.infer<typeof schema>`
-7. THE HashHive System SHALL use Vitest for all tests (no Jest)
-8. THE HashHive System SHALL use Oxlint for linting (fallback to Biome if needed)
+1. THE HashHive Backend SHALL use Bun (latest stable) as runtime, package manager, and test runner
+2. THE HashHive Backend SHALL use Hono framework running natively on Bun.serve()
+3. THE HashHive Backend SHALL use PostgreSQL with Drizzle ORM for all data persistence
+4. THE HashHive Frontend SHALL use React 19 with Vite, TypeScript, Tailwind CSS, and shadcn/ui component library
+5. THE HashHive System SHALL use Turborepo with Bun workspaces for monorepo management
+6. THE HashHive System SHALL define all database schema as Drizzle table definitions in the `shared/` package
+7. THE HashHive System SHALL use drizzle-zod to generate Zod schemas from Drizzle tables with TypeScript types inferred via `z.infer<typeof schema>`
+8. THE HashHive System SHALL use bun:test for all tests
+9. THE HashHive System SHALL use Biome for linting, formatting, and import sorting
 
 ### Requirement 2: Authentication and Authorization
 
@@ -72,16 +73,15 @@ This document defines the requirements for migrating CipherSwarm from a Rails 8 
 
 ### Requirement 4: Agent API Contract
 
-**User Story:** As an agent developer, I want a versioned OpenAPI specification for the Agent API, so that I can implement compatible Go-based agents with clear contracts and high-throughput bulk operations.
+**User Story:** As an agent developer, I want a versioned OpenAPI specification for the Agent API, so that I can implement compatible Go-based agents with clear contracts and batch operations.
 
 #### Acceptance Criteria
 
 1. THE HashHive System SHALL define the Agent API in an OpenAPI YAML specification at openapi/agent-api.yaml
 2. THE Agent API SHALL include endpoints for sessions, heartbeat, tasks/next, and tasks/:id/report
-3. THE Agent API SHALL support bulk operations (insertMany, bulkWrite) for hash result submissions
-4. THE Agent API SHALL handle sustained bursts of 10K requests/second during productive cracking runs
-5. THE Agent API SHALL use write concern `{ w: 1, j: false }` for hash submissions in lab environment
-6. WHEN an agent requests tasks/next, THE HashHive System SHALL return task descriptors matching agent capabilities
+3. THE Agent API SHALL support batch operations for hash result submissions using Drizzle bulk inserts or raw Bun.SQL
+4. THE Agent API SHALL handle periodic bursts when agents submit results, request work, and send heartbeats
+5. WHEN an agent requests tasks/next, THE HashHive System SHALL return task descriptors matching agent capabilities
 
 ### Requirement 5: Campaign and Attack Orchestration
 
@@ -97,15 +97,15 @@ This document defines the requirements for migrating CipherSwarm from a Rails 8 
 
 ### Requirement 6: Task Distribution and Scheduling
 
-**User Story:** As a system operator, I want intelligent task distribution using message queues, so that agents receive work matching their capabilities with optimal utilization.
+**User Story:** As a system operator, I want intelligent task distribution, so that agents receive work matching their capabilities with optimal utilization.
 
 #### Acceptance Criteria
 
 1. THE HashHive System SHALL generate tasks based on attack keyspace calculations and partition strategies
-2. THE HashHive System SHALL enqueue pending tasks into BullMQ queues keyed by campaign and capability tags
-3. WHEN an agent calls tasks/next, THE HashHive System SHALL pop the next appropriate task from capability-matched queues
+2. THE HashHive System SHALL store pending tasks in PostgreSQL with appropriate indexes
+3. WHEN an agent calls tasks/next, THE HashHive System SHALL return the next appropriate task matching agent capabilities
 4. THE HashHive System SHALL mark tasks as assigned with agent_id and assigned_at timestamp
-5. THE HashHive System SHALL support task retry with dead-letter queues for failed tasks requiring intervention
+5. THE HashHive System SHALL support task retry for failed tasks requiring intervention
 
 ### Requirement 7: Resource Management
 
@@ -113,7 +113,7 @@ This document defines the requirements for migrating CipherSwarm from a Rails 8 
 
 #### Acceptance Criteria
 
-1. THE HashHive System SHALL store resource metadata in MongoDB with file references to S3-compatible object storage
+1. THE HashHive System SHALL store resource metadata in PostgreSQL with file path references
 2. THE HashHive System SHALL support hash list uploads with automatic hash type detection
 3. THE HashHive System SHALL parse uploaded hash lists into individual hash_items with hash_value and metadata
 4. THE HashHive System SHALL support wordlist, rulelist, and masklist uploads with size and hashcat flag metadata
@@ -125,7 +125,7 @@ This document defines the requirements for migrating CipherSwarm from a Rails 8 
 
 #### Acceptance Criteria
 
-1. THE HashHive System SHALL implement event streaming via WebSockets using @fastify/websocket at /events/stream endpoint
+1. THE HashHive System SHALL implement event streaming via WebSockets using hono/websocket at /events/stream endpoint
 2. THE HashHive System SHALL emit events for agent_status, campaign_status, attack_status, task_update, and crack_result
 3. THE HashHive Frontend SHALL subscribe to WebSocket streams and update UI components without page reloads
 4. THE HashHive System SHALL throttle event emissions to prevent performance degradation
@@ -157,12 +157,12 @@ This document defines the requirements for migrating CipherSwarm from a Rails 8 
 
 ### Requirement 11: Data Migration from Rails
 
-**User Story:** As a platform maintainer, I want repeatable data migration scripts, so that I can migrate production data from PostgreSQL to MongoDB with validation.
+**User Story:** As a platform maintainer, I want repeatable data migration scripts, so that I can migrate production data from Rails PostgreSQL to HashHive PostgreSQL with validation.
 
 #### Acceptance Criteria
 
-1. THE HashHive System SHALL provide migration scripts exporting PostgreSQL data to neutral interchange formats
-2. THE Migration Scripts SHALL transform relational data into MongoDB documents with appropriate normalization
+1. THE HashHive System SHALL provide migration scripts exporting Rails PostgreSQL data to neutral interchange formats
+2. THE Migration Scripts SHALL transform Rails schema into Drizzle table definitions with appropriate normalization
 3. THE Migration Scripts SHALL be idempotent and safely re-runnable in staging environments
 4. THE Migration Scripts SHALL validate migrated data with row counts and spot checks of critical entities
 5. THE Migration Scripts SHALL preserve functional equivalence for all user workflows and data relationships
@@ -173,9 +173,9 @@ This document defines the requirements for migrating CipherSwarm from a Rails 8 
 
 #### Acceptance Criteria
 
-1. THE HashHive Backend SHALL use Vitest for all unit and integration tests
-2. THE HashHive Backend SHALL use Testcontainers for integration tests with MongoDB, Redis, and MinIO
-3. THE HashHive Frontend SHALL use Vitest with Testing Library for component tests
+1. THE HashHive Backend SHALL use bun:test for all unit and integration tests
+2. THE HashHive Backend SHALL use test database for integration tests with PostgreSQL
+3. THE HashHive Frontend SHALL use bun:test with Testing Library for component tests
 4. THE HashHive Frontend SHALL use Playwright for end-to-end workflow tests
 5. THE HashHive System SHALL maintain 90% or greater test coverage for new code
 
@@ -185,10 +185,10 @@ This document defines the requirements for migrating CipherSwarm from a Rails 8 
 
 #### Acceptance Criteria
 
-1. THE HashHive System SHALL provide Docker images for API server, web UI, MongoDB, Redis, and MinIO
+1. THE HashHive System SHALL provide Docker images for API server, web UI, and PostgreSQL
 2. THE HashHive System SHALL provide docker-compose.yml for local development stack
 3. THE HashHive System SHALL expose health check endpoints for monitoring and orchestration
-4. THE HashHive System SHALL support structured logging with Pino and OpenTelemetry-compatible exporters
+4. THE HashHive System SHALL support structured logging with appropriate log levels
 5. THE HashHive System SHALL support zero-downtime deployments with rollback capabilities
 
 ### Requirement 14: Web UI Dashboard
@@ -211,7 +211,7 @@ This document defines the requirements for migrating CipherSwarm from a Rails 8 
 #### Acceptance Criteria
 
 1. THE HashHive Frontend SHALL provide a multi-step wizard for campaign creation with progress indicators
-2. THE HashHive Frontend SHALL support direct file uploads for hash lists with S3-compatible storage integration
-3. THE HashHive Frontend SHALL provide attack configuration forms with mode-specific field validation using shared Zod schemas
+2. THE HashHive Frontend SHALL support direct file uploads for hash lists with file storage integration
+3. THE HashHive Frontend SHALL provide attack configuration forms with mode-specific field validation using shared Zod schemas from drizzle-zod
 4. THE HashHive Frontend SHALL provide visual DAG editor for attack dependencies with drag-and-drop
 5. WHEN campaign configuration is complete, THE HashHive Frontend SHALL display summary preview before submission
