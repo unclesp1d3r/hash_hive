@@ -46,3 +46,4 @@ temp/
 frontend/test-results/
 frontend/playwright-report/
 .nx/
+.claude.local.md
