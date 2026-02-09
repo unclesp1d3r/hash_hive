@@ -15,17 +15,22 @@ jobs:
       DOCKER_HOST: unix:///var/run/docker.sock
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: '.bun-version'
 
       - uses: actions/setup-node@v5
         with:
           node-version-file: '.node-version'
-          cache: npm
 
       - name: Install just
         uses: extractions/setup-just@v1
 
       - name: Install dependencies
-        run: npm install
+        run: bun install
 
       - name: Verify Docker is available for Testcontainers
         run: |

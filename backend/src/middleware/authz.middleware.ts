@@ -1,9 +1,9 @@
-import type { Request, Response, NextFunction } from 'express';
-import { AppError } from './error-handler';
-import { ProjectService } from '../services/project.service';
+import type { NextFunction, Request, Response } from 'express';
+import type { User, UserRole } from '../../../shared/src/types';
 import { Project } from '../models/project.model';
 import { Role } from '../models/role.model';
-import type { UserRole, User } from '../../../shared/src/types';
+import { ProjectService } from '../services/project.service';
+import { AppError } from './error-handler';
 
 const HTTP_FORBIDDEN = 403;
 
@@ -69,7 +69,6 @@ export const requireProjectAccess =
     // Attach project to request
     const project = await Project.findById(projectId);
     if (project !== null) {
-      // eslint-disable-next-line no-param-reassign -- Express middleware pattern requires mutating req
       req.project = project;
     }
 
@@ -109,7 +108,6 @@ export const requireProjectRole =
     // Attach project to request
     const project = await Project.findById(projectId);
     if (project !== null) {
-      // eslint-disable-next-line no-param-reassign -- Express middleware pattern requires mutating req
       req.project = project;
     }
 
@@ -135,7 +133,9 @@ export async function hasPermission(user: User, permission: string): Promise<boo
   // Collect all permissions from user's roles
   const allPermissions = new Set<string>();
   for (const role of roles) {
-    role.permissions.forEach((perm) => allPermissions.add(perm));
+    for (const perm of role.permissions) {
+      allPermissions.add(perm);
+    }
   }
 
   // Check if the requested permission is present

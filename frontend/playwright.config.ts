@@ -32,7 +32,7 @@ const config = defineConfig({
 // Only add webServer in non-CI environments
 if (!isCI) {
   config.webServer = {
-    command: 'npm run dev',
+    command: 'bun run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: true,
   };

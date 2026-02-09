@@ -1,6 +1,6 @@
-import { Schema, model, type Document } from 'mongoose';
-import { baseSchemaOptions } from './base.schema';
+import { type Document, model, Schema } from 'mongoose';
 import type { UserRole } from '../../../shared/src/types';
+import { baseSchemaOptions } from './base.schema';
 
 export interface IRole extends Document {
   name: UserRole;

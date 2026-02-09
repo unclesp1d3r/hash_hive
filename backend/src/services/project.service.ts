@@ -1,10 +1,10 @@
 import { Types } from 'mongoose';
-import { logger } from '../utils/logger';
-import { mongoose } from '../db';
-import { Project, type IProject } from '../models/project.model';
-import { ProjectUser } from '../models/project-user.model';
 import type { UserRole } from '../../../shared/src/types';
+import { mongoose } from '../db';
 import { AppError } from '../middleware/error-handler';
+import { type IProject, Project } from '../models/project.model';
+import { ProjectUser } from '../models/project-user.model';
+import { logger } from '../utils/logger';
 
 const DEFAULT_PRIORITY = 5;
 const DEFAULT_MAX_AGENTS = 100;
@@ -12,7 +12,7 @@ const NO_DELETED_COUNT = 0;
 const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
 
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Service class pattern for static methods
+// biome-ignore lint/complexity/noStaticOnlyClass: service class pattern used across codebase
 export class ProjectService {
   /**
    * Create a new project and add creator as admin
@@ -73,7 +73,6 @@ export class ProjectService {
   static async getUserProjects(userId: string): Promise<IProject[]> {
     const userIdObjectId = new Types.ObjectId(userId);
     const projectUsers = await ProjectUser.find({ user_id: userIdObjectId }).populate('project_id');
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- populate returns IProject
     return projectUsers.map((pu) => pu.project_id as IProject);
   }
 

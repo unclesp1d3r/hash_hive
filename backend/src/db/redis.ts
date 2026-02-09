@@ -39,7 +39,6 @@ export async function connectRedis(): Promise<Redis> {
     lazyConnect: true,
   };
 
-  // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- Direct property access is clearer here
   const redisPassword = config.redis.password;
   if (redisPassword !== undefined && redisPassword !== '') {
     options.password = redisPassword;

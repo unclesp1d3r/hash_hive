@@ -1,12 +1,12 @@
 import mongoose, { Schema } from 'mongoose';
+import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 import {
-  createBaseSchema,
   addCommonIndexes,
-  isSoftDeleteDocument,
   type BaseDocument,
+  createBaseSchema,
+  isSoftDeleteDocument,
   type SoftDeleteDocument,
 } from '../../src/models/base.schema';
-import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 
 describe('Base Schema', () => {
   beforeAll(async () => {
@@ -116,7 +116,7 @@ describe('Base Schema', () => {
     it('should soft delete a document', async () => {
       const doc = await TestModel.create({ name: 'Test Document' });
 
-      await doc.softDelete!();
+      await doc.softDelete?.();
 
       expect(doc.is_deleted).toBe(true);
       expect(doc.deleted_at).toBeInstanceOf(Date);
@@ -124,9 +124,9 @@ describe('Base Schema', () => {
 
     it('should restore a soft deleted document', async () => {
       const doc = await TestModel.create({ name: 'Test Document' });
-      await doc.softDelete!();
+      await doc.softDelete?.();
 
-      await doc.restore!();
+      await doc.restore?.();
 
       expect(doc.is_deleted).toBe(false);
       expect(doc.deleted_at).toBeUndefined();
@@ -135,7 +135,7 @@ describe('Base Schema', () => {
     it('should exclude soft deleted documents from find queries', async () => {
       await TestModel.create({ name: 'Active Document' });
       const deletedDoc = await TestModel.create({ name: 'Deleted Document' });
-      await deletedDoc.softDelete!();
+      await deletedDoc.softDelete?.();
 
       const results = await TestModel.find().notDeleted();
 
@@ -146,7 +146,7 @@ describe('Base Schema', () => {
     it('should find only deleted documents with onlyDeleted', async () => {
       await TestModel.create({ name: 'Active Document' });
       const deletedDoc = await TestModel.create({ name: 'Deleted Document' });
-      await deletedDoc.softDelete!();
+      await deletedDoc.softDelete?.();
 
       const results = await TestModel.find().onlyDeleted();
 
@@ -157,7 +157,7 @@ describe('Base Schema', () => {
     it('should find all documents with withDeleted', async () => {
       await TestModel.create({ name: 'Active Document' });
       const deletedDoc = await TestModel.create({ name: 'Deleted Document' });
-      await deletedDoc.softDelete!();
+      await deletedDoc.softDelete?.();
 
       const results = await TestModel.find().withDeleted();
 
@@ -166,7 +166,7 @@ describe('Base Schema', () => {
 
     it('should exclude soft deleted documents from findOne', async () => {
       const deletedDoc = await TestModel.create({ name: 'Deleted Document' });
-      await deletedDoc.softDelete!();
+      await deletedDoc.softDelete?.();
 
       const result = await TestModel.findOne({ name: 'Deleted Document' }).notDeleted();
 
@@ -176,7 +176,7 @@ describe('Base Schema', () => {
     it('should exclude soft deleted documents from countDocuments', async () => {
       await TestModel.create({ name: 'Active Document' });
       const deletedDoc = await TestModel.create({ name: 'Deleted Document' });
-      await deletedDoc.softDelete!();
+      await deletedDoc.softDelete?.();
 
       const count = await TestModel.countDocuments().notDeleted();
 
@@ -186,7 +186,7 @@ describe('Base Schema', () => {
     it('should include deleted documents when includeDeleted option is set', async () => {
       await TestModel.create({ name: 'Active Document' });
       const deletedDoc = await TestModel.create({ name: 'Deleted Document' });
-      await deletedDoc.softDelete!();
+      await deletedDoc.softDelete?.();
 
       const results = await TestModel.find().setOptions({ includeDeleted: true });
 

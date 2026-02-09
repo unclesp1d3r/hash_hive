@@ -9,40 +9,48 @@ default:
     @just --choose
 
 # -----------------------------
-# 🔧 Setup & Installation
+# Setup & Installation
 # -----------------------------
 
-# Update uv and pnpm dependencies
+# Update dependencies
 [unix]
 update-deps:
     cd {{ justfile_dir() }}
-    npm update --all --include=dev
+    bun update
     pre-commit autoupdate
 
 [windows]
 update-deps:
     cd {{ justfile_dir() }}
-    npm update --all --include=dev
+    bun update
     pre-commit autoupdate
 
 # Install all dependencies
 install:
-    npm install
+    bun install
 
 # Complete setup (install deps, copy env files, start docker)
 [unix]
 setup:
     #!/usr/bin/env bash
     # HashHive Setup - Unix
-    # Check Node.js major version (require 20+)
-    NODE_MAJOR_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-    if [ "$NODE_MAJOR_VERSION" -lt 20 ]; then
-        echo "Node.js 20+ is required. Current version: $(node -v)" >&2
+    # Check Bun version (require 1.2+)
+    BUN_VERSION=$(bun --version)
+    BUN_MAJOR=$(echo "$BUN_VERSION" | cut -d'.' -f1)
+    BUN_MINOR=$(echo "$BUN_VERSION" | cut -d'.' -f2)
+    if [ "$BUN_MAJOR" -lt 1 ] || { [ "$BUN_MAJOR" -eq 1 ] && [ "$BUN_MINOR" -lt 2 ]; }; then
+        echo "Bun 1.2+ is required. Current version: $BUN_VERSION" >&2
         exit 1
     fi
 
-    npm install
-    npm install --workspaces
+    # Node.js is still required for Next.js
+    NODE_MAJOR_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+    if [ "$NODE_MAJOR_VERSION" -lt 20 ]; then
+        echo "Node.js 20+ is required for Next.js. Current version: $(node -v)" >&2
+        exit 1
+    fi
+
+    bun install
 
     if [ ! -f backend/.env ]; then
         cp backend/.env.example backend/.env
@@ -68,20 +76,32 @@ setup:
 setup:
     #!pwsh.exe
     # HashHive Setup - Windows (PowerShell)
+    $bunVersionOutput = bun --version
+    if (-not $bunVersionOutput) {
+      Write-Error "Bun is not installed or not on PATH. Please install Bun 1.2+ first."
+      exit 1
+    }
+    $bunParts = $bunVersionOutput.Split('.')
+    $bunMajor = [int]$bunParts[0]
+    $bunMinor = [int]$bunParts[1]
+    if ($bunMajor -lt 1 -or ($bunMajor -eq 1 -and $bunMinor -lt 2)) {
+      Write-Error "Bun 1.2+ is required. Current version: $bunVersionOutput"
+      exit 1
+    }
+
     $nodeVersionOutput = node -v
     if (-not $nodeVersionOutput) {
-      Write-Error "Node.js is not installed or not on PATH. Please install Node.js 20+ first."
+      Write-Error "Node.js is not installed or not on PATH. Please install Node.js 20+ first (required for Next.js)."
       exit 1
     }
 
     $nodeMajorVersion = [int]($nodeVersionOutput.TrimStart('v').Split('.')[0])
     if ($nodeMajorVersion -lt 20) {
-      Write-Error "Node.js 20+ is required. Current version: $nodeVersionOutput"
+      Write-Error "Node.js 20+ is required for Next.js. Current version: $nodeVersionOutput"
       exit 1
     }
 
-    npm install
-    npm install --workspaces
+    bun install
 
     if (-not (Test-Path "backend/.env")) {
       Copy-Item "backend/.env.example" "backend/.env"
@@ -114,15 +134,17 @@ validate:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    NODE_MAJOR_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-    if [ "$NODE_MAJOR_VERSION" -lt 20 ]; then
-        echo "Node.js 20+ required. Current: $(node -v)" >&2
+    BUN_VERSION=$(bun --version)
+    BUN_MAJOR=$(echo "$BUN_VERSION" | cut -d'.' -f1)
+    BUN_MINOR=$(echo "$BUN_VERSION" | cut -d'.' -f2)
+    if [ "$BUN_MAJOR" -lt 1 ] || { [ "$BUN_MAJOR" -eq 1 ] && [ "$BUN_MINOR" -lt 2 ]; }; then
+        echo "Bun 1.2+ required. Current: $BUN_VERSION" >&2
         exit 1
     fi
 
-    NPM_MAJOR_VERSION=$(npm -v | cut -d'.' -f1)
-    if [ "$NPM_MAJOR_VERSION" -lt 10 ]; then
-        echo "npm 10+ required. Current: $(npm -v)" >&2
+    NODE_MAJOR_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+    if [ "$NODE_MAJOR_VERSION" -lt 20 ]; then
+        echo "Node.js 20+ required for Next.js. Current: $(node -v)" >&2
         exit 1
     fi
 
@@ -173,17 +195,7 @@ validate:
     fi
 
     if [ ! -d node_modules ]; then
-        echo "Root dependencies not installed (run: npm install)" >&2
-        exit 1
-    fi
-
-    if [ ! -d backend/node_modules ]; then
-        echo "Backend dependencies not installed (run: npm install -w backend)" >&2
-        exit 1
-    fi
-
-    if [ ! -d frontend/node_modules ]; then
-        echo "Frontend dependencies not installed (run: npm install -w frontend)" >&2
+        echo "Dependencies not installed (run: bun install)" >&2
         exit 1
     fi
 
@@ -191,22 +203,28 @@ validate:
 validate:
     #!pwsh.exe
     # HashHive validation - Windows (PowerShell)
+    $bunVersionOutput = bun --version
+    if (-not $bunVersionOutput) {
+        Write-Error "Bun is not installed or not on PATH."
+        exit 1
+    }
+    $bunParts = $bunVersionOutput.Split('.')
+    $bunMajor = [int]$bunParts[0]
+    $bunMinor = [int]$bunParts[1]
+    if ($bunMajor -lt 1 -or ($bunMajor -eq 1 -and $bunMinor -lt 2)) {
+        Write-Error "Bun 1.2+ required. Current: $bunVersionOutput"
+        exit 1
+    }
+
     $nodeVersionOutput = node -v
     if (-not $nodeVersionOutput) {
-        Write-Error "Node.js is not installed or not on PATH. Please install Node.js 20+ first."
+        Write-Error "Node.js is not installed or not on PATH."
         exit 1
     }
 
     $nodeMajorVersion = [int]($nodeVersionOutput.TrimStart('v').Split('.')[0])
     if ($nodeMajorVersion -lt 20) {
-        Write-Error "Node.js 20+ required. Current: $nodeVersionOutput"
-        exit 1
-    }
-
-    $npmVersionOutput = npm -v
-    $npmMajorVersion = [int]($npmVersionOutput.Split('.')[0])
-    if ($npmMajorVersion -lt 10) {
-        Write-Error "npm 10+ required. Current: $npmVersionOutput"
+        Write-Error "Node.js 20+ required for Next.js. Current: $nodeVersionOutput"
         exit 1
     }
 
@@ -244,7 +262,6 @@ validate:
         }
     }
 
-
     if (-not (Test-Path "backend/.env.example" -PathType Leaf)) {
         Write-Error "Missing: backend/.env.example"
         exit 1
@@ -261,17 +278,8 @@ validate:
     }
 
     if (-not (Test-Path "node_modules" -PathType Container)) {
-        Write-Warning "Root dependencies not installed (run: npm install)"
+        Write-Warning "Dependencies not installed (run: bun install)"
         exit 1
-    }
-
-    if (-not (Test-Path "backend/node_modules" -PathType Container)) {
-        Write-Warning "Backend dependencies not installed (run: npm install -w backend)"
-        exit 1
-    }
-
-    if (-not (Test-Path "frontend/node_modules" -PathType Container)) {
-        Write-Warning "Frontend dependencies not installed (run: npm install -w frontend)"
     }
 
 # Copy environment files from examples
@@ -305,34 +313,34 @@ install-hooks:
     }
 
 # -----------------------------
-# 🚀 Development Environment
+# Development Environment
 # -----------------------------
 
 # Start development servers (backend + frontend)
 dev:
-    npm run dev
+    bun run dev
 
 # Start backend only
 dev-backend:
-    npm run dev -w backend
+    bun run --filter '@hashhive/backend' dev
 
 # Start frontend only
 dev-frontend:
-    npm run dev -w frontend
+    bun run --filter '@hashhive/frontend' dev
 
 # Run backend in production mode
 start-backend:
-    npm run start -w backend
+    bun run --filter '@hashhive/backend' start
 
 # Run frontend in production mode
 start-frontend:
-    npm run start -w frontend
+    bun run --filter '@hashhive/frontend' start
 
 # Show environment info
 [unix]
 info:
+    @echo "Bun version: $(bun --version)"
     @echo "Node version: $(node -v)"
-    @echo "npm version: $(npm -v)"
     @echo "Docker version: $(docker --version)"
     @echo ""
     @echo "Services:"
@@ -341,8 +349,8 @@ info:
 [windows]
 info:
     #!pwsh.exe
+    Write-Output "Bun version: $(bun --version)"
     Write-Output "Node version: $(node -v)"
-    Write-Output "npm version: $(npm -v)"
     Write-Output "Docker version: $(docker --version)"
     Write-Output ""
     Write-Output "Services:"
@@ -353,74 +361,74 @@ restart service:
     docker compose restart {{ service }}
 
 # -----------------------------
-# 🧹 Linting, Typing, Dep Check
+# Linting, Typing, Dep Check
 # -----------------------------
 
-# Lint all code
+# Lint all code (NX cached)
 lint:
-    npm run lint
+    bunx nx run-many --target=lint
 
 # Format all code
 format:
-    npm run format
+    bun run format
 
 # Check code formatting
 format-check:
-    npm run format:check
+    bun run format:check
 
-# Run TypeScript type checking across all workspaces
+# Run TypeScript type checking across all workspaces (NX cached)
 type-check:
-    npm run type-check --workspaces
+    bunx nx run-many --target=type-check
 
 # -----------------------------
-# 🧪 Testing & Coverage
+# Testing & Coverage
 # -----------------------------
 
-# Run all tests
+# Run all tests (NX cached)
 test:
-    npm test
+    bunx nx run-many --target=test
 
 # Run backend tests
 test-backend:
-    npm run test -w backend
+    bunx nx run @hashhive/backend:test
 
 # Run frontend tests
 test-frontend:
-    npm run test -w frontend
+    bunx nx run @hashhive/frontend:test
 
-# Run integration tests
+# Run integration tests (not cached)
 test-integration:
-    npm run test:integration -w backend
+    bunx nx run @hashhive/backend:test:integration
 
-# Run E2E tests
+# Run E2E tests (not cached)
 test-e2e:
-    npm run test:e2e -w frontend
+    bunx nx run @hashhive/frontend:test:e2e
 
 # Run tests in watch mode
 test-watch:
-    npm run test:watch -w backend
+    bun run --filter '@hashhive/backend' test:watch
 
 # Generate coverage report
 coverage:
-    npm run test:coverage -w backend
+    bunx nx run @hashhive/backend:test:coverage
 
 # -----------------------------
-# 📦 Build & Clean
+# Build & Clean
 # -----------------------------
 
-# Build all packages
+# Build all packages (NX cached, dependency-ordered)
 build:
-    npm run build
+    bunx nx run-many --target=build
 
 # Build specific package
 build-backend:
-    npm run build -w backend
+    bunx nx run @hashhive/backend:build
 
 build-frontend:
-    npm run build -w frontend
+    bunx nx run @hashhive/frontend:build
 
 build-shared:
-    npm run build -w shared
+    bunx nx run @hashhive/shared:build
 
 # Clean build artifacts and dependencies
 [unix]
@@ -431,6 +439,7 @@ clean:
     rm -rf frontend/node_modules frontend/.next
     rm -rf shared/node_modules shared/dist
     rm -rf coverage
+    rm -rf .nx
 
 [windows]
 clean:
@@ -440,6 +449,7 @@ clean:
     Remove-Item -Recurse -Force frontend/node_modules, frontend/.next -ErrorAction SilentlyContinue
     Remove-Item -Recurse -Force shared/node_modules, shared/dist -ErrorAction SilentlyContinue
     Remove-Item -Recurse -Force coverage -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force .nx -ErrorAction SilentlyContinue
 
 # Clean Docker volumes
 clean-docker:
@@ -449,7 +459,7 @@ clean-docker:
 clean-all: clean clean-docker
 
 # -----------------------------
-# 🐳 Docker & Infrastructure
+# Docker & Infrastructure
 # -----------------------------
 
 # Start Docker services
@@ -503,7 +513,7 @@ minio-console:
     }
 
 # -----------------------------
-# 🗄️ Database Tasks
+# Database Tasks
 # -----------------------------
 
 # Connect to MongoDB shell
@@ -515,17 +525,16 @@ redis-cli:
     docker compose exec redis redis-cli
 
 # -----------------------------
-# 🤖 CI Workflow
+# CI Workflow
 # -----------------------------
 # Run the full CI check locally or in GitHub Actions.
 # This relies on Jest + Testcontainers to provision MongoDB, Redis, and MinIO
-
 # for the backend test suites, so no docker-compose step is required.
 ci-check: lint format-check build-shared type-check test-backend test-integration test-frontend test-e2e coverage
 
 # -----------------------------
-# 📚 Documentation
+# Documentation
 # -----------------------------
 # -----------------------------
-# 🚢 Production Build & Deployment
+# Production Build & Deployment
 # -----------------------------

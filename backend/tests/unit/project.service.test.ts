@@ -1,6 +1,6 @@
-import { ProjectService } from '../../src/services/project.service';
 import { Project } from '../../src/models/project.model';
 import { ProjectUser } from '../../src/models/project-user.model';
+import { ProjectService } from '../../src/services/project.service';
 
 // Mock dependencies
 jest.mock('../../src/models/project.model');

@@ -1,16 +1,16 @@
 import { RedisContainer, type StartedRedisContainer } from '@testcontainers/redis';
 import type { Job } from 'bullmq';
 import {
-  initializeQueues,
-  createQueue,
-  getQueue,
-  registerWorker,
-  moveToDeadLetterQueue,
-  getQueueMetrics,
-  getAllQueueMetrics,
-  closeQueues,
   checkQueueHealth,
+  closeQueues,
+  createQueue,
+  getAllQueueMetrics,
+  getQueue,
+  getQueueMetrics,
+  initializeQueues,
+  moveToDeadLetterQueue,
   QUEUE_NAMES,
+  registerWorker,
 } from '../../src/config/queue';
 import { connectRedis, disconnectRedis } from '../../src/config/redis';
 
@@ -207,7 +207,6 @@ describe('BullMQ Queue Integration Tests', () => {
           }
 
           // Small delay between polls to avoid tight loop
-          // eslint-disable-next-line no-await-in-loop
           await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
         }
 
@@ -239,9 +238,9 @@ describe('BullMQ Queue Integration Tests', () => {
       expect(deadLetterJobs.length).toBeGreaterThan(0);
       const deadLetterJob = deadLetterJobs[0];
       expect(deadLetterJob).toBeDefined();
-      expect(deadLetterJob!.data.originalQueue).toBe(QUEUE_NAMES.TASKS);
-      expect(deadLetterJob!.data.originalJobId).toBe(job.id);
-      expect(deadLetterJob!.data.failedReason).toBe('Test failure reason');
+      expect(deadLetterJob?.data.originalQueue).toBe(QUEUE_NAMES.TASKS);
+      expect(deadLetterJob?.data.originalJobId).toBe(job.id);
+      expect(deadLetterJob?.data.failedReason).toBe('Test failure reason');
     });
   });
 
@@ -307,7 +306,7 @@ describe('BullMQ Queue Integration Tests', () => {
       const health = await checkQueueHealth();
 
       expect(health.queues).toBeDefined();
-      const tasksHealth = health.queues![QUEUE_NAMES.TASKS];
+      const tasksHealth = health.queues?.[QUEUE_NAMES.TASKS];
       expect(tasksHealth).toHaveProperty('status');
       expect(tasksHealth).toHaveProperty('metrics');
     });

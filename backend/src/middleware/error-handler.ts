@@ -1,5 +1,4 @@
-/* eslint-disable complexity, @typescript-eslint/init-declarations -- Centralized error handler trades off complexity for having one authoritative place; safeBody is initialized via branches */
-import type { Request, Response, NextFunction } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import { ZodError } from 'zod';
 import { logger } from '../utils/logger';
 
@@ -65,7 +64,6 @@ export const errorHandler = (
     // Handle objects and arrays - check if JSON-serializable
     try {
       JSON.stringify(req.body);
-      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- Direct assignment keeps logging logic simple
       safeBody = req.body;
     } catch {
       safeBody = '[unserializable body]';
@@ -131,7 +129,6 @@ export const errorHandler = (
   if (
     err.name === 'MongoServerError' &&
     'code' in err &&
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Narrowing Mongo error shape based on known driver fields
     (err as { code?: number }).code === MONGO_DUPLICATE_KEY_CODE
   ) {
     const errorResponse: ErrorResponse = {

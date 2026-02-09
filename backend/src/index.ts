@@ -1,20 +1,19 @@
-import 'express-async-errors';
-import express from 'express';
-import cors from 'cors';
-import cookieParser from 'cookie-parser';
-import csrf from 'csrf';
-import pinoHttp from 'pino-http';
 import * as crypto from 'node:crypto';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import csrf from 'csrf';
+import express from 'express';
+import pinoHttp from 'pino-http';
 import { config } from './config';
-import { logger } from './utils/logger';
+import { closeQueues, initializeQueues } from './config/queue';
 import { connectDatabase, disconnectDatabase } from './db';
 import { connectRedis, disconnectRedis } from './db/redis';
-import { initializeQueues, closeQueues } from './config/queue';
+import { errorHandler } from './middleware/error-handler';
 import { requestIdMiddleware } from './middleware/request-id';
 import { securityHeadersMiddleware } from './middleware/security-headers';
-import { errorHandler } from './middleware/error-handler';
-import { healthRouter } from './routes/health';
 import { webRouter } from './routes';
+import { healthRouter } from './routes/health';
+import { logger } from './utils/logger';
 
 // HTTP status / exit code constants to avoid magic numbers
 const HTTP_STATUS_SERVER_ERROR_THRESHOLD = 500;
@@ -56,7 +55,6 @@ app.use(
         query: req.query,
         params: req.params,
         remoteAddress: req.ip,
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- req.socket can be undefined in test environments (supertest)
         remotePort: req.socket?.remotePort,
       }),
       res: (res: express.Response) => ({
@@ -296,16 +294,13 @@ function isBodyWithCsrf(body: unknown): body is { _csrf: unknown } {
 }
 
 function getCsrfTokenFromRequest(req: express.Request): string | null {
-  // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- CSRF_HEADER_NAME is dynamic
   const headerToken = req.headers[CSRF_HEADER_NAME];
   if (typeof headerToken === 'string' && headerToken !== '') {
     return headerToken;
   }
 
-  // eslint-disable-next-line @typescript-eslint/prefer-destructuring, @typescript-eslint/no-unsafe-assignment -- req.body is typed as any by Express
   const body = req.body;
   if (isBodyWithCsrf(body)) {
-    // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- accessing _csrf property after type guard
     const bodyToken = body._csrf;
     return typeof bodyToken === 'string' && bodyToken !== '' ? bodyToken : null;
   }

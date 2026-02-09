@@ -8,6 +8,11 @@ module.exports = {
   maxWorkers: 1,
   roots: ['<rootDir>/tests/integration'],
   testMatch: ['**/*.test.ts'],
+  // bcrypt-ts is ESM-only; must be transformed by ts-jest
+  transformIgnorePatterns: ['/node_modules/(?!bcrypt-ts/)'],
+  transform: {
+    '^.+\\.[tj]sx?$': 'ts-jest',
+  },
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/**/*.test.ts'],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
