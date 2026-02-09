@@ -1,4 +1,4 @@
-import NextAuth from 'next-auth';
+import NextAuth, { type User } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
 // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- Destructuring breaks with process.env
@@ -10,19 +10,19 @@ const HTTP_STATUS_REDIRECT = 302;
 
 // Helper to validate credentials
 function isValidCredentials(
-  email: unknown,
-  password: unknown,
-): email is string {
+  credentials: { email?: string; password?: string } | undefined
+): credentials is { email: string; password: string } {
   return (
-    typeof email === 'string' &&
-    email !== '' &&
-    typeof password === 'string' &&
-    password !== ''
+    credentials !== undefined &&
+    typeof credentials.email === 'string' &&
+    credentials.email !== '' &&
+    typeof credentials.password === 'string' &&
+    credentials.password !== ''
   );
 }
 
 // Helper to authenticate user with backend
-async function authenticateUser(email: string, password: string): Promise<unknown> {
+async function authenticateUser(email: string, password: string): Promise<User | null> {
   // First, get CSRF token from backend (Auth.js requires this)
   await fetch(`${API_URL}/auth/signin/credentials`, {
     method: 'GET',
@@ -59,8 +59,9 @@ async function authenticateUser(email: string, password: string): Promise<unknow
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Response is unknown from backend
   const sessionData = await sessionResponse.json();
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Response structure is dynamic
-  return sessionData.user ?? null;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-type-assertion -- Response structure is dynamic
+  const userData = sessionData.user as User | undefined;
+  return userData ?? null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- NextAuth returns a handler function
@@ -73,16 +74,13 @@ const handler = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       // Reduce complexity by extracting validation and fetch logic
-      async authorize(credentials) {
-        const email = credentials?.email;
-        const password = credentials?.password;
-
-        if (!isValidCredentials(email, password)) {
+      async authorize(credentials): Promise<User | null> {
+        if (!isValidCredentials(credentials)) {
           return null;
         }
 
         try {
-          return await authenticateUser(email, password);
+          return await authenticateUser(credentials.email, credentials.password);
         } catch {
           return null;
         }
@@ -94,15 +92,14 @@ const handler = NextAuth({
       // user is only present on initial sign-in
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- user is optional based on callback timing
       if (user !== undefined) {
-        const { id, email, name, roles } = user;
-        // eslint-disable-next-line no-param-reassign -- NextAuth requires mutating token object
-        token.id = id;
-        // eslint-disable-next-line no-param-reassign -- NextAuth requires mutating token object
-        token.email = email;
-        // eslint-disable-next-line no-param-reassign -- NextAuth requires mutating token object
-        token.name = name;
-        // eslint-disable-next-line no-param-reassign -- NextAuth requires mutating token object
-        token.roles = roles;
+        // eslint-disable-next-line no-param-reassign, @typescript-eslint/prefer-destructuring, @typescript-eslint/dot-notation -- NextAuth requires mutating token object, TS4111 requires bracket notation
+        token['id'] = user['id'];
+        // eslint-disable-next-line no-param-reassign, @typescript-eslint/prefer-destructuring, @typescript-eslint/dot-notation -- NextAuth requires mutating token object, TS4111 requires bracket notation
+        token['email'] = user['email'];
+        // eslint-disable-next-line no-param-reassign, @typescript-eslint/prefer-destructuring, @typescript-eslint/dot-notation -- NextAuth requires mutating token object, TS4111 requires bracket notation
+        token['name'] = user['name'];
+        // eslint-disable-next-line no-param-reassign, @typescript-eslint/prefer-destructuring, @typescript-eslint/dot-notation -- NextAuth requires mutating token object, TS4111 requires bracket notation
+        token['roles'] = user['roles'];
       }
       return token;
     },
@@ -111,7 +108,12 @@ const handler = NextAuth({
       // user object exists in all valid sessions
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- user could theoretically be undefined
       if (user !== undefined) {
-        const { id: tokenId, email: tokenEmail, name: tokenName, roles: tokenRoles } = token;
+        // Destructure standard JWT properties
+        const { email: tokenEmail, name: tokenName } = token;
+        // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- Cannot destructure index signature properties
+        const tokenId = token['id'];
+        // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- Cannot destructure index signature properties
+        const tokenRoles = token['roles'];
 
         user.id = typeof tokenId === 'string' ? tokenId : '';
 
@@ -119,7 +121,8 @@ const handler = NextAuth({
 
         user.name = typeof tokenName === 'string' ? tokenName : '';
 
-        user.roles = tokenRoles;
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Type guard ensures array
+        user.roles = Array.isArray(tokenRoles) ? (tokenRoles as string[]) : [];
       }
       return session;
     },
