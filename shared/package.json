@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "lint": "bunx eslint \"src/**/*.{ts,tsx,js,jsx}\"",
+    "lint": "biome check ./src",
     "build": "tsc",
     "type-check": "tsc --noEmit",
     "test": "echo 'No tests yet' && exit 0"

@@ -1,5 +1,5 @@
-import { hash, compare } from 'bcrypt-ts';
-import { Schema, model, type Document } from 'mongoose';
+import { compare, hash } from 'bcrypt-ts';
+import { type Document, model, Schema } from 'mongoose';
 import { baseSchemaOptions } from './base.schema';
 
 export interface IUser extends Document {
@@ -71,7 +71,6 @@ const userSchema = new Schema<IUser>(
 userSchema.methods['comparePassword'] = async function (
   candidatePassword: string
 ): Promise<boolean> {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/prefer-destructuring -- Mongoose document property access, cannot destructure conditional field
   const passwordHash = this['password_hash'];
 
   if (typeof passwordHash !== 'string') {
@@ -84,8 +83,7 @@ userSchema.methods['comparePassword'] = async function (
 };
 
 // Static method to hash password
-userSchema.statics['hashPassword'] = async function (password: string): Promise<string> {
-  return await hash(password, SALT_ROUNDS);
-};
+userSchema.statics['hashPassword'] = async (password: string): Promise<string> =>
+  await hash(password, SALT_ROUNDS);
 
 export const User = model<IUser>('User', userSchema);

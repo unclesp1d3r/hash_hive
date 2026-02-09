@@ -1,8 +1,8 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { NextFunction, Request, Response } from 'express';
+import { type ZodError, z } from 'zod';
+import { AppError, errorHandler } from '../../src/middleware/error-handler';
 import { requestIdMiddleware } from '../../src/middleware/request-id';
 import { securityHeadersMiddleware } from '../../src/middleware/security-headers';
-import { errorHandler, AppError } from '../../src/middleware/error-handler';
-import { type ZodError, z } from 'zod';
 
 describe('Middleware', () => {
   describe('requestIdMiddleware', () => {

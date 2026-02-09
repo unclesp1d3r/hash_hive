@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/prefer-destructuring -- Queue config uses imperative property access where destructuring adds little value */
 import { randomUUID } from 'node:crypto';
-import { Queue, QueueEvents, Worker, type Job, type ConnectionOptions } from 'bullmq';
-import { config } from './index';
+import { type ConnectionOptions, type Job, Queue, QueueEvents, Worker } from 'bullmq';
 import { logger } from '../utils/logger';
+import { config } from './index';
 
 /**
  * Queue names used throughout the application
@@ -439,7 +438,6 @@ export const closeQueues = async (): Promise<void> => {
   queues.clear();
 
   // Small delay to allow connections to fully close
-  // eslint-disable-next-line promise/avoid-new -- setTimeout requires Promise wrapper
   await new Promise<void>((resolve) => {
     setTimeout(() => {
       resolve();

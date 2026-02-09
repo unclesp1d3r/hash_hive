@@ -1,10 +1,10 @@
-import { AuthService } from '../../src/services/auth.service';
-import { User } from '../../src/models/user.model';
-import { Session } from '../../src/models/session.model';
+import jwt from 'jsonwebtoken';
 import { getRedisClient } from '../../src/db/redis';
+import { Session } from '../../src/models/session.model';
+import { User } from '../../src/models/user.model';
+import { AuthService } from '../../src/services/auth.service';
 import { ProjectService } from '../../src/services/project.service';
 import { AuthTokenExpiredError, AuthTokenInvalidError } from '../../src/utils/auth-errors';
-import jwt from 'jsonwebtoken';
 
 // Mock dependencies
 jest.mock('../../src/models/user.model');

@@ -1,13 +1,13 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import {
   authenticateJWT,
   authenticateSession,
   optionalAuth,
 } from '../../src/middleware/auth.middleware';
-import { AuthService } from '../../src/services/auth.service';
 import { AppError } from '../../src/middleware/error-handler';
-import { AuthTokenExpiredError, AuthTokenInvalidError } from '../../src/utils/auth-errors';
 import { User } from '../../src/models/user.model';
+import { AuthService } from '../../src/services/auth.service';
+import { AuthTokenExpiredError, AuthTokenInvalidError } from '../../src/utils/auth-errors';
 import { aggregateUserRoles } from '../../src/utils/role-aggregator';
 
 // Mock dependencies

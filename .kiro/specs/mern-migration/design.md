@@ -2,15 +2,17 @@
 
 ## Overview
 
-HashHive is a greenfield MERN implementation that replaces the Rails-based CipherSwarm platform. The system orchestrates distributed password cracking across multiple agents using hashcat, providing campaign management, intelligent task distribution, real-time monitoring, and comprehensive resource management. The architecture uses TypeScript throughout, with MongoDB for data persistence, BullMQ/Redis for job queuing, S3-compatible storage for binary artifacts, and Next.js for the operator-facing web UI.
+HashHive is a greenfield MERN implementation that replaces the Rails-based CipherSwarm platform. The system orchestrates distributed password cracking across multiple agents using hashcat, providing campaign management, intelligent task distribution, real-time monitoring, and comprehensive resource management. The architecture uses TypeScript throughout, with **Fastify** for high-performance HTTP, **MongoDB** for data persistence, **BullMQ/Redis** for job queuing, **S3-compatible storage** (MinIO) for binary artifacts, and **React 19 + Vite** for the operator-facing web UI.
 
-The design prioritizes:
+**Key Architectural Principles:**
 
-- **Type Safety**: Shared TypeScript types across all layers
-- **Real-time Operations**: WebSocket/SSE for live updates
-- **Scalability**: Message queue-based task distribution
-- **Automation**: RESTful APIs for scripting and integration
-- **Operational Excellence**: Comprehensive logging, monitoring, and testing
+- **Zod schemas as single source of truth**: All data shapes defined in `shared/` package, types inferred via `z.infer<typeof schema>`
+- **No premature abstraction**: Fastify route handlers can call Mongoose models directly; service layers only when needed
+- **Bulk operations for Agent API**: Use `insertMany()` and `bulkWrite({ ordered: false })` for hash submissions
+- **High-throughput Agent API**: Must handle 10K req/s bursts with write concern `{ w: 1, j: false }`
+- **Low-traffic Dashboard API**: Standard REST for 1-3 concurrent users
+- **Real-time via WebSockets**: @fastify/websocket for dashboard updates (agent heartbeats, crack results)
+- **Turborepo + pnpm**: Monorepo with workspace packages (backend, frontend, shared, openapi)
 
 ## Architecture
 
@@ -23,44 +25,52 @@ The design prioritizes:
                      │ HTTPS
                      ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              Next.js Frontend (React + TypeScript)           │
-│  - App Router with Server Components                         │
-│  - React Query for data fetching                             │
-│  - WebSocket/SSE client for real-time updates                │
+│         React 19 + Vite Frontend (TypeScript)                │
+│  - TanStack Query v5 for server state                        │
+│  - Zustand for client UI state                               │
+│  - WebSocket client for real-time updates                    │
+│  - shadcn/ui components (copied into project)                │
 └────────────────────┬────────────────────────────────────────┘
                      │ HTTP/WebSocket
                      ▼
 ┌─────────────────────────────────────────────────────────────┐
-│           Node.js Backend (Express + TypeScript)             │
+│         Node.js Backend (Fastify + TypeScript)               │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │  API Layer (Routes + Middleware)                    │    │
-│  │  - Web API (/api/v1/web/*)                          │    │
+│  │  API Layer (Fastify Routes)                         │    │
+│  │  - Dashboard API (/api/v1/dashboard/*)              │    │
+│  │    Session-based auth, 1-3 concurrent users         │    │
 │  │  - Agent API (/api/v1/agent/*)                      │    │
-│  │  - Control API (/api/v1/control/*)                  │    │
+│  │    Token-based auth, 10K req/s bursts               │    │
+│  │    Bulk operations (insertMany, bulkWrite)          │    │
 │  └─────────────────────────────────────────────────────┘    │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │  Service Layer (Business Logic)                     │    │
-│  │  - AuthService, ProjectService                      │    │
-│  │  - AgentService, CampaignService                    │    │
-│  │  - TaskDistributionService, ResourceService         │    │
-│  │  - HashAnalysisService, EventService                │    │
+│  │  Service Layer (Optional - only when needed)        │    │
+│  │  - AuthService, AgentService                        │    │
+│  │  - CampaignService, TaskDistributionService         │    │
+│  │  - ResourceService, HashAnalysisService             │    │
+│  │  - EventService (WebSocket broadcasting)            │    │
 │  └─────────────────────────────────────────────────────┘    │
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │  Data Access Layer (Mongoose Models)                │    │
+│  │  - Direct calls from routes when simple             │    │
+│  │  - Compound indexes for hot query paths             │    │
+│  │  - Write concern: { w: 1, j: false } for Agent API  │    │
+│  └─────────────────────────────────────────────────────┘    │
 └──┴─────────────────────────────────────────────────────┴────┘
        │                    │                    │
        ▼                    ▼                    ▼
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│  MongoDB    │    │ Redis/BullMQ│    │ S3/MinIO    │
+│  MongoDB    │    │ Redis/BullMQ│    │ MinIO (S3)  │
 │  (Primary   │    │ (Queues &   │    │ (Binary     │
-│   Data)     │    │  Cache)     │    │  Artifacts) │
+│   Data)     │    │  Pub/Sub)   │    │  Artifacts) │
 └─────────────┘    └─────────────┘    └─────────────┘
                            ▲
-                           │ Task Pull
+                           │ Task Pull (REST)
                            │
                     ┌──────┴──────┐
-                    │   Agents    │
-                    │  (Hashcat)  │
+                    │ Go-based    │
+                    │ Agents      │
+                    │ (Hashcat)   │
                     └─────────────┘
 ```
 
@@ -68,30 +78,40 @@ The design prioritizes:
 
 **Backend:**
 
-- Node.js LTS with TypeScript
-- Express or Fastify for HTTP server
+- Node.js LTS with TypeScript (for MongoDB driver compatibility)
+- Fastify for HTTP server (high-performance, schema-based validation)
 - Mongoose for MongoDB ODM
-- Zod for request/response validation
+- Zod for all data shapes (single source of truth in `shared/` package)
 - BullMQ for job queues
 - Pino for structured logging
-- JWT + session cookies for auth
+- @fastify/websocket for real-time updates
 
 **Frontend:**
 
-- Next.js 14+ with App Router
-- React 18+ with TypeScript
+- React 19 with TypeScript
+- Vite for build tooling (not Next.js, not CRA)
 - Tailwind CSS for styling
-- shadcn/ui for components
-- React Hook Form + Zod for forms
-- TanStack Query for data fetching
-- WebSocket/SSE for real-time
+- shadcn/ui for components (copied into project via CLI)
+- React Hook Form + Zod resolvers for forms
+- TanStack Query v5 for all server state
+- Zustand for client-side UI state (no Redux, no Context API)
+- WebSocket client for real-time updates
 
 **Infrastructure:**
 
 - MongoDB 6+ for document storage
 - Redis 7+ for caching and queues
 - MinIO (S3-compatible) for objects
-- Docker + Compose for deployment
+- Docker Compose for local development (MongoDB, Redis, MinIO)
+
+**Tooling:**
+
+- pnpm for package management (exclusively)
+- Turborepo for monorepo orchestration and caching
+- Vitest for all tests (no Jest)
+- Testcontainers for integration tests
+- Oxlint for linting (fallback to Biome if needed)
+- Oxfmt/Prettier for formatting
 
 ## Components and Interfaces
 
@@ -271,7 +291,11 @@ The design prioritizes:
 
 ### API Endpoints
 
-#### Web API (/api/v1/web/*)
+#### Dashboard API (/api/v1/dashboard/*)
+
+**Authentication:** Session-based (HttpOnly cookies)
+**Traffic:** Low (1-3 concurrent users)
+**Pattern:** Standard REST CRUD operations
 
 **Authentication:**
 
@@ -372,11 +396,15 @@ POST /hashes/guess-type
 
 ```typescript
 GET /events/stream?projectId=:id
-  Response: SSE stream
+  Response: WebSocket connection
   Events: agent_status, campaign_status, task_update, crack_result
 ```
 
 #### Agent API (/api/v1/agent/*)
+
+**Authentication:** Token-based (JWT)
+**Traffic:** High-throughput (10K req/s bursts)
+**Pattern:** Bulk operations, defined by OpenAPI spec
 
 Defined in `openapi/agent-api.yaml`:
 
@@ -394,27 +422,9 @@ POST /agent/tasks/next
   Response: { task: Task | null }
 
 POST /agent/tasks/:id/report
-  Body: { progress, status, results, errors }
+  Body: { progress, status, results: Hash[], errors }
   Response: { acknowledged: true }
-```
-
-#### Control API (/api/v1/control/*)
-
-```typescript
-POST /control/campaigns
-  Body: { projectId, config }
-  Response: { campaign: Campaign }
-
-GET /control/campaigns/:id/status
-  Response: { status, progress, results }
-
-POST /control/resources/import
-  Body: { projectId, type, file }
-  Response: { resource: Resource }
-
-GET /control/agents/status
-  Query: { projectId }
-  Response: { agents: AgentStatus[] }
+  Note: Uses bulkWrite({ ordered: false }) for hash results
 ```
 
 ## Data Models
@@ -643,15 +653,17 @@ export const User = model<IUser>('User', userSchema);
 
 ### Zod Validation Schemas
 
-API request/response validation:
+**Single source of truth in `shared/` package:**
 
 ```typescript
 import { z } from 'zod';
 
+// All types inferred from Zod schemas
 export const LoginRequestSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8)
 });
+export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 
 export const CreateCampaignSchema = z.object({
   projectId: z.string(),
@@ -660,6 +672,7 @@ export const CreateCampaignSchema = z.object({
   hashListId: z.string(),
   priority: z.number().int().min(0).max(10).default(5)
 });
+export type CreateCampaign = z.infer<typeof CreateCampaignSchema>;
 
 export const AgentHeartbeatSchema = z.object({
   status: z.enum(['online', 'busy', 'error']),
@@ -676,6 +689,19 @@ export const AgentHeartbeatSchema = z.object({
     memory_usage: z.number(),
     temperature: z.number().optional()
   })
+});
+export type AgentHeartbeat = z.infer<typeof AgentHeartbeatSchema>;
+
+// Fastify route validation
+import { FastifyRequest, FastifyReply } from 'fastify';
+
+fastify.post('/campaigns', {
+  schema: {
+    body: zodToJsonSchema(CreateCampaignSchema)
+  }
+}, async (request: FastifyRequest, reply: FastifyReply) => {
+  const data = CreateCampaignSchema.parse(request.body);
+  // ...
 });
 ```
 
@@ -774,23 +800,26 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
 
 ### Backend Testing
 
-**Unit Tests (Jest):**
+**Vitest for all tests (no Jest):**
 
 - Service layer business logic
 - Utility functions and helpers
 - Validation schemas
 - Model methods
 
-**Integration Tests (Jest + Testcontainers):**
+**Integration Tests (Vitest + Testcontainers):**
 
 - API endpoint contracts
-- Database operations
-- Queue operations
-- S3 storage operations
+- Database operations (MongoDB)
+- Queue operations (Redis/BullMQ)
+- S3 storage operations (MinIO)
 
 **Test Structure:**
 
 ```typescript
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { GenericContainer, StartedTestContainer } from 'testcontainers';
+
 describe('CampaignService', () => {
   let mongoContainer: StartedTestContainer;
   let redisContainer: StartedTestContainer;
@@ -833,12 +862,12 @@ describe('CampaignService', () => {
 
 ### Frontend Testing
 
-**Component Tests (Jest + React Testing Library):**
+**Component Tests (Vitest + Testing Library):**
 
 - UI component rendering
 - User interactions
 - Form validation
-- State management
+- State management (Zustand stores)
 
 **E2E Tests (Playwright):**
 
@@ -850,6 +879,10 @@ describe('CampaignService', () => {
 **Test Example:**
 
 ```typescript
+import { describe, it, expect } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
 describe('CampaignWizard', () => {
   it('should create campaign through wizard', async () => {
     render(<CampaignWizard projectId={testProjectId} />);
@@ -884,6 +917,7 @@ describe('CampaignWizard', () => {
 Using the OpenAPI specification:
 
 ```typescript
+import { describe, it, expect } from 'vitest';
 import { validateAgainstSchema } from 'openapi-validator';
 
 describe('Agent API Contract', () => {

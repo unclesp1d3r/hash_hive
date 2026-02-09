@@ -1,14 +1,14 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import {
-  requireRole,
+  hasPermission,
   requireProjectAccess,
   requireProjectRole,
-  hasPermission,
+  requireRole,
 } from '../../src/middleware/authz.middleware';
-import { ProjectService } from '../../src/services/project.service';
+import { AppError } from '../../src/middleware/error-handler';
 import { Project } from '../../src/models/project.model';
 import { Role } from '../../src/models/role.model';
-import { AppError } from '../../src/middleware/error-handler';
+import { ProjectService } from '../../src/services/project.service';
 
 // Mock dependencies
 jest.mock('../../src/services/project.service');
@@ -155,7 +155,6 @@ describe('Authorization Middleware', () => {
     });
 
     it('should return 403 when no user', () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Exact optional property types require explicit undefined assignment
       mockReq.user = undefined as any;
       const middleware = requireRole('admin');
 

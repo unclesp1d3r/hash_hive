@@ -1,7 +1,7 @@
-import { MinioContainer, type StartedMinioContainer } from '@testcontainers/minio';
-import { ListBucketsCommand } from '@aws-sdk/client-s3';
-import type { StorageService } from '../../src/services/storage.service';
 import { Readable } from 'node:stream';
+import { ListBucketsCommand } from '@aws-sdk/client-s3';
+import { MinioContainer, type StartedMinioContainer } from '@testcontainers/minio';
+import type { StorageService } from '../../src/services/storage.service';
 
 describe('StorageService Integration', () => {
   let minioContainer: StartedMinioContainer;

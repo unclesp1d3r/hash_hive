@@ -1,8 +1,8 @@
 import { RedisContainer, type StartedRedisContainer } from '@testcontainers/redis';
 import {
+  checkRedisHealth,
   connectRedis,
   disconnectRedis,
-  checkRedisHealth,
   getRedisClient,
 } from '../../src/config/redis';
 

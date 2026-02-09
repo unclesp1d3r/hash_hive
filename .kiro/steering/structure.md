@@ -2,63 +2,84 @@
 
 ## Repository Organization
 
-HashHive follows a monorepo structure with separate backend and frontend applications sharing common types.
+HashHive follows a Turborepo + pnpm workspaces monorepo structure with separate backend and frontend applications sharing common schemas.
 
 ```text
 /
-├── backend/              # Node.js + Express API
-│   ├── src/
-│   │   ├── models/       # Mongoose schemas and models
-│   │   ├── routes/       # Express routers by domain
-│   │   ├── services/     # Business logic layer
-│   │   ├── middleware/   # Auth, validation, error handling
-│   │   ├── types/        # Shared TypeScript types
-│   │   ├── utils/        # Helper functions
-│   │   └── config/       # Configuration management
-│   ├── tests/
-│   │   ├── unit/         # Service and utility tests
-│   │   ├── integration/  # API tests with Testcontainers
-│   │   └── fixtures/     # Test data and factories
-│   └── package.json
-│
-├── frontend/             # Next.js + React UI
-│   ├── app/              # Next.js App Router pages
-│   ├── components/       # React components
-│   │   ├── ui/           # shadcn/ui base components
-│   │   └── features/     # Feature-specific components
-│   ├── lib/              # Utilities and API clients
-│   ├── hooks/            # Custom React hooks
-│   ├── types/            # TypeScript types
-│   └── package.json
-│
-├── shared/               # Shared types and schemas
-│   └── types/            # Common TypeScript definitions
-│
-├── openapi/              # API specifications
-│   └── agent-api.yaml    # Agent API OpenAPI spec
+├── packages/
+│   ├── backend/          # Node.js + Fastify API
+│   │   ├── src/
+│   │   │   ├── models/       # Mongoose schemas and models
+│   │   │   ├── routes/       # Fastify route handlers by domain
+│   │   │   │   ├── agent/    # Agent API routes (/api/v1/agent/*)
+│   │   │   │   └── dashboard/# Dashboard API routes (/api/v1/dashboard/*)
+│   │   │   ├── services/     # Business logic layer (optional, only when needed)
+│   │   │   ├── plugins/      # Fastify plugins (auth, websocket, etc.)
+│   │   │   ├── utils/        # Helper functions
+│   │   │   └── config/       # Configuration management
+│   │   ├── tests/
+│   │   │   ├── unit/         # Service and utility tests
+│   │   │   ├── integration/  # API tests with Testcontainers
+│   │   │   └── fixtures/     # Test data and factories
+│   │   └── package.json
+│   │
+│   ├── frontend/         # React 19 + Vite UI
+│   │   ├── src/
+│   │   │   ├── components/   # React components
+│   │   │   │   ├── ui/       # shadcn/ui base components
+│   │   │   │   └── features/ # Feature-specific components
+│   │   │   ├── pages/        # Route-level page components
+│   │   │   ├── lib/          # Utilities and API client config
+│   │   │   ├── hooks/        # Custom React hooks (TanStack Query wrappers)
+│   │   │   └── stores/       # Zustand stores for UI state
+│   │   └── package.json
+│   │
+│   ├── shared/           # Shared Zod schemas and inferred types
+│   │   ├── src/
+│   │   │   ├── schemas/  # Zod schema definitions (single source of truth)
+│   │   │   └── types/    # Inferred types (z.infer exports)
+│   │   └── package.json
+│   │
+│   └── openapi/          # API specifications
+│       └── agent-api.yaml    # Agent API OpenAPI spec
 │
 ├── docs/                 # Documentation
 │   ├── MERN_proposal.md
+│   ├── MERN_GUIDANCE.md
 │   └── v2_rewrite_implementation_plan/
 │
-├── docker-compose.yml    # Local development stack
-├── justfile              # Task runner (just recipes)
-├── nx.json               # NX build caching configuration
-└── .bun-version          # Bun version pinning
+├── docker-compose.yml    # Local development stack (MongoDB, Redis, MinIO)
+├── turbo.json            # Turborepo configuration
+├── pnpm-workspace.yaml   # pnpm workspace configuration
+└── package.json          # Root package.json
 ```
 
-## Backend Service Modules
+## Backend Architecture
 
-Each service module is self-contained with routes, controllers, service layer, and data access:
+**No premature abstraction**: Fastify route handlers can call Mongoose models directly. Service layers are optional and only introduced when handlers become complex.
 
-- **auth-service**: Users, roles, sessions, tokens, project membership
-- **project-service**: Multi-project management, role assignments, permissions
-- **agent-service**: Agent registration, heartbeat, capabilities, device status
-- **campaign-service**: Campaign orchestration, attack definitions, templates
-- **task-service**: Task queueing, agent assignment, progress tracking
-- **resource-service**: Hash lists, wordlists, rulelists, masklists, uploads
-- **hash-service**: Hash type guessing, validation, hashcat mode mapping
-- **event-service**: Real-time event streams via WebSockets/SSE
+### Route Organization
+
+- **Agent API routes** (`src/routes/agent/`): High-throughput REST API for Go-based agents
+  - Token-based authentication
+  - Bulk operations (insertMany, bulkWrite) for hash submissions
+  - Endpoints: sessions, heartbeat, tasks/next, tasks/:id/report
+- **Dashboard API routes** (`src/routes/dashboard/`): Standard REST API for React frontend
+  - Session-based authentication
+  - Low traffic (1-3 concurrent users)
+  - Standard CRUD operations
+
+### Optional Service Modules
+
+Only create service modules when route handlers become complex:
+
+- **AuthService**: Login, logout, token/session management
+- **AgentService**: Registration, heartbeat, capability detection
+- **CampaignService**: Campaign lifecycle, attack orchestration
+- **TaskDistributionService**: Keyspace partitioning, task queueing
+- **ResourceService**: File uploads, hash list parsing
+- **HashAnalysisService**: Hash type identification, hashcat mode mapping
+- **EventService**: WebSocket/SSE broadcasting
 
 ## MongoDB Collections
 
@@ -81,43 +102,45 @@ Each service module is self-contained with routes, controllers, service layer, a
 
 ### Agent API (`/api/v1/agent/*`)
 
-- Token-based authentication
-- Defined by OpenAPI specification
-- Endpoints: sessions, heartbeat, tasks/next, tasks/:id/report
+- **Purpose**: High-throughput API for Go-based hashcat agents (10K req/s bursts)
+- **Authentication**: Token-based
+- **Contract**: Defined by OpenAPI specification in `openapi/agent-api.yaml`
+- **Key endpoints**: 
+  - `POST /agent/sessions` - Agent authentication
+  - `POST /agent/heartbeat` - Status updates
+  - `POST /agent/tasks/next` - Request work
+  - `POST /agent/tasks/:id/report` - Submit results (bulk operations)
 
-### Web API (`/api/v1/web/*`)
+### Dashboard API (`/api/v1/dashboard/*`)
 
-- Session-based authentication
-- RESTful JSON endpoints
-- Supports all UI operations
-
-### Control API (`/api/v1/control/*`)
-
-- Automation-friendly endpoints
-- Idempotent operations where possible
-- Designed for n8n, MCP, and scripting
+- **Purpose**: Standard REST API for React frontend (1-3 concurrent users)
+- **Authentication**: Session-based (HttpOnly cookies)
+- **Pattern**: Standard REST CRUD operations (no tRPC)
+- **Key endpoints**: Projects, agents, campaigns, attacks, tasks, resources, hash analysis
 
 ## Frontend Structure
 
-- **App Router**: Server components for initial data loading
-- **Client Components**: Interactive UI with React Query
-- **Layouts**: Shared layouts with navigation and project context
-- **Forms**: React Hook Form + Zod validation
-- **Real-time**: EventContext provider for SSE/WebSocket subscriptions
+- **Vite + React 19**: No Next.js, no server components
+- **TanStack Query**: All server state (API data fetching, caching, background refetch)
+- **Zustand**: Client-side UI state (selected agents, filters, dashboard layout)
+- **shadcn/ui**: Components copied into project via CLI (no external component library)
+- **React Hook Form + Zod**: Form handling with shared Zod schemas from `shared/` package
+- **WebSocket/SSE**: Real-time updates for dashboard (agent heartbeats, crack results)
 
 ## Testing Organization
 
-- **Backend Unit Tests**: Service logic and utilities
-- **Backend Integration Tests**: Full API tests with Testcontainers
-- **Frontend Component Tests**: React Testing Library
-- **E2E Tests**: Playwright covering major user journeys
+- **Vitest for all tests** (no Jest)
+- **Backend Unit Tests**: Service logic, utilities, validation schemas
+- **Backend Integration Tests**: API endpoints with Testcontainers (MongoDB, Redis, MinIO)
+- **Frontend Component Tests**: Testing Library for React components
+- **E2E Tests**: Playwright for complete user workflows
 
 ## Configuration
 
-- Environment-specific `.env` files
-- Centralized config module with validation
-- 12-factor app principles
-- Separate configs for development, test, production
+- **Environment variables**: `.env` files with dotenv
+- **Centralized config**: Single config module with Zod validation
+- **12-factor principles**: All config via environment variables
+- **No Docker Compose for development**: `turbo dev` starts everything (MongoDB, Redis, MinIO run separately)
 
 ## Naming Conventions
 

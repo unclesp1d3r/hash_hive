@@ -32,29 +32,26 @@ repos:
       - id: check-xml
       - id: check-yaml
 
-  # Local hooks for npm scripts
+  # Local hooks for Biome and TypeScript
   - repo: local
     hooks:
-      # Format code with Prettier
-      # Use local hook to ensure same Prettier version and config as npm scripts
-      - id: prettier
-        name: Prettier
-        entry: bash -c 'bun run format'
+      # Format code with Biome
+      - id: biome-format
+        name: Biome Format
+        entry: bash -c 'bun run format:check'
         language: system
         types: [file]
-        types_or: [javascript, jsx, ts, tsx, json, yaml]
+        types_or: [javascript, jsx, ts, tsx, json, css]
         pass_filenames: false
         always_run: true
 
-      # ESLint linting
-      # Note: Using local hook to respect project's ESLint config
-      # Alternative: https://github.com/pre-commit/mirrors-eslint (requires additional setup)
-      - id: eslint
-        name: ESLint
+      # Lint with Biome
+      - id: biome-lint
+        name: Biome Lint
         entry: bash -c 'bun run lint'
         language: system
         types: [file]
-        types_or: [javascript, jsx, ts, tsx]
+        types_or: [javascript, jsx, ts, tsx, json, css]
         pass_filenames: false
         always_run: true
 

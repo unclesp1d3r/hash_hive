@@ -9,14 +9,14 @@ export { authenticateJWT, authenticateSession, optionalAuth } from './auth.middl
 
 // Authorization middleware
 export {
-  requireRole,
+  hasPermission,
   requireProjectAccess,
   requireProjectRole,
-  hasPermission,
+  requireRole,
 } from './authz.middleware';
 
 // Error handling
-export { errorHandler, AppError } from './error-handler';
+export { AppError, errorHandler } from './error-handler';
 
 // Request ID
 export { requestIdMiddleware } from './request-id';

@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
+import { config } from '../../src/config';
 import {
   connectDatabase,
   disconnectDatabase,
-  isMongoConnected,
   dropDatabase,
+  isMongoConnected,
 } from '../../src/config/database';
-import { config } from '../../src/config';
 
 // Mock logger to avoid console output during tests
 jest.mock('../../src/utils/logger', () => ({

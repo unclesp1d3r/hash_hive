@@ -24,7 +24,6 @@ export async function connectDatabase(): Promise<void> {
   while (attempt < DEFAULT_RETRIES) {
     try {
       attempt += ATTEMPT_INCREMENT;
-      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- Direct property access is clearer here
       const mongoUri = config.mongodb.uri;
       const maskedUri = mongoUri.replace(/\/\/.*@/, '//***@');
       logger.info(
@@ -32,7 +31,6 @@ export async function connectDatabase(): Promise<void> {
         'Attempting MongoDB connection'
       );
 
-      // eslint-disable-next-line no-await-in-loop -- Each attempt must complete before the next begins
       await mongoose.connect(mongoUri, {
         maxPoolSize: config.mongodb.maxPoolSize,
         serverSelectionTimeoutMS: SERVER_SELECTION_TIMEOUT_MS,
@@ -58,7 +56,6 @@ export async function connectDatabase(): Promise<void> {
       }
 
       logger.info({ retryDelay }, 'Retrying MongoDB connection');
-      // eslint-disable-next-line no-await-in-loop, promise/avoid-new, @typescript-eslint/no-loop-func -- Delay between attempts must be awaited before continuing; retryDelay is captured intentionally
       await new Promise<void>((resolve) => {
         setTimeout(resolve, retryDelay);
       });

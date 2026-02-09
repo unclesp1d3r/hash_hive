@@ -28,11 +28,9 @@ const envSchema = z.object({
     .transform((val) => Number(val))
     .pipe(z.number().int().positive())
     .default(DEFAULT_SERVER_PORT),
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().url() is the canonical way to validate URLs in current Zod
   API_BASE_URL: z.string().url().default('http://localhost:3001'),
 
   // MongoDB
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().url() is the canonical way to validate URLs in current Zod
   MONGODB_URI: z.string().url().default('mongodb://localhost:27017/hashhive'),
   MONGODB_MAX_POOL_SIZE: z
     .string()
@@ -50,7 +48,6 @@ const envSchema = z.object({
   REDIS_PASSWORD: z.string().optional().default(''),
 
   // S3/MinIO
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().url() is the canonical way to validate URLs in current Zod
   S3_ENDPOINT: z.string().url().default('http://localhost:9000'),
   S3_ACCESS_KEY_ID: z.string().default('minioadmin'),
   S3_SECRET_ACCESS_KEY: z.string().default('minioadmin'),
@@ -87,7 +84,6 @@ const parseEnv = (): z.infer<typeof envSchema> & { JWT_SECRET: string; SESSION_S
     const jwtSecret: string = (() => {
       if (jwtSecretRaw === undefined || jwtSecretRaw === '') {
         if (nodeEnv === 'production') {
-          console.error('❌ JWT_SECRET must be set in production environment');
           process.exit(INVALID_ENV_EXIT_CODE);
         }
         return generateSecureSecret();
@@ -99,7 +95,6 @@ const parseEnv = (): z.infer<typeof envSchema> & { JWT_SECRET: string; SESSION_S
     const sessionSecret: string = (() => {
       if (sessionSecretRaw === undefined || sessionSecretRaw === '') {
         if (nodeEnv === 'production') {
-          console.error('❌ SESSION_SECRET must be set in production environment');
           process.exit(INVALID_ENV_EXIT_CODE);
         }
         return generateSecureSecret();
@@ -114,10 +109,7 @@ const parseEnv = (): z.infer<typeof envSchema> & { JWT_SECRET: string; SESSION_S
     };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error('❌ Invalid environment variables:');
-      error.issues.forEach((issue) => {
-        console.error(`  - ${issue.path.join('.')}: ${issue.message}`);
-      });
+      error.issues.forEach((_issue) => {});
       process.exit(INVALID_ENV_EXIT_CODE);
     }
     throw error;
@@ -136,12 +128,10 @@ export const config = {
       return getNodeEnv();
     },
     get port() {
-      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
       const { PORT: portEnv } = process.env;
       return portEnv === undefined ? env.PORT : parseInt(portEnv, 10);
     },
     get baseUrl() {
-      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
       const { API_BASE_URL: baseUrlEnv } = process.env;
       return baseUrlEnv ?? env.API_BASE_URL;
     },
@@ -157,29 +147,24 @@ export const config = {
   },
   mongodb: {
     get uri() {
-      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
       const { MONGODB_URI: uriEnv } = process.env;
       return uriEnv ?? env.MONGODB_URI;
     },
     get maxPoolSize() {
-      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
       const { MONGODB_MAX_POOL_SIZE: poolSizeEnv } = process.env;
       return poolSizeEnv === undefined ? env.MONGODB_MAX_POOL_SIZE : parseInt(poolSizeEnv, 10);
     },
   },
   redis: {
     get host() {
-      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
       const { REDIS_HOST: hostEnv } = process.env;
       return hostEnv ?? env.REDIS_HOST;
     },
     get port() {
-      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
       const { REDIS_PORT: portEnv } = process.env;
       return portEnv === undefined ? env.REDIS_PORT : parseInt(portEnv, 10);
     },
     get password() {
-      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
       const { REDIS_PASSWORD: envPassword } = process.env;
       if (envPassword !== undefined) {
         return envPassword;
@@ -189,32 +174,26 @@ export const config = {
   },
   s3: {
     get endpoint() {
-      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
       const { S3_ENDPOINT: endpointEnv } = process.env;
       return endpointEnv ?? env.S3_ENDPOINT;
     },
     get accessKeyId() {
-      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
       const { S3_ACCESS_KEY_ID: accessKeyIdEnv } = process.env;
       return accessKeyIdEnv ?? env.S3_ACCESS_KEY_ID;
     },
     get secretAccessKey() {
-      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
       const { S3_SECRET_ACCESS_KEY: secretAccessKeyEnv } = process.env;
       return secretAccessKeyEnv ?? env.S3_SECRET_ACCESS_KEY;
     },
     get bucketName() {
-      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
       const { S3_BUCKET_NAME: bucketNameEnv } = process.env;
       return bucketNameEnv ?? env.S3_BUCKET_NAME;
     },
     get region() {
-      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
       const { S3_REGION: regionEnv } = process.env;
       return regionEnv ?? env.S3_REGION;
     },
     get forcePathStyle() {
-      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- process.env requires bracket notation for runtime access
       const { S3_FORCE_PATH_STYLE: forcePathStyleEnv } = process.env;
       if (forcePathStyleEnv !== undefined) {
         return forcePathStyleEnv === 'true';

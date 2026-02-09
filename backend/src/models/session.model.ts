@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Types } from 'mongoose';
+import { type Document, model, Schema, type Types } from 'mongoose';
 import { baseSchemaOptions } from './base.schema';
 import type { IUser } from './user.model';
 
@@ -41,7 +41,6 @@ const sessionSchema = new Schema<ISession>(
 );
 
 // TTL index on expires_at to automatically delete expired sessions. Field-level index flag removed to avoid duplication.
-// eslint-disable-next-line @typescript-eslint/no-magic-numbers -- Mongoose index direction (1 = ascending) and TTL (0 = immediate expiration)
 sessionSchema.index({ expires_at: 1 }, { expireAfterSeconds: 0 });
 
 // unique: true on session_id already creates an index; removed redundant explicit index.
