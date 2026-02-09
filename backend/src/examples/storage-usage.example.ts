@@ -5,8 +5,8 @@
  * The StorageService provides an abstraction over S3-compatible storage (MinIO in development).
  */
 
+import { createReadStream } from 'node:fs';
 import { storageService } from '../services/storage.service';
-import { createReadStream } from 'fs';
 
 /**
  * Example 1: Upload a file from a Buffer
@@ -23,8 +23,6 @@ async function uploadFromBuffer() {
       purpose: 'demonstration',
     },
   });
-
-  console.log(`File uploaded successfully: ${key}`);
   return key;
 }
 
@@ -43,8 +41,6 @@ async function uploadFromString() {
     body: jsonData,
     contentType: 'application/json',
   });
-
-  console.log(`JSON file uploaded: ${key}`);
   return key;
 }
 
@@ -59,8 +55,6 @@ async function uploadFromStream(filePath: string) {
     body: stream,
     contentType: 'application/octet-stream',
   });
-
-  console.log(`Stream uploaded: ${key}`);
   return key;
 }
 
@@ -70,10 +64,6 @@ async function uploadFromStream(filePath: string) {
 async function downloadFile(key: string) {
   const result = await storageService.download(key);
 
-  console.log(`Downloaded file: ${key}`);
-  console.log(`Content-Type: ${result.contentType}`);
-  console.log(`Size: ${result.contentLength} bytes`);
-
   // Read the stream
   const chunks: Buffer[] = [];
   for await (const chunk of result.body) {
@@ -81,7 +71,6 @@ async function downloadFile(key: string) {
   }
 
   const content = Buffer.concat(chunks).toString();
-  console.log(`Content: ${content}`);
 
   return content;
 }
@@ -92,12 +81,6 @@ async function downloadFile(key: string) {
 async function getFileInfo(key: string) {
   const metadata = await storageService.getMetadata(key);
 
-  console.log(`File: ${metadata.key}`);
-  console.log(`Size: ${metadata.size} bytes`);
-  console.log(`Type: ${metadata.contentType}`);
-  console.log(`Modified: ${metadata.lastModified}`);
-  console.log(`Metadata:`, metadata.metadata);
-
   return metadata;
 }
 
@@ -107,13 +90,11 @@ async function getFileInfo(key: string) {
 async function generateDownloadLink(key: string) {
   // Generate URL valid for 1 hour (default)
   const url = await storageService.getPresignedUrl(key);
-  console.log(`Download URL (1 hour): ${url}`);
 
   // Generate URL valid for 24 hours
-  const longUrl = await storageService.getPresignedUrl(key, {
+  const _longUrl = await storageService.getPresignedUrl(key, {
     expiresIn: 86400, // 24 hours in seconds
   });
-  console.log(`Download URL (24 hours): ${longUrl}`);
 
   return url;
 }
@@ -125,9 +106,7 @@ async function checkFileExists(key: string) {
   const exists = await storageService.exists(key);
 
   if (exists) {
-    console.log(`File exists: ${key}`);
   } else {
-    console.log(`File not found: ${key}`);
   }
 
   return exists;
@@ -138,7 +117,6 @@ async function checkFileExists(key: string) {
  */
 async function deleteFile(key: string) {
   await storageService.delete(key);
-  console.log(`File deleted: ${key}`);
 }
 
 /**
@@ -157,8 +135,6 @@ async function uploadHashList(projectId: string, hashListContent: string) {
       'upload-date': new Date().toISOString(),
     },
   });
-
-  console.log(`Hash list uploaded: ${key}`);
   return key;
 }
 
@@ -180,8 +156,6 @@ async function uploadWordlist(projectId: string, wordlistPath: string) {
       'original-filename': filename,
     },
   });
-
-  console.log(`Wordlist uploaded: ${key}`);
   return key;
 }
 
@@ -189,53 +163,27 @@ async function uploadWordlist(projectId: string, wordlistPath: string) {
  * Example 11: Complete workflow - Upload, verify, download, delete
  */
 async function completeWorkflow() {
-  console.log('=== Complete Storage Workflow ===\n');
-
-  // 1. Upload
-  console.log('1. Uploading file...');
   const key = await uploadFromString();
-
-  // 2. Verify existence
-  console.log('\n2. Checking if file exists...');
   const exists = await checkFileExists(key);
 
   if (!exists) {
     throw new Error('File should exist after upload');
   }
-
-  // 3. Get metadata
-  console.log('\n3. Getting file metadata...');
   await getFileInfo(key);
-
-  // 4. Generate presigned URL
-  console.log('\n4. Generating presigned URL...');
   await generateDownloadLink(key);
-
-  // 5. Download
-  console.log('\n5. Downloading file...');
   await downloadFile(key);
-
-  // 6. Delete
-  console.log('\n6. Deleting file...');
   await deleteFile(key);
-
-  // 7. Verify deletion
-  console.log('\n7. Verifying deletion...');
   const stillExists = await checkFileExists(key);
 
   if (stillExists) {
     throw new Error('File should not exist after deletion');
   }
-
-  console.log('\n=== Workflow completed successfully ===');
 }
 
 /**
  * Example 12: Batch operations
  */
 async function batchUpload(files: Array<{ key: string; content: string }>) {
-  console.log(`Uploading ${files.length} files...`);
-
   const uploads = files.map((file) =>
     storageService.upload({
       key: file.key,
@@ -245,7 +193,6 @@ async function batchUpload(files: Array<{ key: string; content: string }>) {
   );
 
   const results = await Promise.all(uploads);
-  console.log(`Successfully uploaded ${results.length} files`);
 
   return results;
 }
@@ -259,9 +206,7 @@ async function handleErrors() {
     await storageService.download('non-existent-file.txt');
   } catch (error) {
     if (error instanceof Error && error.message.includes('File not found')) {
-      console.log('Handled expected error: File not found');
     } else {
-      console.error('Unexpected error:', error);
       throw error;
     }
   }
@@ -271,9 +216,7 @@ async function handleErrors() {
     await storageService.getMetadata('another-missing-file.txt');
   } catch (error) {
     if (error instanceof Error && error.message.includes('File not found')) {
-      console.log('Handled expected error: Metadata not found');
     } else {
-      console.error('Unexpected error:', error);
       throw error;
     }
   }
@@ -303,8 +246,7 @@ if (require.main === module) {
   (async () => {
     try {
       await completeWorkflow();
-    } catch (error) {
-      console.error('Error running examples:', error);
+    } catch (_error) {
       process.exit(1);
     }
   })();

@@ -1,5 +1,5 @@
-import { StorageService } from '../../src/services/storage.service';
 import { S3Client } from '@aws-sdk/client-s3';
+import { StorageService } from '../../src/services/storage.service';
 
 describe('StorageService Unit Tests', () => {
   let storageService: StorageService;
@@ -70,7 +70,7 @@ describe('StorageService Unit Tests', () => {
   describe('Presigned URL Options', () => {
     it('should accept default expiration options', () => {
       const options = {};
-      const expiresIn = options.hasOwnProperty('expiresIn') ? (options as any).expiresIn : 3600;
+      const expiresIn = Object.hasOwn(options, 'expiresIn') ? (options as any).expiresIn : 3600;
 
       expect(expiresIn).toBe(3600);
     });

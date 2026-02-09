@@ -1,4 +1,4 @@
-import { Schema, model, type Document, type Types } from 'mongoose';
+import { type Document, model, Schema, type Types } from 'mongoose';
 import { baseSchemaOptions } from './base.schema';
 import type { IUser } from './user.model';
 
@@ -55,21 +55,17 @@ const projectSchema = new Schema<IProject>(
 // NOTE: unique: true on slug creates the unique index; removed redundant projectSchema.index to prevent duplicate warnings.
 
 // Index on created_by
-// eslint-disable-next-line @typescript-eslint/no-magic-numbers -- Mongoose index direction (1 = ascending)
 projectSchema.index({ created_by: 1 });
 
 // Pre-validate hook to auto-generate slug from name if not provided
 // Runs before validation so required: true on slug field can be satisfied
-// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion -- Mongoose pre hook typing
+// biome-ignore lint/suspicious/noExplicitAny: Mongoose pre hook typing requires cast
 (projectSchema as any).pre('validate', function (this: any, next: () => void) {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-type-assertion -- Mongoose document context
   const slug = this.slug as string | undefined;
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-type-assertion -- Mongoose document context
   const name = this.name as string | undefined;
   const hasSlug = slug !== undefined && slug !== '';
   const hasName = name !== undefined && name !== '';
   if (!hasSlug && hasName) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access -- Mongoose document context
     this.slug = name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')

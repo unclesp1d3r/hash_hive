@@ -1,12 +1,12 @@
-import request from 'supertest';
 import { MongoDBContainer, type StartedMongoDBContainer } from '@testcontainers/mongodb';
 import { RedisContainer, type StartedRedisContainer } from '@testcontainers/redis';
-import { app } from '../../src/index';
+import request from 'supertest';
 import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 import { connectRedis, disconnectRedis } from '../../src/db/redis';
-import { User } from '../../src/models/user.model';
+import { app } from '../../src/index';
 import { Project } from '../../src/models/project.model';
 import { ProjectUser } from '../../src/models/project-user.model';
+import { User } from '../../src/models/user.model';
 import { getCsrfToken, getCsrfTokenWithSession } from '../helpers/csrf';
 
 let mongoContainer: StartedMongoDBContainer;
@@ -61,7 +61,6 @@ describe('Authentication Integration Tests', () => {
   describe('POST /api/v1/web/auth/login', () => {
     it('should login with valid credentials and set session cookie', async () => {
       // Create test user
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- User.hashPassword is a static method defined via bracket notation
       const hashedPassword = await (User as any).hashPassword('password123');
       await User.create({
         email: 'test@example.com',
@@ -97,7 +96,6 @@ describe('Authentication Integration Tests', () => {
     });
 
     it('should return 401 with invalid credentials', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- User.hashPassword is a static method defined via bracket notation
       const hashedPassword = await (User as any).hashPassword('password123');
       await User.create({
         email: 'test@example.com',
@@ -126,7 +124,6 @@ describe('Authentication Integration Tests', () => {
   describe('GET /api/v1/web/auth/me', () => {
     it('should return current user with projects and roles', async () => {
       // Create test user
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- User.hashPassword is a static method defined via bracket notation
       const hashedPassword = await (User as any).hashPassword('password123');
       const user = await User.create({
         email: 'test@example.com',
@@ -186,7 +183,6 @@ describe('Authentication Integration Tests', () => {
   describe('POST /api/v1/web/auth/logout', () => {
     it('should logout and clear session cookie', async () => {
       // Create test user
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- User.hashPassword is a static method defined via bracket notation
       const hashedPassword = await (User as any).hashPassword('password123');
       await User.create({
         email: 'test@example.com',
@@ -251,7 +247,6 @@ describe('Authentication Integration Tests', () => {
 
     it('should return 403 when account is disabled', async () => {
       // Create disabled test user
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- User.hashPassword is a static method defined via bracket notation
       const hashedPassword = await (User as any).hashPassword('password123');
       await User.create({
         email: 'disabled@example.com',
@@ -279,7 +274,6 @@ describe('Authentication Integration Tests', () => {
   describe('POST /api/v1/web/auth/refresh', () => {
     it('should refresh token when authenticated', async () => {
       // Create test user
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- User.hashPassword is a static method defined via bracket notation
       const hashedPassword = await (User as any).hashPassword('password123');
       await User.create({
         email: 'test@example.com',

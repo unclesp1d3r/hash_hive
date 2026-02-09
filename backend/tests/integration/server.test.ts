@@ -1,8 +1,8 @@
-import request from 'supertest';
 import { RedisContainer, type StartedRedisContainer } from '@testcontainers/redis';
-import { app } from '../../src/index';
+import request from 'supertest';
+import { closeQueues, initializeQueues } from '../../src/config/queue';
 import { connectRedis, disconnectRedis } from '../../src/config/redis';
-import { initializeQueues, closeQueues } from '../../src/config/queue';
+import { app } from '../../src/index';
 
 let redisContainer: StartedRedisContainer;
 let originalEnv: NodeJS.ProcessEnv;

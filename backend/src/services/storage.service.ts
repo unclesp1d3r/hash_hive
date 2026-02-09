@@ -1,15 +1,14 @@
-/* eslint-disable @typescript-eslint/prefer-destructuring, preserve-caught-error -- StorageService focuses on readability over aggressive destructuring; error wrapping is used for clearer high-level messages */
+import { Readable } from 'node:stream';
 import {
-  S3Client,
-  PutObjectCommand,
-  GetObjectCommand,
-  DeleteObjectCommand,
-  HeadObjectCommand,
   CreateBucketCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
   HeadBucketCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { Readable } from 'node:stream';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 
@@ -89,7 +88,6 @@ export class StorageService {
       await this.client.send(new HeadBucketCommand({ Bucket: this.bucketName }));
       logger.info({ bucket: this.bucketName }, 'Storage bucket exists');
     } catch (error: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Narrowing AWS error shape for HTTP status check
       const err = error as { name?: string; $metadata?: { httpStatusCode?: number } };
       const HTTP_STATUS_NOT_FOUND = 404;
       if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === HTTP_STATUS_NOT_FOUND) {
@@ -169,7 +167,6 @@ export class StorageService {
 
       const response = await this.client.send(command);
 
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive check for unexpected SDK responses
       if (response.Body === null || response.Body === undefined) {
         throw new Error('No body in response');
       }
@@ -194,7 +191,6 @@ export class StorageService {
         metadata: response.Metadata,
       };
     } catch (error: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Narrowing AWS error shape for HTTP status check
       const err = error as { name?: string; $metadata?: { httpStatusCode?: number } };
       const HTTP_STATUS_NOT_FOUND = 404;
       if (err.name === 'NoSuchKey' || err.$metadata?.httpStatusCode === HTTP_STATUS_NOT_FOUND) {
@@ -281,7 +277,6 @@ export class StorageService {
         metadata: response.Metadata,
       };
     } catch (error: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Narrowing AWS error shape for HTTP status check
       const err = error as { name?: string; $metadata?: { httpStatusCode?: number } };
       const HTTP_STATUS_NOT_FOUND = 404;
       if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === HTTP_STATUS_NOT_FOUND) {

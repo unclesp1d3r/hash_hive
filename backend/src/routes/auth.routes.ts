@@ -1,12 +1,12 @@
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
+import { config } from '../config';
+import { authenticateSession } from '../middleware/auth.middleware';
+import { AppError } from '../middleware/error-handler';
 import { AuthService } from '../services/auth.service';
 import { ProjectService } from '../services/project.service';
-import { authenticateSession } from '../middleware/auth.middleware';
 import { aggregateUserRoles } from '../utils/role-aggregator';
-import { config } from '../config';
-import { AppError } from '../middleware/error-handler';
-import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
 
@@ -43,7 +43,6 @@ const HTTP_FORBIDDEN = 403;
 const MIN_PASSWORD_LENGTH = 8;
 
 const loginSchema = z.object({
-  // eslint-disable-next-line @typescript-eslint/no-deprecated -- z.string().email() is the correct Zod v3 syntax
   email: z.string().email(),
   password: z.string().min(MIN_PASSWORD_LENGTH),
 });
@@ -109,7 +108,6 @@ router.post('/login', loginRateLimiter, async (req, res, next) => {
  */
 router.post('/logout', authenticateSession, async (req, res, next) => {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-unsafe-member-access -- Express cookies are typed as any
     const sessionId = req.cookies?.sessionId as string | undefined;
     if (sessionId !== undefined && sessionId !== '') {
       await AuthService.logout(sessionId);

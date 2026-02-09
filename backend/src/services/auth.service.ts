@@ -1,13 +1,13 @@
-import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
-import { config } from '../config';
-import { logger } from '../utils/logger';
-import { User, type IUser } from '../models/user.model';
-import { Session } from '../models/session.model';
-import { getRedisClient } from '../db/redis';
-import { aggregateUserRoles } from '../utils/role-aggregator';
-import { AuthTokenExpiredError, AuthTokenInvalidError } from '../utils/auth-errors';
+import jwt from 'jsonwebtoken';
 import type { AuthTokenPayload } from '../../../shared/src/types';
+import { config } from '../config';
+import { getRedisClient } from '../db/redis';
+import { Session } from '../models/session.model';
+import { type IUser, User } from '../models/user.model';
+import { AuthTokenExpiredError, AuthTokenInvalidError } from '../utils/auth-errors';
+import { logger } from '../utils/logger';
+import { aggregateUserRoles } from '../utils/role-aggregator';
 
 const SESSION_ID_BYTES = 32;
 const MILLISECONDS_PER_SECOND = 1000;
@@ -17,7 +17,7 @@ const HOURS_PER_DAY = 24;
 const DEFAULT_TOKEN_EXPIRATION_DAYS = 7;
 const ARRAY_INDEX_ZERO = 0;
 
-// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Service class pattern for static methods
+// biome-ignore lint/complexity/noStaticOnlyClass: service class pattern used across codebase
 export class AuthService {
   /**
    * Login user with email and password
@@ -58,7 +58,7 @@ export class AuthService {
     const roles = await aggregateUserRoles(user._id.toString());
 
     // Generate JWT token
-    const token = this.generateToken(user._id.toString(), roles);
+    const token = AuthService.generateToken(user._id.toString(), roles);
 
     // Update last login timestamp only after successful role aggregation and token generation
     user.last_login_at = new Date();
@@ -78,7 +78,7 @@ export class AuthService {
       userId,
       roles,
       iat: now,
-      exp: now + this.getTokenExpirationSeconds(),
+      exp: now + AuthService.getTokenExpirationSeconds(),
     };
 
     return jwt.sign(payload, config.auth.jwtSecret, {
@@ -91,7 +91,6 @@ export class AuthService {
    */
   static validateToken(token: string): AuthTokenPayload {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- jwt.verify returns unknown, we validate structure
       const decoded = jwt.verify(token, config.auth.jwtSecret) as AuthTokenPayload;
       return decoded;
     } catch (error) {
@@ -238,7 +237,7 @@ export class AuthService {
     }
     const value = parseInt(numericPart, RADIX);
 
-    if (isNaN(value) || value <= ARRAY_INDEX_ZERO) {
+    if (Number.isNaN(value) || value <= ARRAY_INDEX_ZERO) {
       return null;
     }
 
@@ -272,7 +271,6 @@ export class AuthService {
     const DEFAULT_SECONDS =
       DEFAULT_TOKEN_EXPIRATION_DAYS * HOURS_PER_DAY * MINUTES_PER_HOUR * SECONDS_PER_MINUTE;
 
-    // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- Direct property access is clearer here
     const expiresIn = config.auth.jwtExpiresIn;
 
     // Validate and normalize input
@@ -282,7 +280,7 @@ export class AuthService {
       return DEFAULT_SECONDS;
     }
 
-    const parsed = this.parseExpirationString(expiresIn);
+    const parsed = AuthService.parseExpirationString(expiresIn);
 
     if (parsed === null) {
       logger.warn(
@@ -292,6 +290,6 @@ export class AuthService {
       return DEFAULT_SECONDS;
     }
 
-    return this.calculateSeconds(parsed.value, parsed.unit);
+    return AuthService.calculateSeconds(parsed.value, parsed.unit);
   }
 }

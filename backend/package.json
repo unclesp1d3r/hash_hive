@@ -12,8 +12,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:integration": "jest --config jest.integration.config.js",
-    "lint": "bunx eslint \"src/**/*.{ts,tsx,js,jsx}\"",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
+    "lint": "biome check ./src",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
