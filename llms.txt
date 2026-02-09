@@ -6,27 +6,27 @@
 
 - [AGENTS](AGENTS.md): AI assistant guidance for working with this codebase
 - [CONTRIBUTING](CONTRIBUTING.md): Contribution guidelines and development workflow
-- [MERN Guidance](MERN_GUIDANCE.md): Detailed technical guidance for MERN stack implementation with Fastify, React 19, and Turborepo
+- [MERN Guidance](MERN_GUIDANCE.md): Detailed technical guidance for TypeScript stack with Bun, Hono, PostgreSQL, React 19, and Turborepo
 - [README](README.md): Main project documentation and getting started guide
 - [SECURITY](SECURITY.md): Security policies, vulnerability reporting, and deployment best practices
 
 ## Specifications
 
-- [Product Overview](.kiro/steering/product.md): Core capabilities and target users
-- [Project Structure](.kiro/steering/structure.md): Repository layout and naming conventions
-- [Technical Stack](.kiro/steering/tech.md): MERN architecture, libraries, and commands
+- [Product Overview](.kiro/steering/product.md): Core capabilities, target users, and operational context
+- [Project Structure](.kiro/steering/structure.md): Repository layout, backend architecture, and naming conventions
+- [Technical Stack](.kiro/steering/tech.md): Bun + PostgreSQL + Hono architecture, libraries, and commands
 
 ## Implementation Plans
 
 - [Migration Requirements](.kiro/specs/mern-migration/requirements.md): Migration requirements from CipherSwarm
-- [System Design](.kiro/specs/mern-migration/design.md): Architecture and data models
+- [System Design](.kiro/specs/mern-migration/design.md): Architecture, data models, and API designs
 - [Task Breakdown](.kiro/specs/mern-migration/tasks.md): Implementation task list with progress tracking
 - [Task 1 Summary](.kiro/specs/mern-migration/TASK_1_SUMMARY.md): Project foundation and infrastructure setup completion
-- [Task 2.2 Summary](.kiro/specs/mern-migration/TASK_2.2_SUMMARY.md): MongoDB connection and base models implementation completion
+- [Task 2.2 Summary](.kiro/specs/mern-migration/TASK_2.2_SUMMARY.md): Database connection and base models implementation completion
 
 ## Implementation Guides
 
-- [Authentication Implementation](docs/authentication-implementation.md): Detailed authentication and authorization system implementation with JWT and sessions
+- [Authentication Implementation](docs/authentication-implementation.md): Authentication and authorization system with JWT and sessions
 - [Test Coverage Plan](docs/test-coverage-plan.md): Path to 80% branch coverage with current status and action items
 
 ## Optional

@@ -1,21 +1,18 @@
 # Technology Stack
 
-## MERN Stack Architecture
+## TypeScript Stack Architecture
 
-HashHive is a greenfield MERN application with TypeScript throughout, based on the CipherSwarm architecture design.
+HashHive is a 2026 TypeScript reimplementation of CipherSwarm, running on Bun with PostgreSQL.
 
 ### Backend
 
-- **Runtime**: Node.js LTS (for MongoDB driver compatibility)
-- **Framework**: Fastify (high-performance, schema-based validation)
-- **Database**: MongoDB with Mongoose ODM
-- **Validation**: Zod for all data shapes (single source of truth)
+- **Runtime**: Bun (latest stable, currently 1.3.x) - JavaScript runtime, package manager, and test runner
+- **Framework**: Hono (running natively on Bun.serve())
+- **Database**: PostgreSQL with Drizzle ORM
+- **Validation**: Zod for all data shapes, drizzle-zod for schema generation
 - **Authentication**: JWT tokens for Agent API, HttpOnly session cookies for Dashboard API
-- **Queue System**: BullMQ + Redis for background jobs and task distribution
-- **Object Storage**: S3-compatible (MinIO in development) via @aws-sdk/client-s3
-- **Testing**: Vitest for all tests, Testcontainers for integration tests
-- **Logging**: Pino with structured logging
-- **WebSockets**: @fastify/websocket for real-time dashboard updates
+- **Testing**: bun:test (Bun's built-in test runner)
+- **WebSockets**: hono/websocket for real-time dashboard updates
 
 ### Frontend
 
@@ -26,20 +23,18 @@ HashHive is a greenfield MERN application with TypeScript throughout, based on t
 - **Data Fetching**: TanStack Query v5 (React Query) for all server state
 - **State Management**: Zustand for client-side UI state (no Redux, no Context API)
 - **Real-time**: WebSocket/SSE client for live updates
-- **Testing**: Vitest + Testing Library for components, Playwright for E2E
+- **Testing**: bun:test + Testing Library for components, Playwright for E2E
 
 ### Infrastructure
 
-- **Containerization**: Docker with compose for local development
-- **Caching**: Redis for sessions, queue state, and pub/sub
-- **Configuration**: dotenv + centralized config module (12-factor)
+- **Database**: PostgreSQL (sole data store, no Redis or MongoDB)
+- **Configuration**: Environment variables + centralized config module
 
 ### Tooling
 
-- **Package Manager**: pnpm (exclusively, no npm or yarn)
-- **Monorepo**: Turborepo with pnpm workspaces
-- **Linting**: Oxlint (fallback to Biome if needed)
-- **Formatting**: Oxfmt (fallback to Prettier if needed)
+- **Package Manager**: Bun (exclusively, no npm, yarn, or pnpm)
+- **Monorepo**: Turborepo with Bun workspaces
+- **Linting & Formatting**: Biome (single tool for linting, formatting, import sorting)
 - **Build**: Turborepo for task orchestration and caching
 
 ## Common Commands
@@ -48,30 +43,35 @@ HashHive is a greenfield MERN application with TypeScript throughout, based on t
 
 ```bash
 # Start all services
-pnpm dev                 # Start both backend and frontend via Turborepo
-pnpm --filter backend dev    # Start backend only
-pnpm --filter frontend dev   # Start frontend only
-
-# Docker services
-docker compose up        # Start MongoDB, Redis, MinIO
+bun dev                  # Start both backend and frontend via Turborepo
+bun --filter backend dev     # Start backend only
+bun --filter frontend dev    # Start frontend only
 ```
 
 ### Testing
 
 ```bash
-pnpm test                # Run all tests via Turborepo
-pnpm --filter backend test   # Run backend tests
-pnpm --filter frontend test  # Run frontend tests
-pnpm test:e2e            # Run E2E tests (Playwright)
+bun test                 # Run all tests via Turborepo
+bun --filter backend test    # Run backend tests
+bun --filter frontend test   # Run frontend tests
+bun test:e2e             # Run E2E tests (Playwright)
 ```
 
 ### Building & Linting
 
 ```bash
-pnpm build               # Build all packages via Turborepo
-pnpm lint                # Lint all code with Oxlint
-pnpm format              # Format all code with Oxfmt/Prettier
-pnpm type-check          # TypeScript type checking
+bun build                # Build all packages via Turborepo
+bun lint                 # Lint all code with Biome
+bun format               # Format all code with Biome
+bun type-check           # TypeScript type checking
+```
+
+### Database
+
+```bash
+bun --filter backend db:generate  # Generate Drizzle migrations
+bun --filter backend db:migrate   # Run migrations
+bun --filter backend db:studio    # Open Drizzle Studio
 ```
 
 ### Turborepo
@@ -85,9 +85,8 @@ turbo run lint --no-cache        # Lint without cache
 ## API Specifications
 
 - **Agent API**: Defined in `openapi/agent-api.yaml` (single source of truth for Go-based agents)
-  - High-throughput REST API (10K req/s bursts)
+  - Batch operations for hash submissions
   - Token-based authentication
-  - Bulk operations for hash submissions
   - Endpoints: `/api/v1/agent/*`
 - **Dashboard API**: RESTful JSON API at `/api/v1/dashboard/*`
   - Session-based authentication for web UI
@@ -96,20 +95,18 @@ turbo run lint --no-cache        # Lint without cache
 
 ## Key Libraries
 
-- **fastify**: High-performance HTTP framework with schema validation
-- **@fastify/websocket**: WebSocket support for real-time updates
-- **mongoose**: MongoDB ODM with TypeScript support
-- **bullmq**: Message queue for task distribution
-- **zod**: Runtime type validation and schema definition (single source of truth)
-- **pino**: Structured logging
-- **@aws-sdk/client-s3**: S3-compatible object storage client
+- **hono**: Web framework running natively on Bun.serve()
+- **drizzle-orm**: Type-safe PostgreSQL ORM
+- **drizzle-zod**: Generate Zod schemas from Drizzle tables
+- **zod**: Runtime type validation and schema definition
+- **@hono/websocket**: WebSocket support for real-time updates
 - **name-that-hash**: Hash type identification and analysis
 
 ## Type Safety
 
-- **Zod schemas in `shared/` package** are the single source of truth
+- **Drizzle table definitions in `shared/db/schema.ts`** are the single source of truth
+- **drizzle-zod** generates Zod schemas from Drizzle tables
 - All TypeScript types inferred from Zod schemas using `z.infer<typeof schema>`
 - No duplicate manual TypeScript interfaces
-- Shared schemas consumed by both backend (Fastify validation) and frontend (form validation, TanStack Query typing)
-- Mongoose schemas with TypeScript inference
+- Shared schemas consumed by both backend (Hono validation) and frontend (form validation, TanStack Query typing)
 - OpenAPI-generated types for Agent API
