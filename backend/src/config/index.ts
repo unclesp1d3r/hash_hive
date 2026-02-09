@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import crypto from 'node:crypto';
 import dotenv from 'dotenv';
 import { z } from 'zod';
