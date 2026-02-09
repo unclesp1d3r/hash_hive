@@ -6,6 +6,7 @@ import { requestId } from './middleware/request-id.js';
 import { requestLogger } from './middleware/request-logger.js';
 import { securityHeaders } from './middleware/security-headers.js';
 import { authRoutes } from './routes/dashboard/auth.js';
+import { projectRoutes } from './routes/dashboard/projects.js';
 import type { AppEnv } from './types.js';
 
 const app = new Hono<AppEnv>();
@@ -36,6 +37,7 @@ app.get('/health', (c) =>
 // ─── Route Mounts ────────────────────────────────────────────────────
 
 app.route('/api/v1/dashboard/auth', authRoutes);
+app.route('/api/v1/dashboard/projects', projectRoutes);
 
 // app.route('/api/v1/agent', agentRoutes);
 
