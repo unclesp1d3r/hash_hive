@@ -164,7 +164,6 @@ describe('Database Connection Integration', () => {
         await session.abortTransaction();
         // If error is about replica set, skip the test
         if (error instanceof Error && error.message.includes('replica set')) {
-          console.log('Skipping transaction verification - MongoDB not running as replica set');
           // Test passes - transactions aren't required for basic functionality
         } else {
           throw error;

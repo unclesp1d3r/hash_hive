@@ -1,5 +1,5 @@
-import request from 'supertest';
 import type { Express } from 'express';
+import request from 'supertest';
 
 /**
  * Helper function to get a CSRF token from the server.

@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-magic-numbers -- Mongoose index directions and defaults rely on conventional numeric values (1, -1, 0, etc.) */
-import { Schema } from 'mongoose';
 import type { Document, Query } from 'mongoose';
+import { Schema } from 'mongoose';
 
 /**
  * Base document interface with timestamps
@@ -43,7 +42,6 @@ export const baseSchemaOptions: Record<string, unknown> = {
     virtuals: true,
     transform: (_doc: unknown, ret: Record<string, unknown>) => {
       // Remove MongoDB internal fields from JSON output
-      // eslint-disable-next-line @typescript-eslint/naming-convention -- Mongoose reserves __v for internal versioning
       const { __v, ...rest } = ret;
       return rest;
     },
@@ -59,7 +57,7 @@ export const baseSchemaOptions: Record<string, unknown> = {
  */
 export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
   // Add soft delete fields
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-type-assertion -- Mongoose schema mutation relies on runtime APIs
+  // biome-ignore lint/suspicious/noExplicitAny: Mongoose schema mutation requires runtime cast
   (schema as any).add({
     deleted_at: {
       type: Date,
@@ -74,7 +72,6 @@ export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
   });
 
   // Add soft delete method
-  // eslint-disable-next-line no-param-reassign -- Mongoose plugin pattern mutates schema methods
   (schema.methods as Record<string, unknown>)['softDelete'] = async function (
     this: SoftDeleteDocument
   ) {
@@ -84,7 +81,6 @@ export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
   };
 
   // Add restore method
-  // eslint-disable-next-line no-param-reassign -- Mongoose plugin pattern mutates schema methods
   (schema.methods as Record<string, unknown>)['restore'] = async function (
     this: SoftDeleteDocument
   ) {
@@ -94,7 +90,6 @@ export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
   };
 
   // Add query helpers to exclude soft-deleted documents by default
-  // eslint-disable-next-line no-param-reassign -- Mongoose plugin pattern augments query helpers
   (schema.query as Record<string, unknown>)['notDeleted'] = function <ResultType, DocType>(
     this: Query<ResultType, DocType>
   ) {
@@ -104,7 +99,6 @@ export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
     return this.where({ is_deleted: false });
   };
 
-  // eslint-disable-next-line no-param-reassign -- Mongoose plugin pattern augments query helpers
   (schema.query as Record<string, unknown>)['onlyDeleted'] = function <ResultType, DocType>(
     this: Query<ResultType, DocType>
   ) {
@@ -114,7 +108,6 @@ export function addSoftDelete<T extends Document>(schema: Schema<T>): void {
     return this.where({ is_deleted: true });
   };
 
-  // eslint-disable-next-line no-param-reassign -- Mongoose plugin pattern augments query helpers
   (schema.query as Record<string, unknown>)['withDeleted'] = function <ResultType, DocType>(
     this: Query<ResultType, DocType>
   ) {

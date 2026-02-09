@@ -1,8 +1,8 @@
-import { Schema, model, type Document, type Types } from 'mongoose';
-import { baseSchemaOptions } from './base.schema';
+import { type Document, model, Schema, type Types } from 'mongoose';
 import type { UserRole } from '../../../shared/src/types';
-import type { IUser } from './user.model';
+import { baseSchemaOptions } from './base.schema';
 import type { IProject } from './project.model';
+import type { IUser } from './user.model';
 
 export interface IProjectUser extends Document {
   user_id: Types.ObjectId | IUser;
@@ -39,13 +39,10 @@ const projectUserSchema = new Schema<IProjectUser>(
 );
 
 // Compound unique index on [user_id, project_id]
-// eslint-disable-next-line @typescript-eslint/no-magic-numbers -- Mongoose index direction (1 = ascending)
 projectUserSchema.index({ user_id: 1, project_id: 1 }, { unique: true });
 
 // Indexes on user_id and project_id separately
-// eslint-disable-next-line @typescript-eslint/no-magic-numbers -- Mongoose index direction (1 = ascending)
 projectUserSchema.index({ user_id: 1 });
-// eslint-disable-next-line @typescript-eslint/no-magic-numbers -- Mongoose index direction (1 = ascending)
 projectUserSchema.index({ project_id: 1 });
 
 export const ProjectUser = model<IProjectUser>('ProjectUser', projectUserSchema);

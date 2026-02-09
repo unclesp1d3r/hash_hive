@@ -8,8 +8,12 @@
  */
 
 import mongoose from 'mongoose';
-import { connectDatabase, disconnectDatabase, isMongoConnected } from '../config/database';
-import { createBaseSchema, BaseDocument, SoftDeleteDocument } from '../models/base.schema';
+import { connectDatabase, disconnectDatabase } from '../config/database';
+import {
+  type BaseDocument,
+  createBaseSchema,
+  type SoftDeleteDocument,
+} from '../models/base.schema';
 
 // Example 1: Simple model with timestamps
 interface IExample extends BaseDocument {
@@ -66,34 +70,16 @@ const Agent = mongoose.model<IAgent>('Agent', agentSchema);
 
 async function demonstrateUsage() {
   try {
-    console.log('🔌 Connecting to MongoDB...');
     await connectDatabase();
-    console.log('✅ Connected:', isMongoConnected());
-
-    // Example 1: Basic CRUD with timestamps
-    console.log('\n📝 Example 1: Basic model with timestamps');
     const example = await Example.create({
       name: 'Test Example',
       value: 42,
-    });
-    console.log('Created:', {
-      id: example._id,
-      name: example.name,
-      created_at: example.created_at,
-      updated_at: example.updated_at,
     });
 
     // Update and see timestamp change
     await new Promise((resolve) => setTimeout(resolve, 100));
     example.value = 100;
     await example.save();
-    console.log('Updated:', {
-      value: example.value,
-      updated_at: example.updated_at,
-    });
-
-    // Example 2: Soft delete
-    console.log('\n🗑️  Example 2: Soft delete functionality');
     await Project.create({
       name: 'Active Project',
       description: 'This project is active',
@@ -104,39 +90,25 @@ async function demonstrateUsage() {
     });
 
     // Soft delete project2
-    await project2.softDelete!();
-    console.log('Soft deleted project2');
+    await project2.softDelete?.();
 
     // Query only active projects (default behavior)
-    const activeProjects = await Project.find();
-    console.log('Active projects:', activeProjects.length); // Should be 1
+    const _activeProjects = await Project.find();
 
     // Query only deleted projects
-    const deletedProjects = await Project.find().onlyDeleted();
-    console.log('Deleted projects:', deletedProjects.length); // Should be 1
+    const _deletedProjects = await Project.find().onlyDeleted();
 
     // Query all projects
-    const allProjects = await Project.find().withDeleted();
-    console.log('All projects:', allProjects.length); // Should be 2
+    const _allProjects = await Project.find().withDeleted();
 
     // Restore deleted project
-    await project2.restore!();
-    console.log('Restored project2');
+    await project2.restore?.();
 
-    const activeAfterRestore = await Project.find();
-    console.log('Active after restore:', activeAfterRestore.length); // Should be 2
-
-    // Example 3: Custom indexes
-    console.log('\n🔍 Example 3: Model with custom indexes');
-    const agent = await Agent.create({
+    const _activeAfterRestore = await Project.find();
+    const _agent = await Agent.create({
       name: 'Agent 1',
       auth_token: 'unique-token-123',
       status: 'online',
-    });
-    console.log('Created agent:', {
-      id: agent._id,
-      name: agent.name,
-      status: agent.status,
     });
 
     // Try to create duplicate auth_token (should fail)
@@ -146,22 +118,13 @@ async function demonstrateUsage() {
         auth_token: 'unique-token-123', // Duplicate!
         status: 'online',
       });
-    } catch {
-      console.log('✅ Unique index working - duplicate prevented');
-    }
-
-    // Clean up
-    console.log('\n🧹 Cleaning up...');
+    } catch {}
     await Example.deleteMany({});
     await Project.deleteMany({}).setOptions({ includeDeleted: true });
     await Agent.deleteMany({});
-
-    console.log('✅ All examples completed successfully!');
-  } catch (error) {
-    console.error('❌ Error:', error);
+  } catch (_error) {
   } finally {
     await disconnectDatabase();
-    console.log('👋 Disconnected from MongoDB');
   }
 }
 

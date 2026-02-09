@@ -6,6 +6,11 @@ module.exports = {
   maxWorkers: 1,
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
+  // bcrypt-ts is ESM-only; must be transformed by ts-jest
+  transformIgnorePatterns: ['/node_modules/(?!bcrypt-ts/)'],
+  transform: {
+    '^.+\\.[tj]sx?$': 'ts-jest',
+  },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@shared/(.*)$': '<rootDir>/../shared/$1',

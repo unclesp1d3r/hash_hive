@@ -1,86 +1,112 @@
 # Technology Stack
 
-## MERN Stack Architecture
+## TypeScript Stack Architecture
 
-HashHive is a greenfield MERN application with TypeScript throughout, based on the CipherSwarm architecture design.
+HashHive is a 2026 TypeScript reimplementation of CipherSwarm, running on Bun with PostgreSQL.
 
 ### Backend
 
-- **Runtime**: Node.js LTS with TypeScript
-- **Framework**: Express or Fastify with modular routers per domain
-- **Database**: MongoDB with Mongoose ODM
-- **Validation**: Zod for request/response schemas and DTOs
-- **Authentication**: JWT-based stateless auth for APIs, HttpOnly session cookies for web
-- **Queue System**: BullMQ + Redis for background jobs and task distribution
-- **Object Storage**: S3-compatible (MinIO in development) via Node SDK
-- **Testing**: Jest + supertest for HTTP tests, Testcontainers for integration tests
-- **Logging**: Pino with OpenTelemetry-compatible exporters
+- **Runtime**: Bun (latest stable, currently 1.3.x) - JavaScript runtime, package manager, and test runner
+- **Framework**: Hono (running natively on Bun.serve())
+- **Database**: PostgreSQL with Drizzle ORM
+- **Validation**: Zod for all data shapes, drizzle-zod for schema generation
+- **Authentication**: JWT tokens for Agent API, HttpOnly session cookies for Dashboard API
+- **Testing**: bun:test (Bun's built-in test runner)
+- **WebSockets**: hono/websocket for real-time dashboard updates
 
 ### Frontend
 
-- **Framework**: Next.js (React, TypeScript) with App Router
+- **Framework**: React 19 with Vite (not Next.js, not CRA)
 - **Styling**: Tailwind CSS
-- **Components**: shadcn/ui (React)
-- **Forms**: React Hook Form + Zod
-- **Data Fetching**: React Query (TanStack Query)
-- **State Management**: React Query + local component state (minimal global state)
-- **Real-time**: WebSockets/SSE for live updates
-- **Testing**: Jest + React Testing Library for components, Playwright for E2E
+- **Components**: shadcn/ui (copied into project via CLI)
+- **Forms**: React Hook Form + Zod resolvers
+- **Data Fetching**: TanStack Query v5 (React Query) for all server state
+- **State Management**: Zustand for client-side UI state (no Redux, no Context API)
+- **Real-time**: WebSocket/SSE client for live updates
+- **Testing**: bun:test + Testing Library for components, Playwright for E2E
 
 ### Infrastructure
 
-- **Containerization**: Docker with compose/Kubernetes manifests
-- **Caching**: Redis for sessions, queue state, and transient data
-- **Configuration**: dotenv + centralized config module (12-factor)
+- **Database**: PostgreSQL (sole data store, no Redis or MongoDB)
+- **Configuration**: Environment variables + centralized config module
+
+### Tooling
+
+- **Package Manager**: Bun (exclusively, no npm, yarn, or pnpm)
+- **Monorepo**: Turborepo with Bun workspaces
+- **Linting & Formatting**: Biome (single tool for linting, formatting, import sorting)
+- **Build**: Turborepo for task orchestration and caching
 
 ## Common Commands
 
 ### Development
 
 ```bash
-# Backend
-npm run dev              # Start Express API server
-npm run test             # Run Jest unit tests
-npm run test:integration # Run integration tests with Testcontainers
-
-# Frontend
-npm run dev              # Start Next.js dev server
-npm run build            # Build production bundle
-npm run test             # Run component tests
-npm run test:e2e         # Run Playwright E2E tests
-
-# Full Stack
-docker compose up        # Start all services (API, web, mongo, redis, minio)
+# Start all services
+bun dev                  # Start both backend and frontend via Turborepo
+bun --filter backend dev     # Start backend only
+bun --filter frontend dev    # Start frontend only
 ```
 
 ### Testing
 
 ```bash
-npm run test:watch       # Watch mode for unit tests
-npm run test:coverage    # Generate coverage reports
-npm run lint             # Run ESLint
-npm run type-check       # Run TypeScript compiler checks
+bun test                 # Run all tests via Turborepo
+bun --filter backend test    # Run backend tests
+bun --filter frontend test   # Run frontend tests
+bun test:e2e             # Run E2E tests (Playwright)
+```
+
+### Building & Linting
+
+```bash
+bun build                # Build all packages via Turborepo
+bun lint                 # Lint all code with Biome
+bun format               # Format all code with Biome
+bun type-check           # TypeScript type checking
+```
+
+### Database
+
+```bash
+bun --filter backend db:generate  # Generate Drizzle migrations
+bun --filter backend db:migrate   # Run migrations
+bun --filter backend db:studio    # Open Drizzle Studio
+```
+
+### Turborepo
+
+```bash
+turbo run build          # Build all packages with caching
+turbo run test --filter=backend  # Run backend tests only
+turbo run lint --no-cache        # Lint without cache
 ```
 
 ## API Specifications
 
-- **Agent API**: Defined in `openapi/agent-api.yaml` (single source of truth)
-- **Web API**: RESTful JSON API at `/api/v1/web/*`
-- **Control API**: Automation-friendly endpoints at `/api/v1/control/*`
-- **Versioning**: Semantic versioning with `x-agent-api-version` header
+- **Agent API**: Defined in `openapi/agent-api.yaml` (single source of truth for Go-based agents)
+  - Batch operations for hash submissions
+  - Token-based authentication
+  - Endpoints: `/api/v1/agent/*`
+- **Dashboard API**: RESTful JSON API at `/api/v1/dashboard/*`
+  - Session-based authentication for web UI
+  - Low traffic (1-3 concurrent users)
+  - Standard REST endpoints (no tRPC)
 
 ## Key Libraries
 
-- **name-that-hash**: Hash type identification and analysis
-- **mongoose**: MongoDB ODM with TypeScript support
-- **bullmq**: Message queue for task distribution
+- **hono**: Web framework running natively on Bun.serve()
+- **drizzle-orm**: Type-safe PostgreSQL ORM
+- **drizzle-zod**: Generate Zod schemas from Drizzle tables
 - **zod**: Runtime type validation and schema definition
-- **pino**: Structured logging
-- **@aws-sdk/client-s3**: S3-compatible object storage client
+- **@hono/websocket**: WebSocket support for real-time updates
+- **name-that-hash**: Hash type identification and analysis
 
 ## Type Safety
 
-- Shared TypeScript types between backend and frontend
-- Zod schemas for runtime validation
-- Mongoose schemas with TypeScript inference
+- **Drizzle table definitions in `shared/db/schema.ts`** are the single source of truth
+- **drizzle-zod** generates Zod schemas from Drizzle tables
+- All TypeScript types inferred from Zod schemas using `z.infer<typeof schema>`
+- No duplicate manual TypeScript interfaces
+- Shared schemas consumed by both backend (Hono validation) and frontend (form validation, TanStack Query typing)
 - OpenAPI-generated types for Agent API

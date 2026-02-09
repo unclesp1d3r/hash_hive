@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
+import { config } from '../../src/config';
 import { connectDatabase, disconnectDatabase } from '../../src/db';
 import { logger } from '../../src/utils/logger';
-import { config } from '../../src/config';
 
 // Mock logger to avoid console output during tests
 jest.mock('../../src/utils/logger', () => ({

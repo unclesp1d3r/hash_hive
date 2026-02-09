@@ -2,12 +2,12 @@ import { MongoDBContainer, type StartedMongoDBContainer } from '@testcontainers/
 import { RedisContainer, type StartedRedisContainer } from '@testcontainers/redis';
 import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 import { connectRedis, disconnectRedis } from '../../src/db/redis';
-import { User } from '../../src/models/user.model';
 import { Project } from '../../src/models/project.model';
 import { ProjectUser } from '../../src/models/project-user.model';
+import { User } from '../../src/models/user.model';
 import {
-  canViewProject,
   canManageCampaign,
+  canViewProject,
   isProjectAdmin,
 } from '../../src/utils/permission-helpers';
 
@@ -63,7 +63,6 @@ describe('RBAC Integration Tests', () => {
   describe('Project-scoped access', () => {
     it('should allow user with admin role in project A to access project A but not project B', async () => {
       // Create users
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- User.hashPassword is a static method defined via bracket notation
       const hashedPassword = await (User as any).hashPassword('password123');
       const adminUser = await User.create({
         email: 'admin@example.com',
@@ -133,7 +132,6 @@ describe('RBAC Integration Tests', () => {
 
   describe('Role-based permissions', () => {
     it('should allow admin and operator to manage campaigns', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- User.hashPassword is a static method defined via bracket notation
       const hashedPassword = await (User as any).hashPassword('password123');
       const adminUser = await User.create({
         email: 'admin@example.com',
@@ -227,7 +225,6 @@ describe('RBAC Integration Tests', () => {
 
   describe('Permission helpers', () => {
     it('should correctly identify project admin', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- User.hashPassword is a static method defined via bracket notation
       const hashedPassword = await (User as any).hashPassword('password123');
       const adminUser = await User.create({
         email: 'admin@example.com',

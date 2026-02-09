@@ -1,11 +1,11 @@
-import type { Request, Response, NextFunction } from 'express';
-import { AppError } from './error-handler';
-import { logger } from '../utils/logger';
-import { AuthService } from '../services/auth.service';
-import { aggregateUserRoles } from '../utils/role-aggregator';
-import { AuthTokenExpiredError, AuthTokenInvalidError } from '../utils/auth-errors';
-import { User as UserModel, type IUser } from '../models/user.model';
+import type { NextFunction, Request, Response } from 'express';
 import type { User } from '../../../shared/src/types';
+import { type IUser, User as UserModel } from '../models/user.model';
+import { AuthService } from '../services/auth.service';
+import { AuthTokenExpiredError, AuthTokenInvalidError } from '../utils/auth-errors';
+import { logger } from '../utils/logger';
+import { aggregateUserRoles } from '../utils/role-aggregator';
+import { AppError } from './error-handler';
 
 const HTTP_UNAUTHORIZED = 401;
 const BEARER_PREFIX_LENGTH = 7;
@@ -38,9 +38,7 @@ export const authenticateJWT = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- Direct property access is clearer here
     const authHeader = req.headers.authorization;
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- Optional chaining handles undefined
     if (!authHeader?.startsWith('Bearer ')) {
       throw new AppError(
         'AUTH_TOKEN_INVALID',
@@ -63,7 +61,6 @@ export const authenticateJWT = async (
     }
 
     // Attach user to request with roles from JWT token
-    // eslint-disable-next-line no-param-reassign -- Express middleware pattern requires mutating req
     req.user = mapUserToRequestUser(user, payload.roles);
 
     logger.info(
@@ -118,7 +115,6 @@ export const authenticateSession = async (
     const roles = await aggregateUserRoles(user._id.toString());
 
     // Attach user to request with roles
-    // eslint-disable-next-line no-param-reassign -- Express middleware pattern requires mutating req
     req.user = mapUserToRequestUser(user, roles);
 
     logger.info(
@@ -152,7 +148,6 @@ export const optionalAuth = async (
       const user = await AuthService.validateSession(sessionId);
       if (user !== null) {
         const roles = await aggregateUserRoles(user._id.toString());
-        // eslint-disable-next-line no-param-reassign -- Express middleware pattern requires mutating req
         req.user = mapUserToRequestUser(user, roles);
         next();
         return;
@@ -160,15 +155,12 @@ export const optionalAuth = async (
     }
 
     // Try JWT
-    // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- Direct property access is clearer here
     const authHeader = req.headers.authorization;
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- Optional chaining handles undefined
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.substring(BEARER_PREFIX_LENGTH);
       const payload = AuthService.validateToken(token);
       const user = await UserModel.findById(payload.userId);
       if (user !== null && user.status === 'active') {
-        // eslint-disable-next-line no-param-reassign -- Express middleware pattern requires mutating req
         req.user = mapUserToRequestUser(user, payload.roles);
         next();
         return;

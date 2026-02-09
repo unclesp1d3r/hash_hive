@@ -1,5 +1,5 @@
-import { ProjectService } from '../services/project.service';
 import type { User } from '../../../shared/src/types';
+import { ProjectService } from '../services/project.service';
 
 /**
  * Check if user can view a project

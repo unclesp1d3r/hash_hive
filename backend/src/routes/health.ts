@@ -1,11 +1,10 @@
-/* eslint-disable @typescript-eslint/no-magic-numbers -- Health metrics include standard HTTP codes and 1024-based memory units */
+import type { NextFunction, Request, Response } from 'express';
 import { Router } from 'express';
-import type { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import { config } from '../config';
 import { isMongoConnected } from '../config/database';
-import { checkRedisHealth } from '../config/redis';
 import { checkQueueHealth } from '../config/queue';
+import { checkRedisHealth } from '../config/redis';
 import { logger } from '../utils/logger';
 
 export const healthRouter = Router();

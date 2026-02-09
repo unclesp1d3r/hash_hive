@@ -1,7 +1,6 @@
-/* eslint-disable preserve-caught-error -- MongoDB connection retries intentionally wrap and rethrow errors for clearer context */
 import mongoose from 'mongoose';
-import { config } from './index';
 import { logger } from '../utils/logger';
+import { config } from './index';
 
 /**
  * MongoDB connection state
@@ -64,7 +63,6 @@ export async function connectDatabase(
         'Attempting MongoDB connection'
       );
 
-      // eslint-disable-next-line no-await-in-loop -- Each attempt must complete before the next begins
       await mongoose.connect(mongoUri, getConnectionOptions());
 
       isConnected = true;
@@ -88,7 +86,6 @@ export async function connectDatabase(
 
       logger.info({ retryDelay }, 'Retrying MongoDB connection');
       // Sequential retry with delay is intentional; a loop with await is acceptable here.
-      // eslint-disable-next-line no-await-in-loop, promise/avoid-new -- Delay between attempts must be awaited before continuing
       await new Promise<void>((resolve) => {
         setTimeout(resolve, retryDelay);
       });
