@@ -41,7 +41,10 @@ HashHive follows a monorepo structure with separate backend and frontend applica
 │   ├── MERN_proposal.md
 │   └── v2_rewrite_implementation_plan/
 │
-└── docker-compose.yml    # Local development stack
+├── docker-compose.yml    # Local development stack
+├── justfile              # Task runner (just recipes)
+├── nx.json               # NX build caching configuration
+└── .bun-version          # Bun version pinning
 ```
 
 ## Backend Service Modules

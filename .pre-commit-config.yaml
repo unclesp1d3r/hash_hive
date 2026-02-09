@@ -39,7 +39,7 @@ repos:
       # Use local hook to ensure same Prettier version and config as npm scripts
       - id: prettier
         name: Prettier
-        entry: bash -c 'npm run format'
+        entry: bash -c 'bun run format'
         language: system
         types: [file]
         types_or: [javascript, jsx, ts, tsx, json, yaml]
@@ -51,7 +51,7 @@ repos:
       # Alternative: https://github.com/pre-commit/mirrors-eslint (requires additional setup)
       - id: eslint
         name: ESLint
-        entry: bash -c 'npm run lint'
+        entry: bash -c 'bun run lint'
         language: system
         types: [file]
         types_or: [javascript, jsx, ts, tsx]
@@ -62,7 +62,7 @@ repos:
       # Note: No well-maintained 3rd party hook exists for tsc, so we use a local hook
       - id: type-check
         name: TypeScript Type Check
-        entry: bash -c 'npm run type-check'
+        entry: bash -c 'bun run type-check'
         language: system
         types: [file]
         types_or: [javascript, jsx, ts, tsx]

@@ -6,8 +6,8 @@ HashHive is a greenfield MERN application with TypeScript throughout, based on t
 
 ### Backend
 
-- **Runtime**: Node.js LTS with TypeScript
-- **Framework**: Express or Fastify with modular routers per domain
+- **Runtime**: Bun (primary runtime and package manager)
+- **Framework**: Express with modular routers per domain
 - **Database**: MongoDB with Mongoose ODM
 - **Validation**: Zod for request/response schemas and DTOs
 - **Authentication**: JWT-based stateless auth for APIs, HttpOnly session cookies for web
@@ -19,7 +19,7 @@ HashHive is a greenfield MERN application with TypeScript throughout, based on t
 ### Frontend
 
 - **Framework**: Next.js (React, TypeScript) with App Router
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS v4
 - **Components**: shadcn/ui (React)
 - **Forms**: React Hook Form + Zod
 - **Data Fetching**: React Query (TanStack Query)
@@ -33,33 +33,65 @@ HashHive is a greenfield MERN application with TypeScript throughout, based on t
 - **Caching**: Redis for sessions, queue state, and transient data
 - **Configuration**: dotenv + centralized config module (12-factor)
 
+### Tooling
+
+- **Package Manager**: Bun (replaces npm)
+- **Task Runner**: justfile (primary), NX (build caching and task orchestration)
+- **Build Caching**: NX lightweight/inferred mode — infers targets from package.json scripts, no project.json files
+- **Monorepo**: Bun workspaces (backend, frontend, shared)
+
 ## Common Commands
 
 ### Development
 
 ```bash
-# Backend
-npm run dev              # Start Express API server
-npm run test             # Run Jest unit tests
-npm run test:integration # Run integration tests with Testcontainers
+# Using justfile (recommended)
+just dev                 # Start both backend and frontend
+just dev-backend         # Start backend only
+just dev-frontend        # Start frontend only
+just setup               # Full project setup
+just validate            # Validate project setup
 
-# Frontend
-npm run dev              # Start Next.js dev server
-npm run build            # Build production bundle
-npm run test             # Run component tests
-npm run test:e2e         # Run Playwright E2E tests
+# Direct commands
+bun run dev              # Start both dev servers via concurrently
+bun run --filter '@hashhive/backend' dev    # Start backend
+bun run --filter '@hashhive/frontend' dev   # Start frontend
 
-# Full Stack
-docker compose up        # Start all services (API, web, mongo, redis, minio)
+# Docker
+docker compose up        # Start all services (mongo, redis, minio)
 ```
 
 ### Testing
 
 ```bash
-npm run test:watch       # Watch mode for unit tests
-npm run test:coverage    # Generate coverage reports
-npm run lint             # Run ESLint
-npm run type-check       # Run TypeScript compiler checks
+just test                # Run all tests (NX cached)
+just test-backend        # Run backend tests
+just test-frontend       # Run frontend tests
+just test-integration    # Run integration tests (Testcontainers)
+just test-e2e            # Run E2E tests (Playwright)
+just coverage            # Generate coverage report
+```
+
+### Building & Linting
+
+```bash
+just build               # Build all packages (NX cached, dependency-ordered)
+just lint                # Lint all code (NX cached)
+just type-check          # TypeScript type checking (NX cached)
+just format              # Format all code with Prettier
+just format-check        # Check formatting
+
+# NX directly
+bunx nx run-many --target=build      # Build all
+bunx nx run-many --target=lint       # Lint all
+bunx nx run-many --target=type-check # Type-check all
+bunx nx graph                        # View dependency graph
+```
+
+### CI
+
+```bash
+just ci-check            # Full CI pipeline: lint, format-check, build, type-check, tests, coverage
 ```
 
 ## API Specifications
@@ -77,6 +109,7 @@ npm run type-check       # Run TypeScript compiler checks
 - **zod**: Runtime type validation and schema definition
 - **pino**: Structured logging
 - **@aws-sdk/client-s3**: S3-compatible object storage client
+- **bcrypt-ts**: Pure JavaScript bcrypt implementation (cross-runtime compatible)
 
 ## Type Safety
 

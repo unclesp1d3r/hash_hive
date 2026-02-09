@@ -9,14 +9,14 @@
     "shared"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev -w backend\" \"npm run dev -w frontend\"",
-    "build": "npm run build -w shared && npm run build -w backend && npm run build -w frontend",
-    "lint": "npm run lint --workspaces",
+    "dev": "concurrently \"bun run --filter '@hashhive/backend' dev\" \"bun run --filter '@hashhive/frontend' dev\"",
+    "build": "bunx nx run-many --target=build",
+    "lint": "bunx nx run-many --target=lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
-    "type-check": "npm run type-check --workspaces",
-    "test": "npm run test --workspaces",
-    "pre-push": "npm run type-check && npm run test -- --silent"
+    "type-check": "bunx nx run-many --target=type-check",
+    "test": "bunx nx run-many --target=test",
+    "pre-push": "bunx nx run-many --target=type-check,test"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -27,11 +27,12 @@
     "eslint-config-love": "^134.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
+    "nx": "^22.4.5",
     "prettier": "^3.6.2",
     "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=20.0.0",
-    "npm": ">=10.0.0"
+    "bun": ">=1.2.0"
   }
 }

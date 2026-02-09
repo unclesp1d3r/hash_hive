@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import { hash, compare } from 'bcrypt-ts';
 import { Schema, model, type Document } from 'mongoose';
 import { baseSchemaOptions } from './base.schema';
 
@@ -80,12 +80,12 @@ userSchema.methods['comparePassword'] = async function (
     );
   }
 
-  return await bcrypt.compare(candidatePassword, passwordHash);
+  return await compare(candidatePassword, passwordHash);
 };
 
 // Static method to hash password
 userSchema.statics['hashPassword'] = async function (password: string): Promise<string> {
-  return await bcrypt.hash(password, SALT_ROUNDS);
+  return await hash(password, SALT_ROUNDS);
 };
 
 export const User = model<IUser>('User', userSchema);

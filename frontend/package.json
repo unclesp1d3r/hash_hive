@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "npx eslint \"**/*.{ts,tsx,js,jsx}\"",
+    "lint": "bunx eslint \"**/*.{ts,tsx,js,jsx}\"",
     "type-check": "tsc --noEmit",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch",
@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
+    "@tailwindcss/postcss": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@types/node": "^24.10.1",

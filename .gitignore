@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+package-lock.json
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -44,3 +45,4 @@ temp/
 # Test results
 frontend/test-results/
 frontend/playwright-report/
+.nx/
