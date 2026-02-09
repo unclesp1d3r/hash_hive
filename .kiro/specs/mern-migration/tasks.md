@@ -73,43 +73,43 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Test MinIO storage operations
     - _Requirements: 1.1, 1.3, 12.1, 12.2_
 
-- [ ] 4. Authentication and authorization system
-  - [ ] 4.1 Extend Drizzle schema for auth
+- [x] 4. Authentication and authorization system
+  - [x] 4.1 Extend Drizzle schema for auth
     - Add users, roles, project_users tables to shared/db/schema.ts
     - Generate and apply Drizzle migration
     - Generate Zod schemas with drizzle-zod
     - Export TypeScript types for auth entities
     - _Requirements: 1.6, 1.7, 2.1, 2.3_
 
-  - [ ] 4.2 Implement AuthService
+  - [x] 4.2 Implement AuthService
     - Create AuthService with login, logout, token generation
     - Implement JWT token generation and validation
     - Add session management with HttpOnly cookies
     - Implement password hashing with bcrypt
     - _Requirements: 2.1, 2.2, 2.5_
 
-  - [ ] 4.3 Create authentication middleware
+  - [x] 4.3 Create authentication middleware
     - Implement JWT validation middleware for Agent API routes
     - Create session validation middleware for Dashboard API routes
     - Add request user context injection
     - Implement token refresh logic
     - _Requirements: 2.1, 2.2_
 
-  - [ ] 4.4 Implement role-based access control
+  - [x] 4.4 Implement role-based access control
     - Create authorization middleware with role checking
     - Add project-scoped permission validation
     - Create permission helper utilities
     - Implement role enforcement in route handlers
     - _Requirements: 2.3, 2.4_
 
-  - [ ] 4.5 Create authentication API endpoints
+  - [x] 4.5 Create authentication API endpoints
     - Implement POST /auth/login with Zod validation
     - Implement POST /auth/logout
     - Implement GET /auth/me with user profile and projects
     - Use @hono/zod-validator for request validation
     - _Requirements: 2.1, 2.2, 2.5_
 
-  - [ ]* 4.6 Write authentication tests
+  - [x]* 4.6 Write authentication tests
     - Test login flow with valid and invalid credentials
     - Test JWT token generation and validation
     - Test session cookie management
