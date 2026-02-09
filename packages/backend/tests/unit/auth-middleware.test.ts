@@ -1,0 +1,90 @@
+import { describe, expect, it } from 'bun:test';
+import { Hono } from 'hono';
+import { createToken } from '../../src/services/auth.js';
+import { requireAgentToken, requireSession } from '../../src/middleware/auth.js';
+import type { AppEnv } from '../../src/types.js';
+
+function createSessionApp() {
+  const app = new Hono<AppEnv>();
+  app.use('*', requireSession);
+  app.get('/protected', (c) => {
+    const user = c.get('currentUser');
+    return c.json({ userId: user.userId, email: user.email });
+  });
+  // Hono's default error handler converts HTTPException to response
+  return app;
+}
+
+function createAgentApp() {
+  const app = new Hono<AppEnv>();
+  app.use('*', requireAgentToken);
+  app.get('/agent-endpoint', (c) => {
+    const user = c.get('currentUser');
+    return c.json({ userId: user.userId });
+  });
+  return app;
+}
+
+describe('requireSession middleware', () => {
+  const app = createSessionApp();
+
+  it('should reject requests without a session cookie', async () => {
+    const res = await app.request('/protected');
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body['error']['code']).toBe('AUTH_TOKEN_INVALID');
+  });
+
+  it('should accept a valid session cookie', async () => {
+    const token = await createToken({ userId: 1, email: 'test@example.com', type: 'session' });
+    const res = await app.request('/protected', {
+      headers: { cookie: `session=${token}` },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body['userId']).toBe(1);
+    expect(body['email']).toBe('test@example.com');
+  });
+
+  it('should reject an agent token in session cookie', async () => {
+    const token = await createToken({ userId: 1, email: 'agent@example.com', type: 'agent' });
+    const res = await app.request('/protected', {
+      headers: { cookie: `session=${token}` },
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('requireAgentToken middleware', () => {
+  const app = createAgentApp();
+
+  it('should reject requests without Authorization header', async () => {
+    const res = await app.request('/agent-endpoint');
+    expect(res.status).toBe(401);
+  });
+
+  it('should reject non-Bearer tokens', async () => {
+    const res = await app.request('/agent-endpoint', {
+      headers: { authorization: 'Basic abc123' },
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('should accept a valid agent Bearer token', async () => {
+    const token = await createToken({ userId: 42, email: 'agent@example.com', type: 'agent' });
+    const res = await app.request('/agent-endpoint', {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body['userId']).toBe(42);
+  });
+
+  it('should reject a session token in Authorization header', async () => {
+    const token = await createToken({ userId: 1, email: 'test@example.com', type: 'session' });
+    const res = await app.request('/agent-endpoint', {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.status).toBe(401);
+  });
+});

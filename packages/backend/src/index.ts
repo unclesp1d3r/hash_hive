@@ -5,6 +5,7 @@ import { logger } from './config/logger.js';
 import { requestId } from './middleware/request-id.js';
 import { requestLogger } from './middleware/request-logger.js';
 import { securityHeaders } from './middleware/security-headers.js';
+import { authRoutes } from './routes/dashboard/auth.js';
 import type { AppEnv } from './types.js';
 
 const app = new Hono<AppEnv>();
@@ -32,10 +33,11 @@ app.get('/health', (c) =>
   })
 );
 
-// ─── Route Mounts (populated in later tasks) ────────────────────────
+// ─── Route Mounts ────────────────────────────────────────────────────
+
+app.route('/api/v1/dashboard/auth', authRoutes);
 
 // app.route('/api/v1/agent', agentRoutes);
-// app.route('/api/v1/dashboard', dashboardRoutes);
 
 // ─── Error Handler ──────────────────────────────────────────────────
 
