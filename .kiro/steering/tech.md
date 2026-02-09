@@ -109,7 +109,7 @@ just ci-check            # Full CI pipeline: lint, format-check, build, type-che
 - **zod**: Runtime type validation and schema definition
 - **pino**: Structured logging
 - **@aws-sdk/client-s3**: S3-compatible object storage client
-- **bcrypt-ts**: Pure JavaScript bcrypt implementation (cross-runtime compatible)
+- **bcrypt-ts**: Pure JavaScript bcrypt implementation (no native addons)
 
 ## Type Safety
 
