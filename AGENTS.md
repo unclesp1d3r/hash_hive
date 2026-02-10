@@ -209,6 +209,34 @@ Before making major changes, consult these documents:
 
 These documents are the primary source of truth for architecture and behavior. Keep code changes aligned with them and update the docs when behavior diverges.
 
+## TypeScript strict mode gotchas
+
+The tsconfig.base.json enables maximum strictness. Key patterns:
+
+- **`exactOptionalPropertyTypes`**: Use `...(val ? { key: val } : {})` spread, never `key: val ?? undefined`
+- **`noUncheckedIndexedAccess`**: All `arr[i]` returns `T | undefined` — guard with null check before use
+- **`noPropertyAccessFromIndexSignature`**: Use `obj['key']` bracket notation for index signatures
+- **Biome `useLiteralKeys: "off"`**: MUST stay off — conflicts with the TS setting above
+
+## Hono error handling
+
+The `app.onError()` handler must check `instanceof HTTPException` before returning a generic 500:
+```typescript
+app.onError((err, c) => {
+  if (err instanceof HTTPException) return err.getResponse();
+  // ... generic error handling
+});
+```
+Without this, auth middleware 401 responses get swallowed into 500s.
+
+## Testing infrastructure
+
+- Backend contract tests validate auth (401) and validation (400) without a running DB
+- Frontend tests use `happy-dom` with manual global injection (not `@happy-dom/global-registrator`)
+- Always call `afterEach(cleanup)` in Testing Library tests — DOM persists in happy-dom
+- Test fixtures: `packages/backend/tests/fixtures.ts` — factory functions + token helpers
+- Biome overrides: `**/scripts/**` disables `noConsole` and `noExplicitAny` for CLI tools
+
 ## AI agent notes
 
 - Treat `.kiro/**` as canonical planning/steering context; align major structural changes with those documents rather than inferring architecture solely from the current code.
