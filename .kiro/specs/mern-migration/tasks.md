@@ -370,15 +370,15 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Test navigation components
     - _Requirements: 2.1, 2.2, 12.3_
 
-- [ ] 15. Dashboard and monitoring UI
-  - [ ] 15.1 Implement real-time WebSocket client
+- [x] 15. Dashboard and monitoring UI
+  - [x] 15.1 Implement real-time WebSocket client
     - Create EventContext provider with WebSocket connection
     - Implement event subscription hooks
     - Add automatic reconnection logic
     - Implement fallback to polling when disconnected
     - _Requirements: 8.1, 8.3, 8.5_
 
-  - [ ] 15.2 Create dashboard components
+  - [x] 15.2 Create dashboard components
     - Build agent status tiles with real-time updates
     - Create campaign progress cards with percentages
     - Implement recent crack results list
@@ -386,7 +386,7 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Integrate with TanStack Query for data fetching
     - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5_
 
-  - [ ] 15.3 Implement agent list and detail views
+  - [x] 15.3 Implement agent list and detail views
     - Create agent list with filtering and status badges
     - Build agent detail page with hardware info
     - Add agent performance metrics display

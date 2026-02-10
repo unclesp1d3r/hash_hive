@@ -5,6 +5,7 @@ import { BrowserRouter, Route, Routes } from 'react-router';
 import { AppLayout } from './components/features/layout';
 import { ProtectedRoute } from './components/features/protected-route';
 import './index.css';
+import { AgentDetailPage } from './pages/agent-detail';
 import { AgentsPage } from './pages/agents';
 import { CampaignsPage } from './pages/campaigns';
 import { DashboardPage } from './pages/dashboard';
@@ -38,6 +39,7 @@ function App() {
               <Route path="/" element={<DashboardPage />} />
               <Route path="/campaigns" element={<CampaignsPage />} />
               <Route path="/agents" element={<AgentsPage />} />
+              <Route path="/agents/:id" element={<AgentDetailPage />} />
               <Route path="/resources" element={<ResourcesPage />} />
             </Route>
           </Route>
