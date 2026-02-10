@@ -196,18 +196,20 @@ Test the hot paths first: hash submission ingestion, work unit distribution, age
 
 ## Design and documentation sources
 
-Before making major changes, consult these documents:
+`.kiro/steering/` and `.kiro/specs/` are the **authoritative** sources for architecture, requirements, and constraints. When code conflicts with these documents, the documents win. Update the docs first if behavior needs to change.
+
+### Authoritative (`.kiro/`)
 
 - `.kiro/steering/product.md` — product overview and core capabilities
 - `.kiro/steering/structure.md` — repository structure, table list, and API routes
-- `.kiro/steering/tech.md` — technology stack, commands, and key libraries
+- `.kiro/steering/tech.md` — technology stack, commands, key libraries, and "what NOT to introduce"
 - `.kiro/specs/mern-migration/requirements.md` — detailed functional requirements
 - `.kiro/specs/mern-migration/design.md` — end-to-end architecture and data models
 - `.kiro/specs/mern-migration/tasks.md` — implementation task breakdown
-- `MERN_GUIDANCE.md` — architectural principles, constraints, and "what not to introduce"
-- `docs/v2_rewrite_implementation_plan/*` — historical context from CipherSwarm migration
 
-These documents are the primary source of truth for architecture and behavior. Keep code changes aligned with them and update the docs when behavior diverges.
+### Supplementary
+
+- `docs/v2_rewrite_implementation_plan/*` — historical context from CipherSwarm migration
 
 ## TypeScript strict mode gotchas
 
@@ -239,7 +241,7 @@ Without this, auth middleware 401 responses get swallowed into 500s.
 
 ## AI agent notes
 
-- Treat `.kiro/**` as canonical planning/steering context; align major structural changes with those documents rather than inferring architecture solely from the current code.
-- `MERN_GUIDANCE.md` contains explicit constraints on what NOT to introduce (see its "What NOT to Introduce" section). Respect these constraints.
+- `.kiro/steering/` and `.kiro/specs/` are authoritative — always align structural changes with those documents rather than inferring architecture solely from current code.
+- `.kiro/steering/tech.md` contains explicit constraints on what NOT to introduce. Respect these constraints.
 - Prefer mermaid diagrams for architectural or sequence diagrams in documentation.
 - Agents are the primary API consumer. Never break the agent API to improve the dashboard experience.
