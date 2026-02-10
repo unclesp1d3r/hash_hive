@@ -236,8 +236,8 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Test hashcat mode mapping
     - _Requirements: 9.1, 9.2, 9.3, 12.1_
 
-- [ ] 10. Campaign and attack orchestration
-  - [ ] 10.1 Extend Drizzle schema for campaigns
+- [x] 10. Campaign and attack orchestration
+  - [x] 10.1 Extend Drizzle schema for campaigns
     - Add campaigns, attacks tables to schema.ts
     - Include dependencies as integer array for DAG
     - Add advanced_configuration as jsonb field
@@ -245,14 +245,14 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Generate Zod schemas with drizzle-zod
     - _Requirements: 1.6, 1.7, 5.1, 5.2, 5.3_
 
-  - [ ] 10.2 Implement CampaignService
+  - [x] 10.2 Implement CampaignService
     - Create campaign CRUD operations using Drizzle
     - Implement attack configuration and validation
     - Add DAG dependency validation (cycle detection)
     - Implement campaign lifecycle management (start, pause, stop)
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-  - [ ] 10.3 Create campaign API endpoints
+  - [x] 10.3 Create campaign API endpoints
     - Implement GET /api/v1/dashboard/campaigns with filtering
     - Implement POST /api/v1/dashboard/campaigns with validation
     - Implement GET /api/v1/dashboard/campaigns/:id with attack details
@@ -260,7 +260,7 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Implement attack management endpoints
     - _Requirements: 5.1, 5.2, 5.3, 5.5, 10.2_
 
-  - [ ]* 10.4 Write campaign management tests
+  - [x] 10.4 Write campaign management tests
     - Test campaign creation with attacks
     - Test DAG validation and cycle detection
     - Test campaign lifecycle transitions
