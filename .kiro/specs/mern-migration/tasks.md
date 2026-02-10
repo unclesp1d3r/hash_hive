@@ -215,22 +215,22 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Test project-scoped resource access
     - _Requirements: 7.1, 7.2, 7.5, 12.1_
 
-- [ ] 9. Hash analysis service
-  - [ ] 9.1 Implement HashAnalysisService
+- [x] 9. Hash analysis service
+  - [x] 9.1 Implement HashAnalysisService
     - Integrate name-that-hash library
     - Implement hash type guessing with confidence scores
     - Add hashcat mode mapping logic
     - Implement hash format validation
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
 
-  - [ ] 9.2 Create hash analysis API endpoint
+  - [x] 9.2 Create hash analysis API endpoint
     - Implement POST /api/v1/dashboard/hashes/guess-type endpoint
     - Add request validation with Zod
     - Return ranked candidate hash types
     - Include hashcat mode numbers in response
     - _Requirements: 9.1, 9.2, 9.3, 9.5, 10.2_
 
-  - [ ]* 9.3 Write hash analysis tests
+  - [x] 9.3 Write hash analysis tests
     - Test hash type detection for common formats
     - Test confidence score ranking
     - Test hashcat mode mapping
