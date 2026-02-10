@@ -1,16 +1,21 @@
 import { Worker } from 'bullmq';
 import type Redis from 'ioredis';
 import { logger } from '../../config/logger.js';
-import { QUEUE_NAMES } from '../../config/queue.js';
 import { generateTasksForAttack } from '../../services/tasks.js';
 import type { TaskGenerationJob } from '../types.js';
 
-export function createTaskGeneratorWorker(connection: Redis): Worker<TaskGenerationJob> {
+export function createTaskGeneratorWorker(
+  connection: Redis,
+  queueName: string
+): Worker<TaskGenerationJob> {
   const worker = new Worker<TaskGenerationJob>(
-    QUEUE_NAMES.TASK_DISTRIBUTION,
+    queueName,
     async (job) => {
       const { campaignId, attackIds } = job.data;
-      logger.info({ jobId: job.id, campaignId, attackCount: attackIds.length }, 'Generating tasks');
+      logger.info(
+        { jobId: job.id, campaignId, attackCount: attackIds.length, queue: queueName },
+        'Generating tasks'
+      );
 
       let totalTasks = 0;
       for (const attackId of attackIds) {

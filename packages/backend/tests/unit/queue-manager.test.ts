@@ -1,13 +1,23 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
-import { QUEUE_NAMES } from '../../src/config/queue.js';
+import { QUEUE_NAMES, TASK_PRIORITY_QUEUES } from '../../src/config/queue.js';
 import { getQueueManager, setQueueManager } from '../../src/queue/context.js';
 import { QueueManager } from '../../src/queue/manager.js';
 
 describe('Queue config', () => {
-  test('QUEUE_NAMES has all three queue names', () => {
-    expect(QUEUE_NAMES.TASK_DISTRIBUTION).toBe('task-distribution');
-    expect(QUEUE_NAMES.HASH_LIST_PARSING).toBe('hash-list-parsing');
-    expect(QUEUE_NAMES.HEARTBEAT_MONITOR).toBe('heartbeat-monitor');
+  test('QUEUE_NAMES has priority task queue names', () => {
+    expect(QUEUE_NAMES.TASKS_HIGH).toBe('tasks:high');
+    expect(QUEUE_NAMES.TASKS_NORMAL).toBe('tasks:normal');
+    expect(QUEUE_NAMES.TASKS_LOW).toBe('tasks:low');
+  });
+
+  test('QUEUE_NAMES has job queue names', () => {
+    expect(QUEUE_NAMES.HASH_LIST_PARSING).toBe('jobs:hash-list-parsing');
+    expect(QUEUE_NAMES.TASK_GENERATION).toBe('jobs:task-generation');
+    expect(QUEUE_NAMES.HEARTBEAT_MONITOR).toBe('jobs:heartbeat-monitor');
+  });
+
+  test('TASK_PRIORITY_QUEUES contains the three priority queues', () => {
+    expect(TASK_PRIORITY_QUEUES).toEqual(['tasks:high', 'tasks:normal', 'tasks:low']);
   });
 });
 
@@ -52,6 +62,17 @@ describe('QueueManager', () => {
     const result = await qm.enqueue(QUEUE_NAMES.HASH_LIST_PARSING, {
       hashListId: 1,
       projectId: 1,
+    });
+    expect(result).toBe(false);
+  });
+
+  test('enqueue returns false for task-generation job queue when not initialized', async () => {
+    const qm = new QueueManager();
+    const result = await qm.enqueue(QUEUE_NAMES.TASK_GENERATION, {
+      campaignId: 1,
+      projectId: 1,
+      attackIds: [1],
+      priority: 1,
     });
     expect(result).toBe(false);
   });

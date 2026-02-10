@@ -1,22 +1,23 @@
-import { Queue, type Worker } from 'bullmq';
+import { Queue } from 'bullmq';
 import type Redis from 'ioredis';
 import { logger } from '../config/logger.js';
 import { QUEUE_NAMES, type QueueName } from '../config/queue.js';
 import { createRedisClient, getRedisStatus } from '../config/redis.js';
-import type { HashListParseJob, HeartbeatMonitorJob, TaskGenerationJob } from './types.js';
-import { createHashListParserWorker } from './workers/hash-list-parser.js';
-import { createHeartbeatMonitorWorker } from './workers/heartbeat-monitor.js';
-import { createTaskGeneratorWorker } from './workers/task-generator.js';
+import type { QueueJobMap } from './types.js';
 
 export interface QueueHealth {
   status: 'connected' | 'disconnected';
   queues: Record<string, { waiting: number; active: number; failed: number }>;
 }
 
+/**
+ * Manages BullMQ queues for the API process.
+ * Responsible for enqueuing jobs and health reporting only.
+ * Workers run in dedicated processes — see worker-*.ts entrypoints.
+ */
 export class QueueManager {
   private connection: Redis;
   private queues: Map<QueueName, Queue> = new Map();
-  private workers: Worker[] = [];
 
   constructor() {
     this.connection = createRedisClient('bullmq');
@@ -30,17 +31,10 @@ export class QueueManager {
       return;
     }
 
-    // Create queues
+    // Create queues for all canonical names
     for (const name of Object.values(QUEUE_NAMES)) {
       this.queues.set(name, new Queue(name, { connection: this.connection }));
     }
-
-    // Create workers
-    this.workers.push(
-      createHashListParserWorker(this.connection),
-      createTaskGeneratorWorker(this.connection),
-      createHeartbeatMonitorWorker(this.connection)
-    );
 
     // Schedule repeatable heartbeat monitor
     const heartbeatQueue = this.queues.get(QUEUE_NAMES.HEARTBEAT_MONITOR);
@@ -57,11 +51,7 @@ export class QueueManager {
 
   async enqueue<T extends QueueName>(
     queueName: T,
-    data: T extends typeof QUEUE_NAMES.HASH_LIST_PARSING
-      ? HashListParseJob
-      : T extends typeof QUEUE_NAMES.TASK_DISTRIBUTION
-        ? TaskGenerationJob
-        : HeartbeatMonitorJob,
+    data: QueueJobMap[T],
     opts?: { priority?: number }
   ): Promise<boolean> {
     const queue = this.queues.get(queueName);
@@ -110,9 +100,6 @@ export class QueueManager {
 
   async shutdown(): Promise<void> {
     logger.info('Shutting down queue manager');
-
-    // Close workers first
-    await Promise.all(this.workers.map((w) => w.close()));
 
     // Close queues
     await Promise.all([...this.queues.values()].map((q) => q.close()));

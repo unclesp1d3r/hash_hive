@@ -31,7 +31,13 @@ export interface HeartbeatMonitorJob {
 // ─── Job Data Discriminated Union ────────────────────────────────────
 
 export type QueueJobMap = {
+  // Priority task queues (all accept TaskGenerationJob)
+  [QUEUE_NAMES.TASKS_HIGH]: TaskGenerationJob;
+  [QUEUE_NAMES.TASKS_NORMAL]: TaskGenerationJob;
+  [QUEUE_NAMES.TASKS_LOW]: TaskGenerationJob;
+
+  // Job queues
   [QUEUE_NAMES.HASH_LIST_PARSING]: HashListParseJob;
-  [QUEUE_NAMES.TASK_DISTRIBUTION]: TaskGenerationJob;
+  [QUEUE_NAMES.TASK_GENERATION]: TaskGenerationJob;
   [QUEUE_NAMES.HEARTBEAT_MONITOR]: HeartbeatMonitorJob;
 };

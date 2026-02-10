@@ -113,6 +113,25 @@ export async function transitionCampaign(id: number, targetStatus: CampaignStatu
     };
   }
 
+  // When starting/resuming a campaign, verify queue availability before transitioning
+  if (targetStatus === 'running') {
+    const { getQueueManager } = await import('../queue/context.js');
+    const qm = getQueueManager();
+    if (!qm) {
+      return {
+        error: 'Queue unavailable — cannot start campaign',
+        code: 'QUEUE_UNAVAILABLE' as const,
+      };
+    }
+    const health = await qm.getHealth();
+    if (health.status === 'disconnected') {
+      return {
+        error: 'Queue unavailable — cannot start campaign',
+        code: 'QUEUE_UNAVAILABLE' as const,
+      };
+    }
+  }
+
   const updates: Record<string, unknown> = {
     status: targetStatus,
     updatedAt: new Date(),
@@ -142,8 +161,10 @@ export async function transitionCampaign(id: number, targetStatus: CampaignStatu
           10: JOB_PRIORITY.LOW,
         };
         const jobPriority = priorityMap[campaign.priority] ?? JOB_PRIORITY.NORMAL;
-        await qm.enqueue(
-          QUEUE_NAMES.TASK_DISTRIBUTION,
+
+        // Enqueue to the dedicated task-generation job queue with priority as a job option
+        const enqueued = await qm.enqueue(
+          QUEUE_NAMES.TASK_GENERATION,
           {
             campaignId: id,
             projectId: campaign.projectId,
@@ -152,6 +173,15 @@ export async function transitionCampaign(id: number, targetStatus: CampaignStatu
           },
           { priority: jobPriority }
         );
+
+        if (!enqueued) {
+          // Roll back the status transition
+          await db
+            .update(campaigns)
+            .set({ status: campaign.status, updatedAt: new Date() })
+            .where(eq(campaigns.id, id));
+          return { error: 'Failed to enqueue task generation', code: 'QUEUE_UNAVAILABLE' as const };
+        }
       }
     }
   }
