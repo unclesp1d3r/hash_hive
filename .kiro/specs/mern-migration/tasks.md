@@ -182,11 +182,11 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Test OpenAPI contract compliance
     - _Requirements: 3.1, 3.2, 3.5, 4.1, 12.1_
 
-- [ ] 7. Checkpoint - Ensure all tests pass
+- [x] 7. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Resource management system
-  - [ ] 8.1 Extend Drizzle schema for resources
+- [x] 8. Resource management system
+  - [x] 8.1 Extend Drizzle schema for resources
     - Add hash_lists, hash_items, hash_types tables to schema.ts
     - Add word_lists, rule_lists, mask_lists tables
     - Include file_ref as jsonb field for S3 references
@@ -194,7 +194,7 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Generate Zod schemas with drizzle-zod
     - _Requirements: 1.6, 1.7, 7.1, 7.2, 7.3, 7.4_
 
-  - [ ] 8.2 Implement ResourceService
+  - [x] 8.2 Implement ResourceService
     - Create file upload handling with multipart forms
     - Implement hash list parsing and validation
     - Add hash type detection integration
@@ -202,7 +202,7 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Store files in MinIO with S3 client
     - _Requirements: 7.1, 7.2, 7.3, 7.4_
 
-  - [ ] 8.3 Create resource API endpoints
+  - [x] 8.3 Create resource API endpoints
     - Implement GET /api/v1/dashboard/resources/hash-lists with filtering
     - Implement POST /api/v1/dashboard/resources/hash-lists with file upload
     - Implement POST /api/v1/dashboard/resources/hash-lists/:id/import for parsing

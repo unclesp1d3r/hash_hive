@@ -9,6 +9,7 @@ import { agentRoutes } from './routes/agent/index.js';
 import { dashboardAgentRoutes } from './routes/dashboard/agents.js';
 import { authRoutes } from './routes/dashboard/auth.js';
 import { projectRoutes } from './routes/dashboard/projects.js';
+import { resourceRoutes } from './routes/dashboard/resources.js';
 import type { AppEnv } from './types.js';
 
 const app = new Hono<AppEnv>();
@@ -41,6 +42,7 @@ app.get('/health', (c) =>
 app.route('/api/v1/dashboard/auth', authRoutes);
 app.route('/api/v1/dashboard/projects', projectRoutes);
 app.route('/api/v1/dashboard/agents', dashboardAgentRoutes);
+app.route('/api/v1/dashboard/resources', resourceRoutes);
 
 app.route('/api/v1/agent', agentRoutes);
 
