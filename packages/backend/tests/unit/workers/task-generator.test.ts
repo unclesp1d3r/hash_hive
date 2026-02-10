@@ -1,0 +1,100 @@
+import { describe, expect, mock, test } from 'bun:test';
+import type Redis from 'ioredis';
+
+// Mock the logger
+mock.module('../../../src/config/logger.js', () => ({
+  logger: {
+    info: mock(),
+    warn: mock(),
+    error: mock(),
+    debug: mock(),
+  },
+}));
+
+// Mock the DB
+mock.module('../../../src/db/index.js', () => ({
+  db: {},
+}));
+
+// Mock the tasks service
+const mockGenerateTasksForAttack = mock(() => Promise.resolve({ tasks: [], count: 5 }));
+mock.module('../../../src/services/tasks.js', () => ({
+  generateTasksForAttack: mockGenerateTasksForAttack,
+  reassignStaleTasks: mock(),
+}));
+
+// Mock BullMQ Worker to capture the processor function
+let capturedProcessor: ((job: any) => Promise<any>) | null = null;
+mock.module('bullmq', () => ({
+  Worker: class MockWorker {
+    constructor(_name: string, processor: any) {
+      capturedProcessor = processor;
+    }
+    on() {
+      return this;
+    }
+    close() {
+      return Promise.resolve();
+    }
+  },
+  Queue: class MockQueue {
+    add() {
+      return Promise.resolve();
+    }
+    close() {
+      return Promise.resolve();
+    }
+    getWaitingCount() {
+      return Promise.resolve(0);
+    }
+    getActiveCount() {
+      return Promise.resolve(0);
+    }
+    getFailedCount() {
+      return Promise.resolve(0);
+    }
+    upsertJobScheduler() {
+      return Promise.resolve();
+    }
+  },
+}));
+
+describe('Task generator worker', () => {
+  test('processor generates tasks for each attack', async () => {
+    const { createTaskGeneratorWorker } = await import(
+      '../../../src/queue/workers/task-generator.js'
+    );
+
+    const fakeConnection = {} as Redis;
+    createTaskGeneratorWorker(fakeConnection);
+
+    expect(capturedProcessor).toBeDefined();
+
+    const fakeJob = {
+      id: 'gen-1',
+      data: { campaignId: 1, projectId: 1, attackIds: [10, 20, 30], priority: 5 },
+    };
+
+    const result = await capturedProcessor!(fakeJob);
+
+    expect(mockGenerateTasksForAttack).toHaveBeenCalledTimes(3);
+    expect(result).toEqual({ campaignId: 1, totalTasks: 15 });
+  });
+
+  test('processor skips attacks that return errors', async () => {
+    mockGenerateTasksForAttack.mockReset();
+    mockGenerateTasksForAttack
+      .mockResolvedValueOnce({ tasks: [], count: 5 })
+      .mockResolvedValueOnce({ error: 'Attack not found' })
+      .mockResolvedValueOnce({ tasks: [], count: 3 });
+
+    const fakeJob = {
+      id: 'gen-2',
+      data: { campaignId: 2, projectId: 1, attackIds: [1, 2, 3], priority: 5 },
+    };
+
+    const result = await capturedProcessor!(fakeJob);
+
+    expect(result).toEqual({ campaignId: 2, totalTasks: 8 });
+  });
+});

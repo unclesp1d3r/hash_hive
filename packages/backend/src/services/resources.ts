@@ -81,15 +81,18 @@ export async function importHashList(hashListId: number) {
     .set({ status: 'processing', updatedAt: new Date() })
     .where(eq(hashLists.id, hashListId));
 
-  // In a real implementation, this would read the file from S3,
-  // parse it line-by-line, and insert hash items in batches.
-  // For now, mark as ready.
-  await db
-    .update(hashLists)
-    .set({ status: 'ready', updatedAt: new Date() })
-    .where(eq(hashLists.id, hashListId));
+  // Enqueue async parsing job
+  const { getQueueManager } = await import('../queue/context.js');
+  const { QUEUE_NAMES } = await import('../config/queue.js');
+  const qm = getQueueManager();
+  const queued = qm
+    ? await qm.enqueue(QUEUE_NAMES.HASH_LIST_PARSING, {
+        hashListId,
+        projectId: hl.projectId,
+      })
+    : false;
 
-  return { status: 'ready' };
+  return { status: 'processing' as const, queued };
 }
 
 export async function getHashItems(
