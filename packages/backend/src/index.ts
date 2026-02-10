@@ -97,6 +97,16 @@ app.notFound((c) =>
 
 logger.info({ port: env.PORT, env: env.NODE_ENV }, 'starting server');
 
+// ─── Graceful Shutdown ──────────────────────────────────────────────
+
+function handleShutdown(signal: string) {
+  logger.info({ signal }, 'received shutdown signal, closing gracefully');
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+process.on('SIGINT', () => handleShutdown('SIGINT'));
+
 export default {
   port: env.PORT,
   fetch: app.fetch,
