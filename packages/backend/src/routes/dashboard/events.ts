@@ -1,0 +1,85 @@
+import { Hono } from 'hono';
+import { createBunWebSocket } from 'hono/bun';
+import { validateToken } from '../../services/auth.js';
+import type { EventType } from '../../services/events.js';
+import { getClientCount, registerClient, unregisterClient } from '../../services/events.js';
+import type { AppEnv } from '../../types.js';
+
+const { upgradeWebSocket } = createBunWebSocket();
+
+const eventRoutes = new Hono<AppEnv>();
+
+// ─── GET /stream — WebSocket upgrade for real-time events ───────────
+
+eventRoutes.get(
+  '/stream',
+  upgradeWebSocket((c) => {
+    let clientId: number | null = null;
+
+    return {
+      async onOpen(_event, ws) {
+        // Authenticate via query param token (WebSocket can't use cookies reliably)
+        const token = c.req.query('token');
+        if (!token) {
+          ws.close(4001, 'Missing authentication token');
+          return;
+        }
+
+        const payload = await validateToken(token);
+        if (!payload || payload.type !== 'session') {
+          ws.close(4001, 'Invalid authentication token');
+          return;
+        }
+
+        // Parse subscriptions from query
+        const projectIdsParam = c.req.query('projectIds');
+        const projectIds = projectIdsParam
+          ? projectIdsParam.split(',').map(Number).filter(Boolean)
+          : [];
+
+        if (projectIds.length === 0) {
+          ws.close(4002, 'At least one projectId is required');
+          return;
+        }
+
+        const typesParam = c.req.query('types');
+        const eventTypes = typesParam ? (typesParam.split(',') as EventType[]) : undefined;
+
+        // Register this WebSocket as a client
+        const rawWs = ws.raw as { send: (data: string) => void; readyState: number };
+        clientId = registerClient(rawWs, projectIds, eventTypes);
+
+        ws.send(
+          JSON.stringify({
+            type: 'connected',
+            clientId,
+            projectIds,
+            eventTypes: eventTypes ?? 'all',
+          })
+        );
+      },
+
+      onMessage(_event, ws) {
+        // Clients don't send messages in this protocol; could be used for ping/pong
+        ws.send(JSON.stringify({ type: 'pong' }));
+      },
+
+      onClose() {
+        if (clientId !== null) {
+          unregisterClient(clientId);
+        }
+      },
+    };
+  })
+);
+
+// ─── GET /status — check event system health ────────────────────────
+
+eventRoutes.get('/status', (c) => {
+  return c.json({
+    connectedClients: getClientCount(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+export { eventRoutes };

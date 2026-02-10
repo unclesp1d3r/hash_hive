@@ -9,6 +9,7 @@ import { agentRoutes } from './routes/agent/index.js';
 import { dashboardAgentRoutes } from './routes/dashboard/agents.js';
 import { authRoutes } from './routes/dashboard/auth.js';
 import { campaignRoutes } from './routes/dashboard/campaigns.js';
+import { eventRoutes } from './routes/dashboard/events.js';
 import { hashRoutes } from './routes/dashboard/hashes.js';
 import { projectRoutes } from './routes/dashboard/projects.js';
 import { resourceRoutes } from './routes/dashboard/resources.js';
@@ -49,6 +50,7 @@ app.route('/api/v1/dashboard/resources', resourceRoutes);
 app.route('/api/v1/dashboard/hashes', hashRoutes);
 app.route('/api/v1/dashboard/campaigns', campaignRoutes);
 app.route('/api/v1/dashboard/tasks', taskRoutes);
+app.route('/api/v1/dashboard/events', eventRoutes);
 
 app.route('/api/v1/agent', agentRoutes);
 

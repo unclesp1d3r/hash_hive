@@ -312,15 +312,15 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
 - [x] 12. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 13. Real-time event system
-  - [ ] 13.1 Implement EventService
+- [x] 13. Real-time event system
+  - [x] 13.1 Implement EventService
     - Create event emission and broadcasting logic
     - Implement project-scoped event filtering
     - Add event type definitions and Zod schemas
     - Implement event throttling to prevent overload
     - _Requirements: 8.1, 8.2, 8.4_
 
-  - [ ] 13.2 Implement WebSocket infrastructure
+  - [x] 13.2 Implement WebSocket infrastructure
     - Set up hono/websocket for WebSocket support
     - Implement GET /events/stream endpoint with WebSocket upgrade
     - Add connection management and authentication
@@ -328,7 +328,7 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Add graceful connection handling and reconnection
     - _Requirements: 8.1, 8.3_
 
-  - [ ] 13.3 Integrate events across services
+  - [x] 13.3 Integrate events across services
     - Emit agent_status events from AgentService
     - Emit campaign_status events from CampaignService
     - Emit task_update events from TaskDistributionService
