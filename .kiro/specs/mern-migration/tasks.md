@@ -529,22 +529,22 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Test import idempotency
     - _Requirements: 11.2, 11.3, 11.4, 12.1_
 
-- [ ] 21. Testing infrastructure and E2E tests
-  - [ ] 21.1 Set up backend test infrastructure
+- [x] 21. Testing infrastructure and E2E tests
+  - [x] 21.1 Set up backend test infrastructure
     - Configure bun:test for backend unit and integration tests
     - Set up Testcontainers for PostgreSQL, Redis, MinIO
     - Create test database seeding utilities
     - Implement test fixtures and factories
     - _Requirements: 1.8, 12.1, 12.2_
 
-  - [ ] 21.2 Set up frontend test infrastructure
+  - [x] 21.2 Set up frontend test infrastructure
     - Configure bun:test with Testing Library for component tests
     - Set up Playwright for E2E tests
     - Create test utilities and custom matchers
     - Implement mock API server for component tests
     - _Requirements: 1.8, 12.3, 12.4_
 
-  - [ ] 21.3 Implement API contract testing
+  - [x] 21.3 Implement API contract testing
     - Set up OpenAPI validation in tests
     - Create contract tests for Agent API
     - Add contract tests for Dashboard API

@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { HTTPException } from 'hono/http-exception';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { requestId } from './middleware/request-id.js';
@@ -57,6 +58,10 @@ app.route('/api/v1/agent', agentRoutes);
 // ─── Error Handler ──────────────────────────────────────────────────
 
 app.onError((err, c) => {
+  if (err instanceof HTTPException) {
+    return err.getResponse();
+  }
+
   const reqId = c.get('requestId');
   logger.error({ err, requestId: reqId, path: c.req.path }, 'unhandled error');
 
