@@ -7,6 +7,8 @@ import { ProtectedRoute } from './components/features/protected-route';
 import './index.css';
 import { AgentDetailPage } from './pages/agent-detail';
 import { AgentsPage } from './pages/agents';
+import { CampaignCreatePage } from './pages/campaign-create';
+import { CampaignDetailPage } from './pages/campaign-detail';
 import { CampaignsPage } from './pages/campaigns';
 import { DashboardPage } from './pages/dashboard';
 import { LoginPage } from './pages/login';
@@ -38,6 +40,8 @@ function App() {
             <Route element={<AppLayout />}>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/campaigns" element={<CampaignsPage />} />
+              <Route path="/campaigns/new" element={<CampaignCreatePage />} />
+              <Route path="/campaigns/:id" element={<CampaignDetailPage />} />
               <Route path="/agents" element={<AgentsPage />} />
               <Route path="/agents/:id" element={<AgentDetailPage />} />
               <Route path="/resources" element={<ResourcesPage />} />

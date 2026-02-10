@@ -399,29 +399,29 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Test agent list filtering
     - _Requirements: 8.3, 14.1, 14.5, 12.3_
 
-- [ ] 16. Campaign creation wizard
-  - [ ] 16.1 Implement wizard framework
+- [x] 16. Campaign creation wizard
+  - [x] 16.1 Implement wizard framework
     - Create multi-step wizard component with Zustand state
     - Add progress indicator and navigation
     - Implement step validation with Zod schemas
     - Add summary preview step
     - _Requirements: 15.1, 15.5_
 
-  - [ ] 16.2 Create campaign configuration steps
+  - [x] 16.2 Create campaign configuration steps
     - Build basic info form (name, description, priority)
     - Create hash list selection/upload step
     - Implement attack configuration forms with mode-specific fields
     - Add DAG editor with drag-and-drop using react-flow or similar
     - _Requirements: 15.1, 15.2, 15.3, 15.4_
 
-  - [ ] 16.3 Implement form validation
+  - [x] 16.3 Implement form validation
     - Use shared Zod schemas from drizzle-zod for validation
     - Integrate React Hook Form with Zod resolvers
     - Add real-time validation feedback
     - Validate attack configurations against hashcat modes
     - _Requirements: 15.3, 15.4_
 
-  - [ ] 16.4 Wire wizard to backend API
+  - [x] 16.4 Wire wizard to backend API
     - Implement campaign creation submission with TanStack Query
     - Add file upload handling for hash lists
     - Handle validation errors from backend
@@ -434,22 +434,22 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Test file upload handling
     - _Requirements: 15.1, 15.3, 15.5, 12.3_
 
-- [ ] 17. Campaign and attack management UI
-  - [ ] 17.1 Create campaign list view
+- [x] 17. Campaign and attack management UI
+  - [x] 17.1 Create campaign list view
     - Build campaign list with status badges
     - Add filtering by status and project
     - Implement sorting and pagination
     - Show campaign progress indicators
     - _Requirements: 5.1, 14.2_
 
-  - [ ] 17.2 Implement campaign detail view
+  - [x] 17.2 Implement campaign detail view
     - Display campaign metadata and status
     - Show attack list with DAG visualization
     - Add campaign control buttons (start, pause, stop)
     - Display real-time progress updates via WebSocket
     - _Requirements: 5.1, 5.5, 14.2, 14.5_
 
-  - [ ] 17.3 Create attack editor
+  - [x] 17.3 Create attack editor
     - Build attack configuration form with React Hook Form
     - Add resource selection dropdowns
     - Implement mode-specific field visibility
@@ -462,22 +462,22 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Test attack editor
     - _Requirements: 5.1, 5.2, 12.3_
 
-- [ ] 18. Resource management UI
-  - [ ] 18.1 Create resource browser
+- [x] 18. Resource management UI
+  - [x] 18.1 Create resource browser
     - Build tabbed interface for resource types using shadcn/ui tabs
     - Implement resource list with metadata
     - Add filtering and search
     - Show resource usage in campaigns
     - _Requirements: 7.1, 7.5_
 
-  - [ ] 18.2 Implement resource upload flows
+  - [x] 18.2 Implement resource upload flows
     - Create hash list upload form with preview
     - Add wordlist/rulelist/masklist upload
     - Implement drag-and-drop file upload
     - Show upload progress and validation
     - _Requirements: 7.2, 7.3, 7.4, 15.2_
 
-  - [ ] 18.3 Add hash type detection UI
+  - [x] 18.3 Add hash type detection UI
     - Create hash type guessing interface
     - Display candidate types with confidence scores
     - Allow manual hash type selection
@@ -490,7 +490,7 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Test hash type detection
     - _Requirements: 7.1, 7.2, 9.1, 12.3_
 
-- [ ] 19. Checkpoint - Ensure all tests pass
+- [x] 19. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 20. Data migration tooling
