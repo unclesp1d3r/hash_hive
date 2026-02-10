@@ -6,6 +6,8 @@ import { logger } from './config/logger.js';
 import { requestId } from './middleware/request-id.js';
 import { requestLogger } from './middleware/request-logger.js';
 import { securityHeaders } from './middleware/security-headers.js';
+import { getQueueManager, setQueueManager } from './queue/context.js';
+import { QueueManager } from './queue/manager.js';
 import { agentRoutes } from './routes/agent/index.js';
 import { dashboardAgentRoutes } from './routes/dashboard/agents.js';
 import { authRoutes } from './routes/dashboard/auth.js';
@@ -34,13 +36,19 @@ app.use(
 
 // ─── Health Check ───────────────────────────────────────────────────
 
-app.get('/health', (c) =>
-  c.json({
+app.get('/health', async (c) => {
+  const qm = getQueueManager();
+  const redisHealth = qm ? await qm.getHealth() : { status: 'disconnected' as const, queues: {} };
+
+  return c.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     version: '1.0.0',
-  })
-);
+    services: {
+      redis: redisHealth,
+    },
+  });
+});
 
 // ─── Route Mounts ────────────────────────────────────────────────────
 
@@ -97,10 +105,22 @@ app.notFound((c) =>
 
 logger.info({ port: env.PORT, env: env.NODE_ENV }, 'starting server');
 
+// ─── Queue Manager Init (non-blocking) ─────────────────────────────
+
+const queueManager = new QueueManager();
+setQueueManager(queueManager);
+queueManager.init().catch((err) => {
+  logger.error({ err }, 'Queue manager init failed — queues unavailable');
+});
+
 // ─── Graceful Shutdown ──────────────────────────────────────────────
 
-function handleShutdown(signal: string) {
+async function handleShutdown(signal: string) {
   logger.info({ signal }, 'received shutdown signal, closing gracefully');
+  const qm = getQueueManager();
+  if (qm) {
+    await qm.shutdown();
+  }
   process.exit(0);
 }
 

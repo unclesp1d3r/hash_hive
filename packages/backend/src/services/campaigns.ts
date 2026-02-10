@@ -127,6 +127,35 @@ export async function transitionCampaign(id: number, targetStatus: CampaignStatu
 
   const [updated] = await db.update(campaigns).set(updates).where(eq(campaigns.id, id)).returning();
 
+  // When starting a campaign, enqueue task generation for its attacks
+  if (targetStatus === 'running') {
+    const campaignAttacks = await listAttacks(id);
+    if (campaignAttacks.length > 0) {
+      const { getQueueManager } = await import('../queue/context.js');
+      const { QUEUE_NAMES } = await import('../config/queue.js');
+      const { JOB_PRIORITY } = await import('../queue/types.js');
+      const qm = getQueueManager();
+      if (qm) {
+        const priorityMap: Record<number, number> = {
+          1: JOB_PRIORITY.HIGH,
+          5: JOB_PRIORITY.NORMAL,
+          10: JOB_PRIORITY.LOW,
+        };
+        const jobPriority = priorityMap[campaign.priority] ?? JOB_PRIORITY.NORMAL;
+        await qm.enqueue(
+          QUEUE_NAMES.TASK_DISTRIBUTION,
+          {
+            campaignId: id,
+            projectId: campaign.projectId,
+            attackIds: campaignAttacks.map((a) => a.id),
+            priority: jobPriority as 1 | 5 | 10,
+          },
+          { priority: jobPriority }
+        );
+      }
+    }
+  }
+
   return { campaign: updated ?? null };
 }
 
