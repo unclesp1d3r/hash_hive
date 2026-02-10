@@ -12,6 +12,7 @@ import { campaignRoutes } from './routes/dashboard/campaigns.js';
 import { hashRoutes } from './routes/dashboard/hashes.js';
 import { projectRoutes } from './routes/dashboard/projects.js';
 import { resourceRoutes } from './routes/dashboard/resources.js';
+import { taskRoutes } from './routes/dashboard/tasks.js';
 import type { AppEnv } from './types.js';
 
 const app = new Hono<AppEnv>();
@@ -47,6 +48,7 @@ app.route('/api/v1/dashboard/agents', dashboardAgentRoutes);
 app.route('/api/v1/dashboard/resources', resourceRoutes);
 app.route('/api/v1/dashboard/hashes', hashRoutes);
 app.route('/api/v1/dashboard/campaigns', campaignRoutes);
+app.route('/api/v1/dashboard/tasks', taskRoutes);
 
 app.route('/api/v1/agent', agentRoutes);
 

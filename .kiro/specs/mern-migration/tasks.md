@@ -266,8 +266,8 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Test campaign lifecycle transitions
     - _Requirements: 5.1, 5.3, 5.5, 12.1_
 
-- [ ] 11. Task distribution system
-  - [ ] 11.1 Extend Drizzle schema for tasks
+- [x] 11. Task distribution system
+  - [x] 11.1 Extend Drizzle schema for tasks
     - Add tasks table to schema.ts
     - Include work_range, progress, result_stats as jsonb fields
     - Add indexes for hot query paths (status, agent_id, campaign_id)
@@ -275,28 +275,28 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Generate Zod schemas with drizzle-zod
     - _Requirements: 1.6, 1.7, 6.1, 6.3_
 
-  - [ ] 11.2 Implement TaskDistributionService
+  - [x] 11.2 Implement TaskDistributionService
     - Create task generation from attack keyspace calculations
     - Implement keyspace partitioning logic
     - Add task assignment logic with agent capability matching
     - Implement task status tracking and updates
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-  - [ ] 11.3 Implement queue-based task distribution
+  - [x] 11.3 Implement queue-based task distribution
     - Create BullMQ queues for pending tasks
     - Implement capability-based queue routing
     - Add task assignment with locking using PostgreSQL
     - Store pending tasks in PostgreSQL with appropriate indexes
     - _Requirements: 6.2, 6.3_
 
-  - [ ] 11.4 Implement task retry and failure handling
+  - [x] 11.4 Implement task retry and failure handling
     - Add task retry logic with exponential backoff
     - Implement dead-letter queue for failed tasks
     - Add task reassignment for offline agents
     - Create failure reason tracking
     - _Requirements: 6.5_
 
-  - [ ] 11.5 Integrate task distribution with Agent API
+  - [x] 11.5 Integrate task distribution with Agent API
     - Wire tasks/next endpoint to queue system
     - Implement task assignment and locking
     - Add progress reporting handling with Drizzle updates
@@ -309,7 +309,7 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Test task retry and failure handling
     - _Requirements: 6.1, 6.2, 6.5, 12.1_
 
-- [ ] 12. Checkpoint - Ensure all tests pass
+- [x] 12. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 13. Real-time event system
