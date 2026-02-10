@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test';
 import type Redis from 'ioredis';
+import { QUEUE_NAMES } from '../../../src/config/queue.js';
 
 // Mock the logger
 mock.module('../../../src/config/logger.js', () => ({
@@ -66,7 +67,7 @@ describe('Task generator worker', () => {
     );
 
     const fakeConnection = {} as Redis;
-    createTaskGeneratorWorker(fakeConnection);
+    createTaskGeneratorWorker(fakeConnection, QUEUE_NAMES.TASK_GENERATION);
 
     expect(capturedProcessor).toBeDefined();
 
