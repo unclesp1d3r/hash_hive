@@ -6,9 +6,9 @@ This document defines the core user flows for HashHive, covering the complete jo
 
 ## Roles & Permissions
 
-- **Admin**: can manage users/projects; can also create and run campaigns, manage resources, and review results.
-- **Operator**: can create and run campaigns and manage resources; cannot manage users/projects.
-- **Analyst**: can create campaigns/resources and review results; cannot manage users/projects.
+- **Admin**: Global administrator — full access across all projects (manage users, projects, campaigns, resources, results).
+- **Power-user**: Project-level administrator — full access within assigned projects (manage campaigns, resources, project membership).
+- **User**: Standard user — can create and use own campaigns and resources, view results (cannot alter other users' resources within the project).
 
 ---
 
@@ -197,9 +197,11 @@ sequenceDiagram
 
 ## Flow 5: Agent Monitoring
 
-**Description:** Administrator monitors agent health and troubleshoots issues.
+**Description:** User monitors agent health and utilization across the fleet.
 
 **Trigger:** User clicks "Agents" in navigation.
+
+**Cross-project visibility:** All users can see every agent's status and hardware profile. When an agent is working on a task from a project the user doesn't have access to, only the project name is shown — task, attack, and campaign names/descriptions are redacted. Admins see full details for all agents across all projects.
 
 ### 5a: Agent List
 
@@ -224,16 +226,20 @@ sequenceDiagram
 
 1. User sees agent header with name, status, and last seen timestamp
 2. User sees hardware profile: OS, GPU models, CPU specs, hashcat version
-3. User sees current task assignment (if any) with link to campaign
+3. User sees current task assignment:
+   - If the task belongs to a project the user has access to: full details shown (task ID, campaign name, attack name) with link to campaign
+   - If the task belongs to a different project: project name shown, task/campaign/attack details redacted (e.g., "Busy — Project: Lab Sandbox")
+   - Admins always see full details
 4. User sees error log table with columns: Timestamp, Severity, Message, Task
 5. User can filter errors by severity (warning, error, fatal)
-6. User can click task link to navigate to campaign detail
+6. User can click task link to navigate to campaign detail (only if user has access to that project)
 
 **UI Feedback:**
 
 - Hardware profile shown as key-value pairs
 - Error log sorted by timestamp (newest first)
 - Severity shown as colored badge
+- Redacted task assignments shown with muted styling to indicate limited visibility
 - Empty state if no errors logged
 
 ---

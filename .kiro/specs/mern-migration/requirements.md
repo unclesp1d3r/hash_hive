@@ -52,9 +52,9 @@ This document defines the requirements for reimplementing CipherSwarm as HashHiv
 
 #### Acceptance Criteria
 
-1. THE HashHive System SHALL implement JWT-based stateless authentication for Agent API endpoints
+1. THE HashHive System SHALL implement pre-shared token authentication for Agent API endpoints
 2. THE HashHive System SHALL implement HttpOnly session cookies for Dashboard API authentication
-3. THE HashHive System SHALL support roles including admin, operator, analyst, and agent_owner with distinct permissions
+3. THE HashHive System SHALL support roles including admin (global), power-user (project-level admin), and user (standard) with distinct permissions
 4. THE HashHive System SHALL enforce project-scoped data access for all user operations
 5. WHEN a user authenticates, THE HashHive System SHALL return user profile with project memberships and assigned roles
 

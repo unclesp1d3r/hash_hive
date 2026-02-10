@@ -15,9 +15,9 @@ HashHive is a distributed password cracking platform that orchestrates hashcat a
 
 ## Target Users
 
-- **Red Team Operators**: Efficient campaign creation and attack orchestration
-- **Blue Team Analysts**: Password pattern analysis and reporting
-- **Infrastructure Admins**: Resource management and system monitoring
+- **Admins**: Global system administration, user and project management
+- **Power-users**: Project-level administration, campaign orchestration, resource management
+- **Users**: Campaign creation, resource usage, result review and analysis
 
 ## Operational Context
 
