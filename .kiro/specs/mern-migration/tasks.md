@@ -493,8 +493,8 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
 - [x] 19. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 20. Data migration tooling
-  - [ ] 20.1 Create Rails export scripts
+- [x] 20. Data migration tooling
+  - [x] 20.1 Create Rails export scripts
     - Write export script for users and projects
     - Create export script for agents and capabilities
     - Implement export for campaigns, attacks, tasks
@@ -502,21 +502,21 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Export to NDJSON format for processing
     - _Requirements: 11.1_
 
-  - [ ] 20.2 Implement transformation logic
+  - [x] 20.2 Implement transformation logic
     - Create user transformation with password hash mapping
     - Implement project and membership transformation
     - Add agent capability transformation
     - Transform campaign/attack relationships with ID mapping
     - _Requirements: 11.2, 11.5_
 
-  - [ ] 20.3 Create PostgreSQL import scripts
+  - [x] 20.3 Create PostgreSQL import scripts
     - Implement idempotent import using Drizzle batch operations
     - Add ID mapping between Rails and PostgreSQL
     - Handle relationship references with foreign keys
     - Implement batch import for performance
     - _Requirements: 11.2, 11.3_
 
-  - [ ] 20.4 Add migration validation
+  - [x] 20.4 Add migration validation
     - Implement count validation for all entities
     - Add relationship integrity checks using Drizzle queries
     - Validate DAG structures
