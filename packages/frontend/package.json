@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@hashhive/shared": "workspace:*",
+    "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-slot": "^1.2.4",
     "@tanstack/react-query": "^5.90.10",
     "class-variance-authority": "^0.7.1",
@@ -23,12 +24,14 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.49.3",
+    "react-router": "^7.13.0",
     "tailwind-merge": "^3.4.0",
     "zod": "^3.24.0",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
+    "@tailwindcss/vite": "^4.1.18",
     "@testing-library/react": "^16.3.0",
     "@types/react": "^19.2.6",
     "@types/react-dom": "^19.2.3",

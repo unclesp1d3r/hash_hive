@@ -341,8 +341,8 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Test event throttling
     - _Requirements: 8.1, 8.2, 8.4, 12.1_
 
-- [ ] 14. Frontend foundation with React 19 and Vite
-  - [ ] 14.1 Initialize frontend package
+- [x] 14. Frontend foundation with React 19 and Vite
+  - [x] 14.1 Initialize frontend package
     - Create Vite + React 19 application with TypeScript
     - Configure Tailwind CSS with custom theme
     - Install and configure shadcn/ui components via CLI
@@ -350,14 +350,14 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Configure Zustand for client-side UI state
     - _Requirements: 1.4, 14.1, 14.6_
 
-  - [ ] 14.2 Implement authentication UI
+  - [x] 14.2 Implement authentication UI
     - Create login page with React Hook Form + Zod validation
     - Implement session management on client
     - Add protected route wrapper component
     - Create user profile display component
     - _Requirements: 2.1, 2.2_
 
-  - [ ] 14.3 Create layout and navigation
+  - [x] 14.3 Create layout and navigation
     - Implement main layout with sidebar using shadcn/ui
     - Add project selector component with Zustand state
     - Create navigation menu with role-based visibility
