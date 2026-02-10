@@ -558,29 +558,29 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Test real-time updates E2E
     - _Requirements: 12.4, 12.5_
 
-- [ ] 22. Deployment and operations
-  - [ ] 22.1 Create Docker images
+- [x] 22. Deployment and operations
+  - [x] 22.1 Create Docker images
     - Build optimized Bun backend image
     - Create Vite production build image for frontend
     - Add health check endpoints
     - Implement graceful shutdown handling
     - _Requirements: 13.1, 13.3_
 
-  - [ ] 22.2 Create deployment configurations
+  - [x] 22.2 Create deployment configurations
     - Write production docker-compose.yml
     - Configure environment-specific settings
     - Implement secrets management
     - Add database migration scripts for deployment
     - _Requirements: 13.1, 13.2_
 
-  - [ ] 22.3 Implement logging and monitoring
+  - [x] 22.3 Implement logging and monitoring
     - Configure structured logging with Pino
     - Add request/response logging middleware
     - Implement error tracking and alerting
     - Create performance metrics collection
     - _Requirements: 13.4_
 
-  - [ ] 22.4 Add operational tooling
+  - [x] 22.4 Add operational tooling
     - Create database backup scripts
     - Implement health check monitoring
     - Add deployment scripts
