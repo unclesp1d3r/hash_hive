@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { requireAgentToken } from '../../middleware/auth.js';
 import { authenticateAgent, logAgentError, processHeartbeat } from '../../services/agents.js';
 import { createToken } from '../../services/auth.js';
+import { assignNextTask, handleTaskFailure, updateTaskProgress } from '../../services/tasks.js';
 import type { AppEnv } from '../../types.js';
 
 const agentRoutes = new Hono<AppEnv>();
@@ -59,8 +60,9 @@ agentRoutes.post('/heartbeat', zValidator('json', agentHeartbeatSchema), async (
 // ─── POST /tasks/next — request next task ───────────────────────────
 
 agentRoutes.post('/tasks/next', async (c) => {
-  // Task distribution will be implemented in Task 11
-  return c.json({ task: null });
+  const { userId: agentId } = c.get('currentUser');
+  const task = await assignNextTask(agentId);
+  return c.json({ task });
 });
 
 // ─── POST /tasks/:id/report — report task progress ─────────────────
@@ -87,7 +89,7 @@ const taskReportSchema = z.object({
 
 agentRoutes.post('/tasks/:id/report', zValidator('json', taskReportSchema), async (c) => {
   const { userId: agentId } = c.get('currentUser');
-  const _taskId = Number(c.req.param('id'));
+  const taskId = Number(c.req.param('id'));
   const data = c.req.valid('json');
 
   // Log any errors reported by the agent
@@ -97,12 +99,24 @@ agentRoutes.post('/tasks/:id/report', zValidator('json', taskReportSchema), asyn
         agentId,
         severity: 'error',
         message: errorMessage,
-        taskId: _taskId,
+        taskId,
       });
     }
   }
 
-  // Task progress and result processing will be implemented in Task 11
+  // Handle failure with retry logic
+  if (data.status === 'failed') {
+    const failResult = await handleTaskFailure(taskId, data.errors?.[0] ?? 'Unknown failure');
+    return c.json({ acknowledged: true, retried: failResult.retried ?? false });
+  }
+
+  // Update task progress and insert cracked results
+  const result = await updateTaskProgress(taskId, agentId, data);
+
+  if ('error' in result) {
+    return c.json({ error: { code: 'TASK_ERROR', message: result.error } }, 400);
+  }
+
   return c.json({ acknowledged: true });
 });
 
