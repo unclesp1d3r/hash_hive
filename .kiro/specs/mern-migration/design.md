@@ -23,7 +23,7 @@ HashHive is a modern TypeScript implementation that replaces the Rails-based Cip
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                     Operator/Admin Users                     │
+│                    Dashboard Users (all roles)                  │
 └────────────────────┬────────────────────────────────────────┘
                      │ HTTPS
                      ▼
@@ -159,7 +159,7 @@ HashHive is a modern TypeScript implementation that replaces the Rails-based Cip
 
 **Dependencies:**
 
-- Drizzle ORM for projects, project_users, roles tables
+- Drizzle ORM for projects, project_users tables (roles stored as text array on project_users)
 - AuthService for user validation
 
 #### 3. AgentService

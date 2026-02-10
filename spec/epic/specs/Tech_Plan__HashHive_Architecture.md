@@ -338,15 +338,23 @@ sequenceDiagram
 
 **RBAC Policy:**
 
-- **Admin**: Full access (manage users/projects, create/run campaigns, manage resources, view results)
-- **Operator**: Create/run campaigns, manage resources, view results (no user/project management)
-- **Analyst**: Create campaigns/resources, view results (no user/project management)
+- **Admin**: Global administrator — full access across all projects (manage users, projects, campaigns, resources, results)
+- **Power-user**: Project-level administrator — full access within assigned projects (manage campaigns, resources, users within project)
+- **User**: Standard user — can create and use own campaigns and resources, view results (cannot alter other users' resources within the project)
 
 **Project Scoping:**
 
 - All data queries filtered by `project_id` from user context
 - Middleware injects `currentUser` with `userId`, `projectId`, `roles` into request context
 - Routes enforce project-scoped access via WHERE clauses
+
+**Cross-Project Agent Visibility:**
+
+- All users can see every agent's status, utilization, and hardware profile regardless of project membership
+- When an agent is working on a task from a project the current user has access to, the full task/attack/campaign details (name, description, link) are shown
+- When an agent is working on a task from a project the current user does NOT have access to, the UI shows only the project name and that the agent is busy — task, attack, and campaign names/descriptions are redacted to protect sensitive information users may put in those fields
+- **Admins** can see and manage everything associated with any agent across all projects (no redaction)
+- This allows users to understand fleet utilization without leaking campaign details across project boundaries
 
 ### Task Distribution Architecture
 
