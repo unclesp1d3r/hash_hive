@@ -5,5 +5,10 @@ export type AppEnv = {
       userId: number;
       email: string;
     };
+    agent: {
+      agentId: number;
+      projectId: number;
+      capabilities: Record<string, unknown>;
+    };
   };
 };

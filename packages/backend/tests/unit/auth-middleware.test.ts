@@ -1,8 +1,33 @@
-import { describe, expect, it } from 'bun:test';
+import { beforeEach, describe, expect, it, mock } from 'bun:test';
 import { Hono } from 'hono';
+import type { AppEnv } from '../../src/types.js';
+
+// ─── Mock DB for agent token middleware ──────────────────────────────
+
+// Mutable result that each test sets before making a request.
+// The mock DB chain always resolves with this value.
+let mockAgentResult: Array<{
+  id: number;
+  projectId: number;
+  status: string;
+  capabilities: Record<string, unknown>;
+}> = [];
+
+mock.module('../../src/db/index.js', () => ({
+  db: {
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          limit: () => Promise.resolve(mockAgentResult),
+        }),
+      }),
+    }),
+  },
+  client: {},
+}));
+
 import { createToken } from '../../src/services/auth.js';
 import { requireAgentToken, requireSession } from '../../src/middleware/auth.js';
-import type { AppEnv } from '../../src/types.js';
 
 function createSessionApp() {
   const app = new Hono<AppEnv>();
@@ -11,7 +36,6 @@ function createSessionApp() {
     const user = c.get('currentUser');
     return c.json({ userId: user.userId, email: user.email });
   });
-  // Hono's default error handler converts HTTPException to response
   return app;
 }
 
@@ -19,8 +43,8 @@ function createAgentApp() {
   const app = new Hono<AppEnv>();
   app.use('*', requireAgentToken);
   app.get('/agent-endpoint', (c) => {
-    const user = c.get('currentUser');
-    return c.json({ userId: user.userId });
+    const agent = c.get('agent');
+    return c.json({ agentId: agent.agentId, projectId: agent.projectId });
   });
   return app;
 }
@@ -58,6 +82,10 @@ describe('requireSession middleware', () => {
 describe('requireAgentToken middleware', () => {
   const app = createAgentApp();
 
+  beforeEach(() => {
+    mockAgentResult = [];
+  });
+
   it('should reject requests without Authorization header', async () => {
     const res = await app.request('/agent-endpoint');
     expect(res.status).toBe(401);
@@ -70,20 +98,32 @@ describe('requireAgentToken middleware', () => {
     expect(res.status).toBe(401);
   });
 
-  it('should accept a valid agent Bearer token', async () => {
-    const token = await createToken({ userId: 42, email: 'agent@example.com', type: 'agent' });
+  it('should accept a valid active agent pre-shared token', async () => {
+    mockAgentResult = [{ id: 42, projectId: 7, status: 'active', capabilities: { gpu: true } }];
+
     const res = await app.request('/agent-endpoint', {
-      headers: { authorization: `Bearer ${token}` },
+      headers: { authorization: 'Bearer valid-agent-token' },
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body['userId']).toBe(42);
+    expect(body['agentId']).toBe(42);
+    expect(body['projectId']).toBe(7);
   });
 
-  it('should reject a session token in Authorization header', async () => {
-    const token = await createToken({ userId: 1, email: 'test@example.com', type: 'session' });
+  it('should reject an unknown token', async () => {
+    mockAgentResult = [];
+
     const res = await app.request('/agent-endpoint', {
-      headers: { authorization: `Bearer ${token}` },
+      headers: { authorization: 'Bearer unknown-token-does-not-exist' },
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('should reject inactive agents', async () => {
+    mockAgentResult = [{ id: 99, projectId: 7, status: 'offline', capabilities: {} }];
+
+    const res = await app.request('/agent-endpoint', {
+      headers: { authorization: 'Bearer inactive-agent-token' },
     });
     expect(res.status).toBe(401);
   });
