@@ -1,15 +1,52 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
-import { createBunWebSocket } from 'hono/bun';
-import { app } from '../../src/index.js';
-import { createToken } from '../../src/services/auth.js';
+import { afterAll, beforeAll, describe, expect, it, mock } from 'bun:test';
+import { jwtVerify, SignJWT } from 'jose';
 
-// We need the websocket handler from hono/bun to run a real WebSocket server.
-// Since the events route creates its own createBunWebSocket(), we re-create one
-// here for the test server. Hono internally wires upgrade handlers via globals.
-const { websocket } = createBunWebSocket();
+// Mock getUserWithProjects to avoid DB dependency in unit tests.
+// bun:test hoists mock.module() above all imports, so this takes effect
+// before index.ts (and events.ts) resolve the auth module.
+const jwtSecret = new TextEncoder().encode(
+  process.env['JWT_SECRET'] ?? 'test-secret-at-least-16-chars-long'
+);
+
+mock.module('../../src/services/auth.js', () => ({
+  hashPassword: async (password: string) =>
+    Bun.password.hash(password, { algorithm: 'bcrypt', cost: 12 }),
+  verifyPassword: async (password: string, hash: string) => Bun.password.verify(password, hash),
+
+  createToken: async (payload: { userId: number; email: string; type: string }) =>
+    new SignJWT({ sub: String(payload.userId), email: payload.email, type: payload.type })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(jwtSecret),
+
+  validateToken: async (token: string) => {
+    try {
+      const { payload } = await jwtVerify(token, jwtSecret);
+      return {
+        userId: Number(payload['sub']),
+        email: payload['email'] as string,
+        type: payload['type'] as string,
+      };
+    } catch {
+      return null;
+    }
+  },
+
+  login: async () => null,
+
+  getUserWithProjects: async (userId: number) => ({
+    user: { id: userId, email: `user-${userId}@test.com`, name: 'Test User', status: 'active' },
+    projects: [{ id: 1, name: 'Test Project', slug: 'test-project', roles: ['admin'] }],
+  }),
+}));
+
+import { app, websocket } from '../../src/index.js';
+
+// Use the mocked createToken from the same module
+const { createToken } = await import('../../src/services/auth.js');
 
 let server: ReturnType<typeof Bun.serve>;
-let baseUrl: string;
 
 beforeAll(() => {
   server = Bun.serve({
@@ -17,7 +54,6 @@ beforeAll(() => {
     fetch: app.fetch,
     websocket,
   });
-  baseUrl = `http://localhost:${server.port}`;
 });
 
 afterAll(() => {
@@ -131,5 +167,15 @@ describe('WebSocket hybrid authentication', () => {
     });
     const { code } = await waitForClose(ws);
     expect(code).toBe(4002);
+  });
+
+  it('should close with 4003 when user has no access to requested projects', async () => {
+    // Mock returns project id=1 only; requesting project id=999 should fail
+    const token = await createToken({ userId: 1, email: 'test@example.com', type: 'session' });
+    const ws = new WebSocket(wsUrl('/api/v1/dashboard/events/stream?projectIds=999'), {
+      headers: { cookie: `session=${token}` },
+    });
+    const { code } = await waitForClose(ws);
+    expect(code).toBe(4003);
   });
 });
