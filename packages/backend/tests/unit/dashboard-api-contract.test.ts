@@ -32,7 +32,7 @@ describe('Dashboard API: Auth guards', () => {
   }
 
   it('should reject agent tokens on dashboard endpoints', async () => {
-    const token = await agentToken(1);
+    const token = agentToken();
     const res = await app.request(`${DASH_BASE}/projects`, {
       headers: { cookie: `session=${token}` },
     });

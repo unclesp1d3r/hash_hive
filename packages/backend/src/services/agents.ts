@@ -3,11 +3,6 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { emitAgentStatus } from './events.js';
 
-export async function authenticateAgent(authToken: string) {
-  const [agent] = await db.select().from(agents).where(eq(agents.authToken, authToken)).limit(1);
-  return agent ?? null;
-}
-
 export async function getAgentById(agentId: number) {
   const [agent] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
   return agent ?? null;

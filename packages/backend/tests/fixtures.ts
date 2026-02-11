@@ -146,11 +146,12 @@ export async function sessionToken(userId = 1, email = 'test@example.com') {
   return createToken({ userId, email, type: 'session' });
 }
 
-/** Create a valid agent JWT for agent API testing. */
-export async function agentToken(agentId = 1) {
-  return createToken({
-    userId: agentId,
-    email: `agent-${agentId}@agents.local`,
-    type: 'agent',
-  });
+/**
+ * Return a pre-shared agent token for agent API testing.
+ *
+ * For unit/contract tests without a database, pass a mock token string.
+ * For integration tests with a seeded database, pass the agent's actual authToken.
+ */
+export function agentToken(token = 'test-agent-preshared-token'): string {
+  return token;
 }

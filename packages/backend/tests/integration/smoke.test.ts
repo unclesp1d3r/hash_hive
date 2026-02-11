@@ -5,12 +5,16 @@
  * Hono app without requiring a running database. They verify that
  * routing, middleware, and validation work end-to-end.
  *
+ * Agent auth now validates pre-shared tokens against the database,
+ * so tests requiring authenticated agent requests need a running DB
+ * (or mocked DB in unit tests).
+ *
  * For full integration tests with a real database, use the
  * docker-compose dev environment and run with --integration flag.
  */
 import { describe, expect, it } from 'bun:test';
 import { app } from '../../src/index.js';
-import { agentToken, sessionToken } from '../fixtures.js';
+import { sessionToken } from '../fixtures.js';
 
 describe('Integration: Health check', () => {
   it('should return health status with all expected fields', async () => {
@@ -43,29 +47,13 @@ describe('Integration: Agent workflow validation', () => {
     }
   });
 
-  it('should validate heartbeat schema strictly', async () => {
-    const token = await agentToken(1);
-    const headers = {
-      'Content-Type': 'application/json',
-      authorization: `Bearer ${token}`,
-    };
-
-    // Valid minimal heartbeat
-    const validRes = await app.request('/api/v1/agent/heartbeat', {
+  it('should return 404 for removed /sessions endpoint', async () => {
+    const res = await app.request('/api/v1/agent/sessions', {
       method: 'POST',
-      headers,
-      body: JSON.stringify({ status: 'online' }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: 'some-token' }),
     });
-    // Will be 200 if DB is running, 500 if not — but not 400
-    expect(validRes.status).not.toBe(400);
-
-    // Invalid status
-    const invalidRes = await app.request('/api/v1/agent/heartbeat', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ status: 'invalid' }),
-    });
-    expect(invalidRes.status).toBe(400);
+    expect(res.status).toBe(404);
   });
 });
 

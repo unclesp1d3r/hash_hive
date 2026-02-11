@@ -1,6 +1,9 @@
+import { agents } from '@hashhive/shared';
+import { eq } from 'drizzle-orm';
 import { getCookie } from 'hono/cookie';
 import { createMiddleware } from 'hono/factory';
 import { HTTPException } from 'hono/http-exception';
+import { db } from '../db/index.js';
 import { validateToken } from '../services/auth.js';
 import type { AppEnv } from '../types.js';
 
@@ -33,8 +36,8 @@ export const requireSession = createMiddleware<AppEnv>(async (c, next) => {
 });
 
 /**
- * Agent auth middleware — reads JWT from Authorization: Bearer header.
- * Sets currentUser on context if valid.
+ * Agent auth middleware — validates pre-shared token from Authorization: Bearer header.
+ * Queries the agents table directly and sets agent context (agentId, projectId, capabilities).
  */
 export const requireAgentToken = createMiddleware<AppEnv>(async (c, next) => {
   const authHeader = c.req.header('authorization');
@@ -43,11 +46,26 @@ export const requireAgentToken = createMiddleware<AppEnv>(async (c, next) => {
   }
 
   const token = authHeader.slice(7);
-  const payload = await validateToken(token);
-  if (!payload || payload.type !== 'agent') {
+
+  const [agent] = await db
+    .select({
+      id: agents.id,
+      projectId: agents.projectId,
+      status: agents.status,
+      capabilities: agents.capabilities,
+    })
+    .from(agents)
+    .where(eq(agents.authToken, token))
+    .limit(1);
+
+  if (!agent || agent.status !== 'active') {
     throw authError('Invalid or expired agent token');
   }
 
-  c.set('currentUser', { userId: payload.userId, email: payload.email });
+  c.set('agent', {
+    agentId: agent.id,
+    projectId: agent.projectId,
+    capabilities: (agent.capabilities ?? {}) as Record<string, unknown>,
+  });
   await next();
 });
