@@ -1,6 +1,7 @@
 import { attacks, campaigns } from '@hashhive/shared';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
+import { emitCampaignStatus } from './events.js';
 
 // ─── Campaign CRUD ──────────────────────────────────────────────────
 
@@ -145,6 +146,10 @@ export async function transitionCampaign(id: number, targetStatus: CampaignStatu
   }
 
   const [updated] = await db.update(campaigns).set(updates).where(eq(campaigns.id, id)).returning();
+
+  if (updated) {
+    emitCampaignStatus(campaign.projectId, id, targetStatus);
+  }
 
   // When starting a campaign, enqueue task generation for its attacks
   if (targetStatus === 'running') {

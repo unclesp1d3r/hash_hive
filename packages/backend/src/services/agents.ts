@@ -1,6 +1,7 @@
 import { agentErrors, agents } from '@hashhive/shared';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
+import { emitAgentStatus } from './events.js';
 
 export async function authenticateAgent(authToken: string) {
   const [agent] = await db.select().from(agents).where(eq(agents.authToken, authToken)).limit(1);
@@ -73,6 +74,10 @@ export async function processHeartbeat(
 
   const [updated] = await db.update(agents).set(updates).where(eq(agents.id, agentId)).returning();
 
+  if (updated) {
+    emitAgentStatus(updated.projectId, updated.id, data.status);
+  }
+
   return updated ?? null;
 }
 
@@ -88,6 +93,10 @@ export async function updateAgent(
     .set({ ...data, updatedAt: new Date() })
     .where(eq(agents.id, agentId))
     .returning();
+
+  if (updated && data.status) {
+    emitAgentStatus(updated.projectId, updated.id, data.status);
+  }
 
   return updated ?? null;
 }

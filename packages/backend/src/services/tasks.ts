@@ -1,6 +1,7 @@
 import { agents, attacks, campaigns, hashItems, tasks } from '@hashhive/shared';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
+import { emitCrackResult, emitTaskUpdate } from './events.js';
 
 // ─── Task Generation ────────────────────────────────────────────────
 
@@ -180,7 +181,22 @@ export async function updateTaskProgress(
             isCracked: true,
           }))
         );
+
+        emitCrackResult(campaign.projectId, campaign.hashListId, data.results.length);
       }
+    }
+  }
+
+  // Emit task update — derive projectId from the campaign
+  if (updated) {
+    const [campaign] = await db
+      .select({ projectId: campaigns.projectId })
+      .from(campaigns)
+      .where(eq(campaigns.id, task.campaignId))
+      .limit(1);
+
+    if (campaign) {
+      emitTaskUpdate(campaign.projectId, taskId, data.status, data.progress);
     }
   }
 
@@ -200,6 +216,13 @@ export async function handleTaskFailure(taskId: number, reason: string) {
   const resultStats = (task.resultStats as Record<string, unknown>) ?? {};
   const retryCount = (resultStats['retryCount'] as number) ?? 0;
 
+  // Derive projectId from the campaign for event emission
+  const [campaign] = await db
+    .select({ projectId: campaigns.projectId })
+    .from(campaigns)
+    .where(eq(campaigns.id, task.campaignId))
+    .limit(1);
+
   if (retryCount < MAX_RETRIES) {
     // Retry: reset task to pending with incremented retry count
     const [updated] = await db
@@ -214,6 +237,10 @@ export async function handleTaskFailure(taskId: number, reason: string) {
         updatedAt: new Date(),
       })
       .returning();
+
+    if (updated && campaign) {
+      emitTaskUpdate(campaign.projectId, taskId, 'pending');
+    }
 
     return { task: updated, retried: true };
   }
@@ -230,6 +257,10 @@ export async function handleTaskFailure(taskId: number, reason: string) {
     })
     .where(eq(tasks.id, taskId))
     .returning();
+
+  if (updated && campaign) {
+    emitTaskUpdate(campaign.projectId, taskId, 'failed');
+  }
 
   return { task: updated, retried: false };
 }

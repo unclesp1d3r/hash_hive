@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { createBunWebSocket } from 'hono/bun';
 import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
 import { env } from './config/env.js';
@@ -13,14 +14,17 @@ import { agentRoutes } from './routes/agent/index.js';
 import { dashboardAgentRoutes } from './routes/dashboard/agents.js';
 import { authRoutes } from './routes/dashboard/auth.js';
 import { campaignRoutes } from './routes/dashboard/campaigns.js';
-import { eventRoutes } from './routes/dashboard/events.js';
+import { createEventRoutes } from './routes/dashboard/events.js';
 import { hashRoutes } from './routes/dashboard/hashes.js';
 import { projectRoutes } from './routes/dashboard/projects.js';
 import { resourceRoutes } from './routes/dashboard/resources.js';
 import { taskRoutes } from './routes/dashboard/tasks.js';
 import type { AppEnv } from './types.js';
 
+const { upgradeWebSocket, websocket } = createBunWebSocket();
+
 const app = new Hono<AppEnv>();
+const eventRoutes = createEventRoutes(upgradeWebSocket);
 
 // ─── Global Middleware ──────────────────────────────────────────────
 
@@ -135,6 +139,7 @@ process.on('SIGINT', () => handleShutdown('SIGINT'));
 export default {
   port: env.PORT,
   fetch: app.fetch,
+  websocket,
 };
 
-export { app };
+export { app, websocket };
