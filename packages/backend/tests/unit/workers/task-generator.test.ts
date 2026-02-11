@@ -67,7 +67,7 @@ describe('Task generator worker', () => {
     );
 
     const fakeConnection = {} as Redis;
-    createTaskGeneratorWorker(fakeConnection, QUEUE_NAMES.TASK_GENERATION);
+    createTaskGeneratorWorker(fakeConnection, QUEUE_NAMES.TASKS_NORMAL);
 
     expect(capturedProcessor).toBeDefined();
 
