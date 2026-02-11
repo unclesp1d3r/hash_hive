@@ -8,10 +8,11 @@ Implement login page with authentication and project selector with auto-select l
 
 **In Scope:**
 - Implement login page with email/password form (React Hook Form + Zod validation)
-- Add project selector page with project cards
-- Implement auto-select logic (single project → skip to dashboard)
+- Add project selector page with project cards (shown when user has multiple projects or no remembered selection)
+- Implement auto-select logic (single project → skip selector → dashboard)
 - Add "remember last project" preference
-- Implement protected route wrapper
+- Update protected route wrapper to **require a selected project** (redirect to selector when missing)
+  - Keep the **sidebar project dropdown** for switching projects after initial selection
 - Add logout functionality in user menu
 - Update `file:packages/frontend/src/pages/login.tsx` and create project selector page
 

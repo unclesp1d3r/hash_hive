@@ -23,13 +23,13 @@ export function createHashListParserWorker(connection: Redis): Worker<HashListPa
         throw new Error(`Hash list ${hashListId} not found`);
       }
 
-      const fileRef = hl.fileRef as { key: string } | null;
+      const fileRef = hl.fileRef as { bucket?: string; key: string } | null;
       if (!fileRef) {
         throw new Error(`Hash list ${hashListId} has no file reference`);
       }
 
       // Download file from S3
-      const response = await downloadFile(fileRef.key);
+      const response = await downloadFile(fileRef.key, fileRef.bucket);
       const body = response.Body;
       if (!body) {
         throw new Error(`Empty file body for hash list ${hashListId}`);

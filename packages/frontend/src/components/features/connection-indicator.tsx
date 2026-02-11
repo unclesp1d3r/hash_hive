@@ -13,7 +13,7 @@ export function ConnectionIndicator({ connected }: ConnectionIndicatorProps) {
           connected ? 'bg-green-500' : 'bg-red-500'
         )}
       />
-      {connected ? 'Live' : 'Reconnecting...'}
+      {connected ? 'Live' : 'Polling...'}
     </div>
   );
 }

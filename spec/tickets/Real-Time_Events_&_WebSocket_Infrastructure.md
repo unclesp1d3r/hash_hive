@@ -8,7 +8,7 @@ Implement in-memory WebSocket broadcasting for real-time dashboard updates with 
 
 **In Scope:**
 - Implement in-memory WebSocket broadcasting via EventService
-- Add WebSocket authentication via session cookie
+- Add WebSocket authentication (**cookie primary**; optional `token` query param fallback for non-browser clients)
 - Implement project-scoped event filtering
 - Add connection indicator to frontend (subtle, always visible)
 - Implement automatic polling fallback on WebSocket disconnect (30-second intervals)
@@ -24,7 +24,7 @@ Implement in-memory WebSocket broadcasting for real-time dashboard updates with 
 
 1. **WebSocket Server**
    - WebSocket endpoint at `/events/stream` using `hono/websocket`
-   - Authenticates connections via session cookie
+   - Authenticates connections via session cookie when present; supports `?token=<session-jwt>` fallback for non-browser clients
    - Maintains in-memory map of connections by project ID
    - Broadcasts events only to connections in the same project
 

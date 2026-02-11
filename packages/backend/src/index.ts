@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
+import { checkMinioHealth } from './config/storage.js';
 import { requestId } from './middleware/request-id.js';
 import { requestLogger } from './middleware/request-logger.js';
 import { securityHeaders } from './middleware/security-headers.js';
@@ -38,7 +39,10 @@ app.use(
 
 app.get('/health', async (c) => {
   const qm = getQueueManager();
-  const redisHealth = qm ? await qm.getHealth() : { status: 'disconnected' as const, queues: {} };
+  const [redisHealth, minioHealth] = await Promise.all([
+    qm ? qm.getHealth() : Promise.resolve({ status: 'disconnected' as const, queues: {} }),
+    checkMinioHealth(),
+  ]);
 
   return c.json({
     status: 'ok',
@@ -46,6 +50,7 @@ app.get('/health', async (c) => {
     version: '1.0.0',
     services: {
       redis: redisHealth,
+      minio: minioHealth,
     },
   });
 });

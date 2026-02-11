@@ -1,5 +1,24 @@
 import { logger } from '../config/logger.js';
 
+/**
+ * FUTURE: Redis Pub/Sub Extension for Multi-Instance Deployments
+ *
+ * Current implementation uses in-memory Map for WebSocket connections.
+ * For horizontal scaling, extend with Redis pub/sub:
+ *
+ * 1. Publish events to Redis channel:
+ *    await redis.publish('hashhive:events', JSON.stringify(event));
+ *
+ * 2. Subscribe all instances to the channel:
+ *    redis.subscribe('hashhive:events', (message) => {
+ *      const event = JSON.parse(message);
+ *      broadcastToLocalClients(event);
+ *    });
+ *
+ * 3. Keep local client registry (Map) for WebSocket connections
+ * 4. Each instance broadcasts only to its own connected clients
+ */
+
 // ─── Event Types ────────────────────────────────────────────────────
 
 export type EventType =

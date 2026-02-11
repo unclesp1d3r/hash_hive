@@ -8,6 +8,7 @@ Implement dashboard page with real-time stat cards and global layout with sideba
 
 **In Scope:**
 - Implement dashboard page with 4 stat cards (agents, campaigns, tasks, cracked hashes)
+  - Note: current code computes stats client-side via multiple endpoints (`file:packages/frontend/src/hooks/use-dashboard.ts`). Decide whether to keep this initially or add a dedicated `GET /api/v1/dashboard/stats` endpoint as part of the backend execution plan.
 - Add clickable navigation from stat cards to detail pages
 - Implement real-time updates via WebSocket + TanStack Query cache invalidation
 - Add connection indicator (subtle, always visible)

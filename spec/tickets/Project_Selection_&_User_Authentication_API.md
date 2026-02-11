@@ -4,6 +4,8 @@
 
 Implement user authentication with JWT + HttpOnly sessions, project selection with auto-select logic, and RBAC enforcement for the dashboard API.
 
+**Critical requirement:** dashboard endpoints must not trust client-supplied `projectId` for scoping. Project context must be derived from a server-managed “selected project” and validated against membership.
+
 ## Scope
 
 **In Scope:**
@@ -34,15 +36,17 @@ Implement user authentication with JWT + HttpOnly sessions, project selection wi
 
 3. **Project Selection**
    - `GET /api/v1/dashboard/projects` returns user's accessible projects
-   - `POST /api/v1/dashboard/projects/select` sets current project in session
+   - `POST /api/v1/dashboard/projects/select` sets current project for subsequent requests
+          - Recommended approach: **re-issue the session JWT** with a `projectId` claim (kept in the HttpOnly cookie)
+          - Server must validate membership before setting `projectId`
    - Auto-select logic: if user has only one project, automatically select it
    - "Remember last project" stored in user preferences
 
 4. **Project-Scoped Middleware**
    - Dashboard API middleware validates session cookie
-   - Extracts user context: `{ userId, projectId, roles }`
+   - Extracts user context from JWT: `{ userId, email, roles, projectId? }`
    - Injects context into request for route handlers
-   - Returns 401 if session is invalid or expired
+   - Returns 401 if session is invalid/expired; returns 400 if project context is required but missing; returns 403 if not a member
 
 5. **RBAC Enforcement**
    - **Admin**: Full access (manage users/projects, create/run campaigns, manage resources, view results)
