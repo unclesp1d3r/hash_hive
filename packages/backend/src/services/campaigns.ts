@@ -151,10 +151,11 @@ export async function transitionCampaign(id: number, targetStatus: CampaignStatu
     const campaignAttacks = await listAttacks(id);
     if (campaignAttacks.length > 0) {
       const { getQueueManager } = await import('../queue/context.js');
-      const { QUEUE_NAMES } = await import('../config/queue.js');
+      const { getTaskQueueForPriority } = await import('../config/queue.js');
       const { JOB_PRIORITY } = await import('../queue/types.js');
       const qm = getQueueManager();
       if (qm) {
+        const targetQueue = getTaskQueueForPriority(campaign.priority);
         const priorityMap: Record<number, number> = {
           1: JOB_PRIORITY.HIGH,
           5: JOB_PRIORITY.NORMAL,
@@ -162,17 +163,13 @@ export async function transitionCampaign(id: number, targetStatus: CampaignStatu
         };
         const jobPriority = priorityMap[campaign.priority] ?? JOB_PRIORITY.NORMAL;
 
-        // Enqueue to the dedicated task-generation job queue with priority as a job option
-        const enqueued = await qm.enqueue(
-          QUEUE_NAMES.TASK_GENERATION,
-          {
-            campaignId: id,
-            projectId: campaign.projectId,
-            attackIds: campaignAttacks.map((a) => a.id),
-            priority: jobPriority as 1 | 5 | 10,
-          },
-          { priority: jobPriority }
-        );
+        // Enqueue to the priority-based task queue matching the campaign priority
+        const enqueued = await qm.enqueue(targetQueue, {
+          campaignId: id,
+          projectId: campaign.projectId,
+          attackIds: campaignAttacks.map((a) => a.id),
+          priority: jobPriority as 1 | 5 | 10,
+        });
 
         if (!enqueued) {
           // Roll back the status transition

@@ -1,35 +1,35 @@
 import { logger } from './config/logger.js';
-import { QUEUE_NAMES } from './config/queue.js';
+import { TASK_PRIORITY_QUEUES } from './config/queue.js';
 import { createRedisClient } from './config/redis.js';
 import { createTaskGeneratorWorker } from './queue/workers/task-generator.js';
 
-const connection = createRedisClient('worker:task-generation');
+const connection = createRedisClient('task-generation-worker');
 
 async function main() {
   await connection.connect();
-  logger.info('Starting task-generation worker process');
+  logger.info('Task generation worker connected to Redis');
 
-  // Single worker consuming the dedicated task-generation job queue.
-  // Job priority is handled via BullMQ's built-in priority option on the queue.
-  const worker = createTaskGeneratorWorker(connection, QUEUE_NAMES.TASK_GENERATION);
+  // Start a worker for each priority queue (high, normal, low).
+  // Each worker processes its queue independently so higher-priority
+  // campaigns are never blocked behind lower-priority ones.
+  const workers = TASK_PRIORITY_QUEUES.map((queueName) => {
+    const worker = createTaskGeneratorWorker(connection, queueName);
+    logger.info({ queue: queueName }, 'Task generation worker started');
+    return worker;
+  });
 
-  async function handleShutdown(signal: string) {
-    logger.info({ signal }, 'Shutting down task-generation worker');
-    await worker.close();
+  async function shutdown(signal: string) {
+    logger.info({ signal }, 'Shutting down task generation workers');
+    await Promise.all(workers.map((w) => w.close()));
     connection.disconnect();
     process.exit(0);
   }
 
-  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
-  process.on('SIGINT', () => handleShutdown('SIGINT'));
-
-  logger.info(
-    { queue: QUEUE_NAMES.TASK_GENERATION },
-    'Task-generation worker running on dedicated job queue'
-  );
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 main().catch((err) => {
-  logger.error({ err }, 'Task-generation worker failed to start');
+  logger.error({ err }, 'Task generation worker failed to start');
   process.exit(1);
 });

@@ -24,14 +24,32 @@ export class QueueManager {
   }
 
   async init(): Promise<void> {
+    // Listen for the ready event so queues are created when Redis (re)connects
+    // after a failed initial connection attempt.
+    this.connection.on('ready', () => {
+      if (this.queues.size === 0) {
+        this.createQueues().catch((err) => {
+          logger.error({ err }, 'Failed to create queues after Redis reconnect');
+        });
+      }
+    });
+
     try {
       await this.connection.connect();
     } catch (err) {
-      logger.warn({ err }, 'Redis not available at startup — queues will be unavailable');
+      logger.warn({ err }, 'Redis not available at startup — queues will be created on reconnect');
       return;
     }
 
-    // Create queues for all canonical names
+    // Only create if the ready handler hasn't already done it
+    if (this.queues.size === 0) {
+      await this.createQueues();
+    }
+  }
+
+  private async createQueues(): Promise<void> {
+    if (this.queues.size > 0) return;
+
     for (const name of Object.values(QUEUE_NAMES)) {
       this.queues.set(name, new Queue(name, { connection: this.connection }));
     }

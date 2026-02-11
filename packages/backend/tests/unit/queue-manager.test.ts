@@ -12,7 +12,6 @@ describe('Queue config', () => {
 
   test('QUEUE_NAMES has job queue names', () => {
     expect(QUEUE_NAMES.HASH_LIST_PARSING).toBe('jobs:hash-list-parsing');
-    expect(QUEUE_NAMES.TASK_GENERATION).toBe('jobs:task-generation');
     expect(QUEUE_NAMES.HEARTBEAT_MONITOR).toBe('jobs:heartbeat-monitor');
   });
 
@@ -66,13 +65,13 @@ describe('QueueManager', () => {
     expect(result).toBe(false);
   });
 
-  test('enqueue returns false for task-generation job queue when not initialized', async () => {
+  test('enqueue returns false for priority task queue when not initialized', async () => {
     const qm = new QueueManager();
-    const result = await qm.enqueue(QUEUE_NAMES.TASK_GENERATION, {
+    const result = await qm.enqueue(QUEUE_NAMES.TASKS_NORMAL, {
       campaignId: 1,
       projectId: 1,
       attackIds: [1],
-      priority: 1,
+      priority: 5,
     });
     expect(result).toBe(false);
   });
