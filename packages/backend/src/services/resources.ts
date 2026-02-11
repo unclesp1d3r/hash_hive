@@ -1,6 +1,9 @@
+import { randomUUID } from 'node:crypto';
+import { extname } from 'node:path';
 import { hashItems, hashLists, hashTypes, maskLists, ruleLists, wordLists } from '@hashhive/shared';
 import { desc, eq, sql } from 'drizzle-orm';
-import { uploadFile } from '../config/storage.js';
+import { env } from '../config/env.js';
+import { getPresignedUrl, uploadFile } from '../config/storage.js';
 import { db } from '../db/index.js';
 
 // ─── Hash Types ──────────────────────────────────────────────────────
@@ -53,14 +56,27 @@ export async function uploadHashListFile(
   hashListId: number,
   file: File
 ): Promise<{ key: string; size: number }> {
-  const key = `hash-lists/${hashListId}/${file.name}`;
+  const hl = await getHashListById(hashListId);
+  if (!hl) {
+    throw new Error(`Hash list ${hashListId} not found`);
+  }
+
+  const ext = extname(file.name);
+  const key = `${hl.projectId}/hash-lists/${randomUUID()}${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
   await uploadFile(key, buffer, file.type || 'application/octet-stream');
 
   await db
     .update(hashLists)
     .set({
-      fileRef: { bucket: 'hashhive', key, size: file.size, name: file.name },
+      fileRef: {
+        bucket: env.S3_BUCKET,
+        key,
+        contentType: file.type || 'application/octet-stream',
+        size: file.size,
+        name: file.name,
+        uploadedAt: new Date().toISOString(),
+      },
       status: 'uploaded',
       updatedAt: new Date(),
     })
@@ -75,24 +91,40 @@ export async function importHashList(hashListId: number) {
     return null;
   }
 
+  // Check queue availability before marking as processing
+  const { getQueueManager } = await import('../queue/context.js');
+  const { QUEUE_NAMES } = await import('../config/queue.js');
+  const qm = getQueueManager();
+  if (!qm) {
+    return { error: 'Queue unavailable — cannot process hash list' };
+  }
+  const health = await qm.getHealth();
+  if (health.status === 'disconnected') {
+    return { error: 'Queue unavailable — cannot process hash list' };
+  }
+
   // Mark as processing
   await db
     .update(hashLists)
     .set({ status: 'processing', updatedAt: new Date() })
     .where(eq(hashLists.id, hashListId));
 
-  // Enqueue async parsing job
-  const { getQueueManager } = await import('../queue/context.js');
-  const { QUEUE_NAMES } = await import('../config/queue.js');
-  const qm = getQueueManager();
-  const queued = qm
-    ? await qm.enqueue(QUEUE_NAMES.HASH_LIST_PARSING, {
-        hashListId,
-        projectId: hl.projectId,
-      })
-    : false;
+  // Enqueue async parsing job into the hash-list-parsing job queue
+  const enqueued = await qm.enqueue(QUEUE_NAMES.HASH_LIST_PARSING, {
+    hashListId,
+    projectId: hl.projectId,
+  });
 
-  return { status: 'processing' as const, queued };
+  if (!enqueued) {
+    // Revert status since the job was not enqueued
+    await db
+      .update(hashLists)
+      .set({ status: 'uploaded', updatedAt: new Date() })
+      .where(eq(hashLists.id, hashListId));
+    return { error: 'Failed to enqueue hash list parsing job' };
+  }
+
+  return { status: 'processing' as const, queued: true };
 }
 
 export async function getHashItems(
@@ -147,14 +179,27 @@ async function uploadResourceFile(
   prefix: string,
   file: File
 ) {
-  const key = `${prefix}/${resourceId}/${file.name}`;
+  const resource = await getResourceById(table, resourceId);
+  if (!resource) {
+    throw new Error(`Resource ${resourceId} not found in ${prefix}`);
+  }
+
+  const ext = extname(file.name);
+  const key = `${resource.projectId}/${prefix}/${randomUUID()}${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
   await uploadFile(key, buffer, file.type || 'application/octet-stream');
 
   await db
     .update(table)
     .set({
-      fileRef: { bucket: 'hashhive', key, size: file.size, name: file.name },
+      fileRef: {
+        bucket: env.S3_BUCKET,
+        key,
+        contentType: file.type || 'application/octet-stream',
+        size: file.size,
+        name: file.name,
+        uploadedAt: new Date().toISOString(),
+      },
       fileSize: file.size,
       updatedAt: new Date(),
     })
@@ -186,3 +231,16 @@ export const createMaskList = (data: { projectId: number; name: string }) =>
   createResource(maskLists, data);
 export const uploadMaskListFile = (id: number, file: File) =>
   uploadResourceFile(maskLists, id, 'masklists', file);
+
+// ─── Presigned URLs ─────────────────────────────────────────────────
+
+export async function getResourcePresignedUrl(fileRef: {
+  bucket: string;
+  key: string;
+  name?: string;
+}): Promise<string> {
+  return getPresignedUrl(fileRef.key, 3600, {
+    bucket: fileRef.bucket,
+    ...(fileRef.name ? { filename: fileRef.name } : {}),
+  });
+}

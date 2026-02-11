@@ -1,4 +1,17 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, mock } from 'bun:test';
+
+// Mock checkMinioHealth so the health test does not require a running MinIO endpoint
+mock.module('../../src/config/storage.js', () => ({
+  checkMinioHealth: mock(() =>
+    Promise.resolve({ status: 'connected' as const, bucket: 'hashhive-test' })
+  ),
+  s3: {},
+  uploadFile: mock(),
+  downloadFile: mock(),
+  deleteFile: mock(),
+  getPresignedUrl: mock(),
+}));
+
 import { app } from '../../src/index.js';
 
 describe('GET /health', () => {
@@ -10,6 +23,18 @@ describe('GET /health', () => {
     expect(body['status']).toBe('ok');
     expect(body['version']).toBe('1.0.0');
     expect(body['timestamp']).toBeDefined();
+  });
+
+  it('should include MinIO health status', async () => {
+    const res = await app.request('/health');
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    const minio = body['services']['minio'];
+    expect(minio).toBeDefined();
+    expect(minio['status']).toBe('connected');
+    expect(typeof minio['bucket']).toBe('string');
+    expect(minio['bucket'].length).toBeGreaterThan(0);
   });
 });
 

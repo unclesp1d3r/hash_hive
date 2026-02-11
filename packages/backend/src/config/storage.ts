@@ -1,6 +1,7 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadBucketCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -17,10 +18,15 @@ export const s3 = new S3Client({
   forcePathStyle: true,
 });
 
-export async function uploadFile(key: string, body: Buffer | ReadableStream, contentType: string) {
+export async function uploadFile(
+  key: string,
+  body: Buffer | ReadableStream,
+  contentType: string,
+  bucket?: string
+) {
   return s3.send(
     new PutObjectCommand({
-      Bucket: env.S3_BUCKET,
+      Bucket: bucket ?? env.S3_BUCKET,
       Key: key,
       Body: body,
       ContentType: contentType,
@@ -28,31 +34,50 @@ export async function uploadFile(key: string, body: Buffer | ReadableStream, con
   );
 }
 
-export async function downloadFile(key: string) {
+export async function downloadFile(key: string, bucket?: string) {
   return s3.send(
     new GetObjectCommand({
-      Bucket: env.S3_BUCKET,
+      Bucket: bucket ?? env.S3_BUCKET,
       Key: key,
     })
   );
 }
 
-export async function deleteFile(key: string) {
+export async function deleteFile(key: string, bucket?: string) {
   return s3.send(
     new DeleteObjectCommand({
-      Bucket: env.S3_BUCKET,
+      Bucket: bucket ?? env.S3_BUCKET,
       Key: key,
     })
   );
 }
 
-export async function getPresignedUrl(key: string, expiresIn = 3600): Promise<string> {
+export async function getPresignedUrl(
+  key: string,
+  expiresIn = 3600,
+  opts?: { bucket?: string; filename?: string }
+): Promise<string> {
   return getSignedUrl(
     s3,
     new GetObjectCommand({
-      Bucket: env.S3_BUCKET,
+      Bucket: opts?.bucket ?? env.S3_BUCKET,
       Key: key,
+      ...(opts?.filename
+        ? { ResponseContentDisposition: `attachment; filename="${opts.filename}"` }
+        : {}),
     }),
     { expiresIn }
   );
+}
+
+export async function checkMinioHealth(): Promise<{
+  status: 'connected' | 'disconnected';
+  bucket: string;
+}> {
+  try {
+    await s3.send(new HeadBucketCommand({ Bucket: env.S3_BUCKET }));
+    return { status: 'connected', bucket: env.S3_BUCKET };
+  } catch {
+    return { status: 'disconnected', bucket: env.S3_BUCKET };
+  }
 }

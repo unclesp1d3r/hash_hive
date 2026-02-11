@@ -8,7 +8,9 @@ Implement campaign CRUD endpoints with lifecycle management, DAG validation, and
 
 **In Scope:**
 - Implement campaign CRUD endpoints with project scoping
-- Add campaign lifecycle transitions (draft → running → paused → stopped → completed)
+- Add campaign lifecycle transitions consistent with Core Flows:
+  - `draft → running → paused → running → completed`
+  - **Stop semantics:** Stop cancels current tasks and returns campaign to **draft** (restartable)
 - Implement DAG validation (cycle detection) in backend
 - Add attack configuration endpoints
 - Implement campaign progress caching (updated on task events)
@@ -33,7 +35,7 @@ Implement campaign CRUD endpoints with lifecycle management, DAG validation, and
    - `POST /api/v1/dashboard/campaigns/:id/start` transitions `draft → running`
    - `POST /api/v1/dashboard/campaigns/:id/pause` transitions `running → paused`
    - `POST /api/v1/dashboard/campaigns/:id/resume` transitions `paused → running`
-   - `POST /api/v1/dashboard/campaigns/:id/stop` transitions to `stopped` (cancels tasks, returns to draft)
+   - `POST /api/v1/dashboard/campaigns/:id/stop` **cancels current tasks and returns the campaign to `draft`** (restartable)
    - Campaign automatically transitions to `completed` when all tasks finish
 
 3. **DAG Validation**
@@ -109,8 +111,8 @@ stateDiagram-v2
     draft --> running: Start
     running --> paused: Pause
     paused --> running: Resume
-    running --> stopped: Stop
-    stopped --> draft: Reset
+    running --> draft: Stop (reset)
+    draft --> running: Start again
     running --> completed: All tasks done
     completed --> [*]
 ```

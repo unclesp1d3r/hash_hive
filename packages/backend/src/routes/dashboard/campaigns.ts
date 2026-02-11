@@ -98,6 +98,9 @@ campaignRoutes.post('/:id/lifecycle', zValidator('json', lifecycleSchema), async
   const result = await transitionCampaign(id, targetStatus);
 
   if ('error' in result) {
+    if ('code' in result && result.code === 'QUEUE_UNAVAILABLE') {
+      return c.json({ error: { code: 'SERVICE_UNAVAILABLE', message: result.error } }, 503);
+    }
     return c.json({ error: { code: 'INVALID_TRANSITION', message: result.error } }, 400);
   }
 

@@ -10,6 +10,7 @@ import {
   getHashItems,
   getHashListById,
   getMaskListById,
+  getResourcePresignedUrl,
   getRuleListById,
   getWordListById,
   importHashList,
@@ -102,6 +103,10 @@ resourceRoutes.post('/hash-lists/:id/import', async (c) => {
     return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Hash list not found' } }, 404);
   }
 
+  if ('error' in result) {
+    return c.json({ error: { code: 'SERVICE_UNAVAILABLE', message: result.error } }, 503);
+  }
+
   return c.json(result);
 });
 
@@ -112,6 +117,30 @@ resourceRoutes.get('/hash-lists/:id/items', async (c) => {
 
   const result = await getHashItems(id, { limit, offset });
   return c.json(result);
+});
+
+resourceRoutes.get('/hash-lists/:id/download', async (c) => {
+  const id = Number(c.req.param('id'));
+  const hashList = await getHashListById(id);
+
+  if (!hashList) {
+    return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Hash list not found' } }, 404);
+  }
+
+  const fileRef = hashList.fileRef as { bucket?: string; key?: string; name?: string } | null;
+  if (!fileRef?.bucket || !fileRef?.key) {
+    return c.json(
+      { error: { code: 'VALIDATION_ERROR', message: 'Hash list has no uploaded file' } },
+      400
+    );
+  }
+
+  const url = await getResourcePresignedUrl({
+    bucket: fileRef.bucket,
+    key: fileRef.key,
+    ...(fileRef.name ? { name: fileRef.name } : {}),
+  });
+  return c.json({ url });
 });
 
 // ─── Generic resource routes factory ────────────────────────────────
@@ -184,6 +213,37 @@ function createResourceRoutes(
 
     const result = await uploadFn(id, file);
     return c.json(result);
+  });
+
+  resourceRoutes.get(`/${prefix}/:id/download`, async (c) => {
+    const id = Number(c.req.param('id'));
+    const item = await getByIdFn(id);
+
+    if (!item) {
+      return c.json(
+        { error: { code: 'RESOURCE_NOT_FOUND', message: `${prefix} item not found` } },
+        404
+      );
+    }
+
+    const fileRef = (item as Record<string, unknown>)['fileRef'] as {
+      bucket?: string;
+      key?: string;
+      name?: string;
+    } | null;
+    if (!fileRef?.bucket || !fileRef?.key) {
+      return c.json(
+        { error: { code: 'VALIDATION_ERROR', message: `${prefix} item has no uploaded file` } },
+        400
+      );
+    }
+
+    const url = await getResourcePresignedUrl({
+      bucket: fileRef.bucket,
+      key: fileRef.key,
+      ...(fileRef.name ? { name: fileRef.name } : {}),
+    });
+    return c.json({ url });
   });
 }
 

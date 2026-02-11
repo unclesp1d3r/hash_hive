@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { createBunWebSocket } from 'hono/bun';
+import { getCookie } from 'hono/cookie';
 import { validateToken } from '../../services/auth.js';
 import type { EventType } from '../../services/events.js';
 import { getClientCount, registerClient, unregisterClient } from '../../services/events.js';
@@ -18,16 +19,23 @@ eventRoutes.get(
 
     return {
       async onOpen(_event, ws) {
-        // Authenticate via query param token (WebSocket can't use cookies reliably)
-        const token = c.req.query('token');
-        if (!token) {
-          ws.close(4001, 'Missing authentication token');
-          return;
+        // Hybrid auth: try cookie first, fall back to query token
+        let payload: Awaited<ReturnType<typeof validateToken>> = null;
+
+        const cookieToken = getCookie(c, 'session');
+        if (cookieToken) {
+          payload = await validateToken(cookieToken);
         }
 
-        const payload = await validateToken(token);
+        if (!payload) {
+          const queryToken = c.req.query('token');
+          if (queryToken) {
+            payload = await validateToken(queryToken);
+          }
+        }
+
         if (!payload || payload.type !== 'session') {
-          ws.close(4001, 'Invalid authentication token');
+          ws.close(4001, 'Missing authentication (cookie or token required)');
           return;
         }
 

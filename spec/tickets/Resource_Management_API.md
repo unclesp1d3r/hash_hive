@@ -11,7 +11,8 @@ Implement resource upload endpoints with async hash list parsing, idempotency gu
 - Add async hash list parsing via BullMQ with idempotency (unique constraint on `hash_list_id`, `hash_value`)
 - Implement bulk insert for `hash_items` (batches of 1000 using Drizzle)
 - Add resource CRUD endpoints with project scoping
-- Implement hash type detection endpoint using name-that-hash library
+- Implement hash type detection endpoint at `POST /api/v1/dashboard/resources/detect-hash-type` using the existing hash analysis service
+  - Provide an alias (or redirect) from the existing `POST /api/v1/dashboard/hashes/guess-type` for backwards compatibility (optional but recommended)
 - Add resource statistics calculation (total count, cracked count, crack rate)
 - Update `file:packages/backend/src/routes/dashboard/resources.ts` and `file:packages/backend/src/services/resources.ts`
 

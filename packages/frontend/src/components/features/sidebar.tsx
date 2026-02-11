@@ -1,7 +1,9 @@
 import { Link, useLocation } from 'react-router';
+import { useEvents } from '../../hooks/use-events';
 import { cn } from '../../lib/utils';
 import { useAuthStore } from '../../stores/auth';
 import { useUiStore } from '../../stores/ui';
+import { ConnectionIndicator } from './connection-indicator';
 
 const navItems = [
   { label: 'Dashboard', href: '/', icon: 'grid' },
@@ -14,6 +16,7 @@ export function Sidebar() {
   const { pathname } = useLocation();
   const { user, logout } = useAuthStore();
   const { sidebarOpen, selectedProjectId, setSelectedProject } = useUiStore();
+  const { connected } = useEvents();
 
   if (!sidebarOpen) return null;
 
@@ -62,6 +65,9 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t p-4">
+        <div className="mb-2">
+          <ConnectionIndicator connected={connected} />
+        </div>
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">{user?.email}</span>
           <button

@@ -23,7 +23,7 @@ mock.module('../../../src/db/index.js', () => ({
             Promise.resolve([
               {
                 id: 1,
-                fileRef: { key: 'hash-lists/1/test.txt' },
+                fileRef: { bucket: 'hashhive', key: 'hash-lists/1/test.txt' },
                 projectId: 1,
               },
             ]),
@@ -116,7 +116,7 @@ describe('Hash list parser worker', () => {
 
     const result = await capturedProcessor!(fakeJob);
 
-    expect(mockDownloadFile).toHaveBeenCalledWith('hash-lists/1/test.txt');
+    expect(mockDownloadFile).toHaveBeenCalledWith('hash-lists/1/test.txt', 'hashhive');
     expect(result.inserted).toBe(3);
   });
 });

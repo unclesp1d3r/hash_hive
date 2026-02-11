@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '../stores/auth';
 import { useUiStore } from '../stores/ui';
@@ -28,13 +29,15 @@ interface UseEventsOptions {
 /**
  * Connects to the backend WebSocket for real-time events.
  * Automatically reconnects on disconnect with exponential backoff.
- * Falls back to polling /dashboard/events/status when WS is unavailable.
+ * Falls back to polling via TanStack Query invalidation when WS is unavailable.
  */
 export function useEvents(options: UseEventsOptions = {}) {
   const { types, onEvent } = options;
   const { user } = useAuthStore();
   const { selectedProjectId } = useUiStore();
+  const queryClient = useQueryClient();
   const [connected, setConnected] = useState(false);
+  const [polling, setPolling] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const reconnectAttemptsRef = useRef(0);
@@ -49,7 +52,7 @@ export function useEvents(options: UseEventsOptions = {}) {
     const projectIds = String(selectedProjectId);
     const typesParam = types ? `&types=${types.join(',')}` : '';
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = `${protocol}//${window.location.host}/api/v1/dashboard/events/stream?token=session&projectIds=${projectIds}${typesParam}`;
+    const url = `${protocol}//${window.location.host}/api/v1/dashboard/events/stream?projectIds=${projectIds}${typesParam}`;
 
     function connect() {
       const ws = new WebSocket(url);
@@ -57,6 +60,7 @@ export function useEvents(options: UseEventsOptions = {}) {
 
       ws.onopen = () => {
         setConnected(true);
+        setPolling(false);
         reconnectAttemptsRef.current = 0;
       };
 
@@ -64,6 +68,18 @@ export function useEvents(options: UseEventsOptions = {}) {
         try {
           const data = JSON.parse(event.data) as Record<string, unknown>;
           if (data['type'] === 'connected' || data['type'] === 'pong') return;
+
+          const eventType = data['type'] as string;
+          if (eventType === 'agent_status') {
+            queryClient.invalidateQueries({ queryKey: ['agents'] });
+          } else if (eventType === 'campaign_status') {
+            queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+          } else if (eventType === 'task_update') {
+            queryClient.invalidateQueries({ queryKey: ['tasks'] });
+          } else if (eventType === 'crack_result') {
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+          }
+
           onEventRef.current?.(data as unknown as AppEvent);
         } catch {
           // Ignore malformed messages
@@ -72,6 +88,7 @@ export function useEvents(options: UseEventsOptions = {}) {
 
       ws.onclose = () => {
         setConnected(false);
+        setPolling(true);
         wsRef.current = null;
         // Exponential backoff: 1s, 2s, 4s, 8s, max 30s
         const delay = Math.min(1000 * 2 ** reconnectAttemptsRef.current, 30_000);
@@ -94,8 +111,22 @@ export function useEvents(options: UseEventsOptions = {}) {
         wsRef.current = null;
       }
       setConnected(false);
+      setPolling(false);
     };
-  }, [user, selectedProjectId, types]);
+  }, [user, selectedProjectId, types, queryClient]);
 
-  return { connected };
+  // Polling fallback: invalidate queries every 30s when disconnected
+  useEffect(() => {
+    if (!polling) return;
+
+    const interval = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+    }, 30_000);
+
+    return () => clearInterval(interval);
+  }, [polling, queryClient]);
+
+  return { connected, polling };
 }
