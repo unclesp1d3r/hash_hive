@@ -72,10 +72,13 @@ export function useEvents(options: UseEventsOptions = {}) {
           const eventType = data['type'] as string;
           if (eventType === 'agent_status') {
             queryClient.invalidateQueries({ queryKey: ['agents', selectedProjectId] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats', selectedProjectId] });
           } else if (eventType === 'campaign_status') {
             queryClient.invalidateQueries({ queryKey: ['campaigns', selectedProjectId] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats', selectedProjectId] });
           } else if (eventType === 'task_update') {
             queryClient.invalidateQueries({ queryKey: ['tasks', selectedProjectId] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats', selectedProjectId] });
           } else if (eventType === 'crack_result') {
             queryClient.invalidateQueries({ queryKey: ['dashboard-stats', selectedProjectId] });
           }
