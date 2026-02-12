@@ -58,7 +58,7 @@ export const requireAgentToken = createMiddleware<AppEnv>(async (c, next) => {
     .where(eq(agents.authToken, token))
     .limit(1);
 
-  if (!agent || agent.status !== 'active') {
+  if (!agent || agent.status === 'error') {
     throw authError('Invalid or expired agent token');
   }
 

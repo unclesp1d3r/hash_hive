@@ -119,11 +119,11 @@ describe('requireAgentToken middleware', () => {
     expect(res.status).toBe(401);
   });
 
-  it('should reject inactive agents', async () => {
-    mockAgentResult = [{ id: 99, projectId: 7, status: 'offline', capabilities: {} }];
+  it('should reject agents in error state', async () => {
+    mockAgentResult = [{ id: 99, projectId: 7, status: 'error', capabilities: {} }];
 
     const res = await app.request('/agent-endpoint', {
-      headers: { authorization: 'Bearer inactive-agent-token' },
+      headers: { authorization: 'Bearer error-agent-token' },
     });
     expect(res.status).toBe(401);
   });

@@ -178,7 +178,7 @@ export async function updateTaskProgress(
             hashListId: campaign.hashListId,
             hashValue: r.hashValue,
             plaintext: r.plaintext,
-            isCracked: true,
+            crackedAt: new Date(),
           }))
         );
 

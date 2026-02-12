@@ -33,11 +33,18 @@ export async function validateToken(token: string): Promise<{
 } | null> {
   try {
     const { payload } = await jwtVerify(token, jwtSecret);
-    return {
-      userId: Number(payload['sub']),
-      email: payload['email'] as string,
-      type: payload['type'] as 'session' | 'agent',
-    };
+    const sub = payload['sub'];
+    const email = payload['email'];
+    const type = payload['type'];
+
+    if (typeof sub !== 'string' || typeof email !== 'string') {
+      return null;
+    }
+    if (type !== 'session' && type !== 'agent') {
+      return null;
+    }
+
+    return { userId: Number(sub), email, type };
   } catch {
     return null;
   }

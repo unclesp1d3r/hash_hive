@@ -51,7 +51,7 @@ export function createHashListParserWorker(connection: Redis): Worker<HashListPa
               hashListId,
               hashValue: trimmed.substring(0, colonIdx),
               plaintext: trimmed.substring(colonIdx + 1),
-              isCracked: true,
+              crackedAt: new Date(),
             };
           }
           return {

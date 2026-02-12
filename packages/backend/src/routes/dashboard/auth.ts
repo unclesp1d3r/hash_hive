@@ -28,7 +28,7 @@ auth.post('/login', zValidator('json', loginRequestSchema), async (c) => {
     maxAge: 60 * 60 * 24, // 24 hours
   });
 
-  return c.json({ user: result.user, token: result.token });
+  return c.json({ user: result.user });
 });
 
 auth.post('/logout', requireSession, async (c) => {
