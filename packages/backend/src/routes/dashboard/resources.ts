@@ -1,3 +1,4 @@
+import { maskLists, ruleLists, wordLists } from '@hashhive/shared';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
@@ -5,25 +6,18 @@ import { requireSession } from '../../middleware/auth.js';
 import { requireProjectAccess, requireRole } from '../../middleware/rbac.js';
 import {
   createHashList,
-  createMaskList,
-  createRuleList,
-  createWordList,
+  createResource,
   getHashItems,
   getHashListById,
-  getMaskListById,
+  getResourceById,
   getResourcePresignedUrl,
-  getRuleListById,
-  getWordListById,
   importHashList,
   listHashLists,
   listHashTypes,
-  listMaskLists,
-  listRuleLists,
-  listWordLists,
+  listResources,
+  type ResourceTable,
   uploadHashListFile,
-  uploadMaskListFile,
-  uploadRuleListFile,
-  uploadWordListFile,
+  uploadResourceFile,
 } from '../../services/resources.js';
 import type { AppEnv } from '../../types.js';
 
@@ -151,13 +145,7 @@ resourceRoutes.get('/hash-lists/:id/download', requireProjectAccess(), async (c)
 
 // ─── Generic resource routes factory ────────────────────────────────
 
-function createResourceRoutes(
-  prefix: string,
-  listFn: (projectId: number) => Promise<unknown[]>,
-  getByIdFn: (id: number) => Promise<unknown | null>,
-  createFn: (data: { projectId: number; name: string }) => Promise<unknown | null>,
-  uploadFn: (id: number, file: File) => Promise<{ key: string; size: number }>
-) {
+function createResourceRoutes(prefix: string, table: ResourceTable) {
   const createSchema = z.object({
     projectId: z.number().int().positive(),
     name: z.string().min(1).max(255),
@@ -172,7 +160,7 @@ function createResourceRoutes(
       );
     }
 
-    const items = await listFn(projectId);
+    const items = await listResources(table, projectId);
     return c.json({ [prefix]: items });
   });
 
@@ -182,14 +170,14 @@ function createResourceRoutes(
     zValidator('json', createSchema),
     async (c) => {
       const data = c.req.valid('json');
-      const item = await createFn(data);
+      const item = await createResource(table, data);
       return c.json({ item }, 201);
     }
   );
 
   resourceRoutes.get(`/${prefix}/:id`, requireProjectAccess(), async (c) => {
     const id = Number(c.req.param('id'));
-    const item = await getByIdFn(id);
+    const item = await getResourceById(table, id);
 
     if (!item) {
       return c.json(
@@ -203,7 +191,7 @@ function createResourceRoutes(
 
   resourceRoutes.post(`/${prefix}/:id/upload`, requireRole('admin', 'operator'), async (c) => {
     const id = Number(c.req.param('id'));
-    const item = await getByIdFn(id);
+    const item = await getResourceById(table, id);
 
     if (!item) {
       return c.json(
@@ -222,13 +210,13 @@ function createResourceRoutes(
       );
     }
 
-    const result = await uploadFn(id, file);
+    const result = await uploadResourceFile(table, id, prefix, file);
     return c.json(result);
   });
 
   resourceRoutes.get(`/${prefix}/:id/download`, requireProjectAccess(), async (c) => {
     const id = Number(c.req.param('id'));
-    const item = await getByIdFn(id);
+    const item = await getResourceById(table, id);
 
     if (!item) {
       return c.json(
@@ -258,34 +246,8 @@ function createResourceRoutes(
   });
 }
 
-// ─── Wordlists ──────────────────────────────────────────────────────
-
-createResourceRoutes(
-  'wordlists',
-  listWordLists,
-  getWordListById,
-  createWordList,
-  uploadWordListFile
-);
-
-// ─── Rulelists ──────────────────────────────────────────────────────
-
-createResourceRoutes(
-  'rulelists',
-  listRuleLists,
-  getRuleListById,
-  createRuleList,
-  uploadRuleListFile
-);
-
-// ─── Masklists ──────────────────────────────────────────────────────
-
-createResourceRoutes(
-  'masklists',
-  listMaskLists,
-  getMaskListById,
-  createMaskList,
-  uploadMaskListFile
-);
+createResourceRoutes('wordlists', wordLists);
+createResourceRoutes('rulelists', ruleLists);
+createResourceRoutes('masklists', maskLists);
 
 export { resourceRoutes };

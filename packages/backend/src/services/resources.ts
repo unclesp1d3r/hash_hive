@@ -1,6 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
-import { hashItems, hashLists, hashTypes, maskLists, ruleLists, wordLists } from '@hashhive/shared';
+import {
+  hashItems,
+  hashLists,
+  hashTypes,
+  type maskLists,
+  type ruleLists,
+  type wordLists,
+} from '@hashhive/shared';
 import { desc, eq, sql } from 'drizzle-orm';
 import { env } from '../config/env.js';
 import { getPresignedUrl, uploadFile } from '../config/storage.js';
@@ -153,9 +160,9 @@ export async function getHashItems(
 
 // ─── Generic Resource Lists (wordlists, rulelists, masklists) ───────
 
-type ResourceTable = typeof wordLists | typeof ruleLists | typeof maskLists;
+export type ResourceTable = typeof wordLists | typeof ruleLists | typeof maskLists;
 
-async function listResources(table: ResourceTable, projectId: number) {
+export async function listResources(table: ResourceTable, projectId: number) {
   return db
     .select()
     .from(table)
@@ -163,17 +170,20 @@ async function listResources(table: ResourceTable, projectId: number) {
     .orderBy(desc(table.createdAt));
 }
 
-async function getResourceById(table: ResourceTable, id: number) {
+export async function getResourceById(table: ResourceTable, id: number) {
   const [row] = await db.select().from(table).where(eq(table.id, id)).limit(1);
   return row ?? null;
 }
 
-async function createResource(table: ResourceTable, data: { projectId: number; name: string }) {
+export async function createResource(
+  table: ResourceTable,
+  data: { projectId: number; name: string }
+) {
   const [row] = await db.insert(table).values(data).returning();
   return row ?? null;
 }
 
-async function uploadResourceFile(
+export async function uploadResourceFile(
   table: ResourceTable,
   resourceId: number,
   prefix: string,
@@ -207,30 +217,6 @@ async function uploadResourceFile(
 
   return { key, size: file.size };
 }
-
-// Wordlists
-export const listWordLists = (projectId: number) => listResources(wordLists, projectId);
-export const getWordListById = (id: number) => getResourceById(wordLists, id);
-export const createWordList = (data: { projectId: number; name: string }) =>
-  createResource(wordLists, data);
-export const uploadWordListFile = (id: number, file: File) =>
-  uploadResourceFile(wordLists, id, 'wordlists', file);
-
-// Rulelists
-export const listRuleLists = (projectId: number) => listResources(ruleLists, projectId);
-export const getRuleListById = (id: number) => getResourceById(ruleLists, id);
-export const createRuleList = (data: { projectId: number; name: string }) =>
-  createResource(ruleLists, data);
-export const uploadRuleListFile = (id: number, file: File) =>
-  uploadResourceFile(ruleLists, id, 'rulelists', file);
-
-// Masklists
-export const listMaskLists = (projectId: number) => listResources(maskLists, projectId);
-export const getMaskListById = (id: number) => getResourceById(maskLists, id);
-export const createMaskList = (data: { projectId: number; name: string }) =>
-  createResource(maskLists, data);
-export const uploadMaskListFile = (id: number, file: File) =>
-  uploadResourceFile(maskLists, id, 'masklists', file);
 
 // ─── Presigned URLs ─────────────────────────────────────────────────
 
