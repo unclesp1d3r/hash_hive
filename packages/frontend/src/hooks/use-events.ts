@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuthStore } from '../stores/auth';
 import { useUiStore } from '../stores/ui';
 
@@ -33,6 +33,8 @@ interface UseEventsOptions {
  */
 export function useEvents(options: UseEventsOptions = {}) {
   const { types, onEvent } = options;
+  // Stabilize types array to prevent unnecessary WS reconnections
+  const stableTypes = useMemo(() => types?.join(','), [types]);
   const { user } = useAuthStore();
   const { selectedProjectId } = useUiStore();
   const queryClient = useQueryClient();
@@ -50,7 +52,7 @@ export function useEvents(options: UseEventsOptions = {}) {
     }
 
     const projectIds = String(selectedProjectId);
-    const typesParam = types ? `&types=${types.join(',')}` : '';
+    const typesParam = stableTypes ? `&types=${stableTypes}` : '';
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const url = `${protocol}//${window.location.host}/api/v1/dashboard/events/stream?projectIds=${projectIds}${typesParam}`;
 
@@ -116,7 +118,7 @@ export function useEvents(options: UseEventsOptions = {}) {
       setConnected(false);
       setPolling(false);
     };
-  }, [user, selectedProjectId, types, queryClient]);
+  }, [user, selectedProjectId, stableTypes, queryClient]);
 
   // Polling fallback: invalidate queries every 30s when disconnected
   useEffect(() => {

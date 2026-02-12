@@ -84,6 +84,16 @@ export function getClientCount(): number {
 const lastEmitTimes = new Map<string, number>();
 const THROTTLE_MS = 250; // Max 4 events/sec per type+project
 
+// Periodically prune stale entries to prevent unbounded growth
+setInterval(() => {
+  const cutoff = Date.now() - 60_000; // Remove entries older than 60s
+  for (const [key, time] of lastEmitTimes) {
+    if (time < cutoff) {
+      lastEmitTimes.delete(key);
+    }
+  }
+}, 60_000);
+
 /**
  * Emits an event to all connected clients that are subscribed
  * to the event's project and type. Applies per-type throttling.

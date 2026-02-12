@@ -9,27 +9,31 @@ export async function createProject(data: {
   settings?: Record<string, unknown> | undefined;
   createdBy: number;
 }) {
-  const [project] = await db
-    .insert(projects)
-    .values({
-      name: data.name,
-      description: data.description ?? null,
-      slug: data.slug,
-      settings: data.settings ?? {},
-      createdBy: data.createdBy,
-    })
-    .returning();
+  return db.transaction(async (tx) => {
+    const [project] = await tx
+      .insert(projects)
+      .values({
+        name: data.name,
+        description: data.description ?? null,
+        slug: data.slug,
+        settings: data.settings ?? {},
+        createdBy: data.createdBy,
+      })
+      .returning();
 
-  // Add the creator as admin
-  if (project) {
-    await db.insert(projectUsers).values({
+    if (!project) {
+      return null;
+    }
+
+    // Add the creator as admin
+    await tx.insert(projectUsers).values({
       userId: data.createdBy,
       projectId: project.id,
       roles: ['admin'],
     });
-  }
 
-  return project ?? null;
+    return project;
+  });
 }
 
 export async function getProjectById(projectId: number) {

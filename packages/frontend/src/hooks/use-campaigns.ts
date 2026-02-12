@@ -19,13 +19,12 @@ interface Attack {
 
 export function useCreateCampaign() {
   const queryClient = useQueryClient();
-  const { selectedProjectId } = useUiStore();
 
   return useMutation({
     mutationFn: (data: CreateCampaignRequest) =>
       api.post<{ campaign: Campaign }>(`/dashboard/campaigns?projectId=${data.projectId}`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns', selectedProjectId] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns', variables.projectId] });
     },
   });
 }

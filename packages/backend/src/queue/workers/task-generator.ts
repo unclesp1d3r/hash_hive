@@ -38,7 +38,7 @@ export function createTaskGeneratorWorker(
 
   worker.on('failed', (job, err) => {
     logger.error(
-      { jobId: job?.id, campaignId: job?.data.campaignId, err },
+      { jobId: job?.id, campaignId: job?.data?.campaignId, err },
       'Task generation job failed'
     );
   });

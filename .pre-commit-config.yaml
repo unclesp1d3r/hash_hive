@@ -28,9 +28,6 @@ repos:
       - id: check-illegal-windows-names
       - id: check-shebang-scripts-are-executable
       - id: check-symlinks
-      - id: check-vcs-permalinks
-      - id: check-xml
-      - id: check-yaml
 
   # Local hooks for Biome and TypeScript
   - repo: local

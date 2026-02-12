@@ -61,7 +61,7 @@ export function createHashListParserWorker(connection: Redis): Worker<HashListPa
           };
         });
 
-        await db.insert(hashItems).values(values);
+        await db.insert(hashItems).values(values).onConflictDoNothing();
         inserted += values.length;
 
         await job.updateProgress(Math.round((inserted / lines.length) * 100));

@@ -60,7 +60,9 @@ export function useDashboardStats() {
       const [agentsRes, campaignsRes, tasksRes] = await Promise.all([
         api.get<{ agents: Agent[]; total: number }>(`/dashboard/agents${projectFilter}`),
         api.get<{ campaigns: Campaign[]; total: number }>(`/dashboard/campaigns${projectFilter}`),
-        api.get<{ tasks: Task[]; total: number }>(`/dashboard/tasks${projectFilter}&limit=0`),
+        api.get<{ tasks: Task[]; total: number }>(
+          `/dashboard/tasks${projectFilter}${projectFilter ? '&' : '?'}limit=0`
+        ),
       ]);
 
       const onlineAgents = agentsRes.agents.filter((a) => a.status === 'online').length;

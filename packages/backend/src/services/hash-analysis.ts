@@ -163,7 +163,7 @@ export function guessHashType(hashValue: string): HashCandidate[] {
       const baseConfidence = isStructured ? 0.95 : 0.7;
 
       // Decay confidence for later matches of same-length raw hex
-      const positionPenalty = candidates.filter(() => !isStructured).length * 0.1;
+      const positionPenalty = isStructured ? 0 : candidates.length * 0.1;
       const confidence = Math.max(0.1, baseConfidence - positionPenalty);
 
       candidates.push({

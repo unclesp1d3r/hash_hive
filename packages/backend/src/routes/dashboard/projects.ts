@@ -2,7 +2,7 @@ import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { requireSession } from '../../middleware/auth.js';
-import { requireRole } from '../../middleware/rbac.js';
+import { requireProjectAccess, requireRole } from '../../middleware/rbac.js';
 import {
   addUserToProject,
   createProject,
@@ -62,7 +62,7 @@ projectRoutes.post('/', zValidator('json', createProjectSchema), async (c) => {
 });
 
 // GET /projects/:projectId — get project details
-projectRoutes.get('/:projectId', async (c) => {
+projectRoutes.get('/:projectId', requireProjectAccess(), async (c) => {
   const projectId = Number(c.req.param('projectId'));
   const project = await getProjectById(projectId);
 
@@ -92,7 +92,7 @@ projectRoutes.patch(
 );
 
 // GET /projects/:projectId/members — list project members
-projectRoutes.get('/:projectId/members', async (c) => {
+projectRoutes.get('/:projectId/members', requireProjectAccess(), async (c) => {
   const projectId = Number(c.req.param('projectId'));
   const members = await getProjectMembers(projectId);
   return c.json({ members });
