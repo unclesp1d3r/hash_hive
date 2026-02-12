@@ -45,8 +45,9 @@ Both authentication methods are backed by the same user model and service layer,
 The system implements project-scoped RBAC with the following roles:
 
 - **admin**: Global administrator — full access across all projects (manage users, projects, campaigns, resources, results)
-- **power-user**: Project-level administrator — full access within assigned projects (manage campaigns, resources, project membership)
-- **user**: Standard user — can create and use own campaigns and resources, view results (cannot alter other users' resources)
+- **operator**: Project-level power user — full access within assigned projects (manage campaigns, resources, project membership)
+- **analyst**: Read-only user — can view campaigns, resources, and results (cannot create or modify)
+- **agent_owner**: Agent manager — can register and manage agents within assigned projects
 
 Roles are assigned at the project level through the `project_users` table (as a text array), allowing users to have different roles in different projects.
 

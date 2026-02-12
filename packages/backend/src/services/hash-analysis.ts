@@ -110,7 +110,7 @@ const HASH_PATTERNS: HashPattern[] = [
   {
     name: 'Oracle H: Type (Oracle 7+)',
     hashcatMode: 3100,
-    regex: /^[A-F0-9]{16}$/,
+    regex: /^[a-fA-F0-9]{16}$/,
     category: 'Database Server',
   },
   {

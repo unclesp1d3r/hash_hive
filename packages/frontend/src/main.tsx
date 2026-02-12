@@ -55,7 +55,9 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <Suspense>
+          <Suspense
+            fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}
+          >
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route element={<ProtectedRoute />}>

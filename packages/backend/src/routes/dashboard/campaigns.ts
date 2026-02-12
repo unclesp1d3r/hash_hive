@@ -175,6 +175,12 @@ campaignRoutes.post(
 
 campaignRoutes.get('/:id/attacks', requireProjectAccess(), async (c) => {
   const campaignId = Number(c.req.param('id'));
+  const campaign = await getCampaignById(campaignId);
+
+  if (!campaign) {
+    return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Campaign not found' } }, 404);
+  }
+
   const campaignAttacks = await listAttacks(campaignId);
   return c.json({ attacks: campaignAttacks });
 });

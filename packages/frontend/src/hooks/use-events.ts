@@ -71,6 +71,7 @@ export function useEvents(options: UseEventsOptions = {}) {
         campaign_status: ['campaigns', 'dashboard-stats'],
         task_update: ['tasks', 'dashboard-stats'],
         crack_result: ['dashboard-stats'],
+        resource_update: ['hash-lists', 'wordlists', 'rulelists', 'masklists'],
       };
 
       ws.onmessage = (event) => {

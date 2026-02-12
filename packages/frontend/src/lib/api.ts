@@ -27,6 +27,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       const { useAuthStore } = await import('../stores/auth');
       useAuthStore.getState().clearAuth();
       window.location.href = '/login';
+      throw new ApiError(401, 'AUTH_SESSION_EXPIRED', 'Session expired');
     }
 
     const body = await res.json().catch(() => ({}));

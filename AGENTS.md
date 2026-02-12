@@ -94,7 +94,7 @@ When adding new modules or services, follow this monorepo layout. Hono route han
 - **Linting/Formatting**: Biome (not ESLint, not Prettier)
 - **Testing**: bun:test for all tests, Testing Library for components, Playwright for E2E
 
-See `.kiro/steering/tech.md` for the full stack details and `spec/epic/specs/Tech_Plan__HashHive_Architecture.md` for architectural principles.
+See `.kiro/steering/tech.md` for the full-stack details and `spec/epic/specs/Tech_Plan__HashHive_Architecture.md` for architectural principles.
 
 ## Architectural big picture
 
@@ -132,7 +132,7 @@ Two API surfaces on the same Hono instance, backed by the same service and data 
   - Pre-shared token authenticated REST API for Go-based hashcat agents
   - Defined by `openapi/agent-api.yaml` (single source of truth for contract)
   - Supports batch operations: bulk inserts for hash submissions via Drizzle or raw `Bun.SQL`
-  - Core endpoints: `POST /agent/sessions`, `POST /agent/heartbeat`, `POST /agent/tasks/next`, `POST /agent/tasks/:id/report`
+  - Core endpoints: `POST /agent/heartbeat`, `POST /agent/tasks/next`, `POST /agent/tasks/:id/report`
 - **Dashboard API (`/api/v1/dashboard/*`)**
   - JWT + HttpOnly session cookie authenticated REST API for the React frontend
   - Standard CRUD operations with Zod validation
