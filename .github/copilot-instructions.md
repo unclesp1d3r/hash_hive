@@ -1,27 +1,29 @@
 # HashHive AI Coding Instructions
 
-HashHive is a greenfield MERN (MongoDB, Express, React, Node.js) platform orchestrating distributed password cracking with hashcat. This is a test/development project based on CipherSwarm architecture.
+HashHive is a TypeScript reimplementation of CipherSwarm, a distributed password cracking management system orchestrating hashcat across multiple agents.
 
 ## Architecture Overview
 
-**Three-tier monorepo:**
+**Monorepo with Bun workspaces + Turborepo:**
 
-- `backend/` - Node.js + Express/Fastify API with Mongoose ODM
-- `frontend/` - Next.js with App Router, shadcn/ui, React Query
-- `shared/` - Common TypeScript types and Zod schemas
+- `packages/backend/` - Bun + Hono API with Drizzle ORM
+- `packages/frontend/` - React 19 + Vite SPA with shadcn/ui, TanStack Query
+- `packages/shared/` - Drizzle schema, Zod schemas, inferred TypeScript types
+- `packages/openapi/` - Agent API OpenAPI specification
 
-**Service layer pattern:** Business logic lives in `backend/src/services/`, NOT in route handlers. Routes are thin controllers that validate input, call services, and map responses.
+**Schema flow (single source of truth):** Drizzle tables → drizzle-zod → Zod schemas → `z.infer` types. One direction, no duplication.
+
+**Route handlers call Drizzle directly** — service layers only when handlers become complex.
 
 **Key services** (see `.kiro/specs/mern-migration/design.md`):
 
-- `AuthService` - JWT/session auth, password hashing
-- `ProjectService` - Multi-tenancy, role-based access control
-- `AgentService` - Agent registration, heartbeat, capability detection
-- `CampaignService` - Campaign lifecycle, attack DAG validation
-- `TaskDistributionService` - Keyspace partitioning, queue-based task assignment
-- `ResourceService` - S3-compatible storage for hash lists/wordlists/etc
-- `HashAnalysisService` - Hash type identification, hashcat mode mapping
-- `EventService` - Real-time WebSocket/SSE broadcasts
+- `AuthService` - Login/logout, JWT/session management
+- `AgentService` - Registration, heartbeat, capability detection
+- `CampaignService` - Campaign lifecycle, DAG validation, attack configuration
+- `TaskDistributionService` - Keyspace partitioning, task generation, assignment
+- `ResourceService` - File uploads to MinIO, hash list parsing coordination
+- `HashAnalysisService` - Hash-type identification, hashcat mode mapping
+- `EventService` - WebSocket broadcasting for real-time dashboard updates
 
 ## Critical Design Documents
 
@@ -29,94 +31,87 @@ HashHive is a greenfield MERN (MongoDB, Express, React, Node.js) platform orches
 
 - `.kiro/steering/` - Product overview, tech stack, structure (source of truth)
 - `.kiro/specs/mern-migration/` - Requirements, detailed design, task breakdown
-- `AGENTS.md` - AI agent guidance (this file provides extended context)
-- `openapi/agent-api.yaml` - Agent API contract (single source of truth for agent endpoints)
+- `AGENTS.md` - AI agent guidance (extended context)
+- `packages/openapi/agent-api.yaml` - Agent API contract (single source of truth)
 
 ## Development Workflow
 
-> Before committing any changes, always run `just ci-check` and ensure all checks and tests pass; a task is not complete until `just ci-check` succeeds.
+> Before committing any changes, always run `just ci-check` and ensure all checks and tests pass.
 
 ```bash
 # Quick start
-npm install                    # Install all workspace deps
-docker compose up -d          # Start MongoDB, Redis, MinIO
-npm run dev                   # Start both backend + frontend
+bun install                       # Install all workspace deps
+docker compose up -d              # Start PostgreSQL, Redis, MinIO
+bun dev                           # Start backend + frontend
 
 # Or use just commands
-just setup                    # Complete first-time setup
-just dev                      # Start all services
-just test                     # Run all tests
-just lint                     # Lint all code
+just setup                        # Complete first-time setup
+just dev                          # Start all services
+just test                         # Run all tests
+just lint                         # Lint all code
+just ci-check                     # Full CI: lint + format + type-check + build + test
 
 # Individual packages
-npm run dev -w backend        # Backend only (port 3001)
-npm run dev -w frontend       # Frontend only (port 3000)
-npm run test -w backend       # Backend tests
-npm run test:integration -w backend  # Integration tests with Testcontainers
+bun --filter backend dev          # Backend only
+bun --filter frontend dev         # Frontend only
+bun --filter backend test         # Backend tests
 ```
 
 ## Configuration & Environment
 
-- **Centralized config:** `backend/src/config/index.ts` with Zod validation
-- **Environment files:** `backend/.env` and `frontend/.env` (copy from `.env.example`)
+- **Centralized config:** `packages/backend/src/config/env.ts` with Zod validation
+- **Environment files:** `packages/backend/.env` (copy from `.env.example`)
 - **12-factor principles:** All config via env vars, fails fast on validation errors
-- **Strict TypeScript:** Enabled across all packages via `tsconfig.base.json`
+- **Strict TypeScript:** Maximum strictness via `tsconfig.base.json`
 
 ## Code Patterns
 
 ### Formatting & Linting
 
-- Prettier formats all code: TypeScript, JavaScript, JSON, Markdown, **and YAML**
-- Run `just format` or `npm run format` to format all files
-- Husky pre-commit hooks auto-format staged files (including YAML)
-- Kiro automation runs formatting on file save for all supported types
+- **Biome** for linting and formatting (not ESLint, not Prettier)
+- Run `just format` or `bun run format` to format all files
+- pre-commit hooks run Biome checks and type checking
 
 ### Error Handling
 
-- Use `AppError` class from `backend/src/middleware/error-handler.ts`
-- Machine-readable error codes, structured responses with request IDs
-- Log errors with Pino logger, never `console.log`
+- Use `HTTPException` from `hono/http-exception` for HTTP errors
+- The `app.onError()` handler must check `instanceof HTTPException` before generic 500
+- Structured error responses with machine-readable codes
 
 ### Validation
 
-- Zod schemas for request/response validation
-- Define schemas alongside routes or in `shared/` for reuse
-- Mongoose schemas use Zod for type inference where applicable
+- Zod schemas for request/response validation (via `@hono/zod-validator`)
+- Schema flow: Drizzle → drizzle-zod → Zod → TypeScript types
+- Define schemas in `packages/shared/` for cross-package reuse
 
 ### Testing Strategy
 
-- **Backend:** Jest + supertest for HTTP tests, Testcontainers for integration
-- **Frontend:** Jest + React Testing Library for components, Playwright for E2E
-- **Coverage thresholds:** 80% functions/lines/statements, 50% branches
-- **Test setup:** `backend/tests/setup.ts` configures test env vars (30s timeout)
-
-### Logging
-
-- Use Pino logger from `backend/src/utils/logger.ts`
-- Structured JSON logs with pretty-print in development
-- Include context: request IDs, user IDs, operation names
+- **bun:test** for all tests (not Jest, not Vitest)
+- **Backend:** Integration tests with test database and mocked services
+- **Frontend:** Testing Library for components, Playwright for E2E
+- **Coverage target:** 80%+ for critical paths
 
 ### API Design
 
-- **Agent API:** OpenAPI spec in `openapi/agent-api.yaml` - validate responses in contract tests
-- **Web API:** Session-authenticated, RESTful JSON at `/api/v1/web/*`
-- **Control API:** Idempotent automation endpoints at `/api/v1/control/*`
-- **Versioning:** Semantic versioning with `x-agent-api-version` header for Agent API
+- **Agent API (`/api/v1/agent/*`):** Pre-shared token auth, defined by OpenAPI spec
+- **Dashboard API (`/api/v1/dashboard/*`):** JWT + HttpOnly cookie auth, standard CRUD
+- **Versioning:** `x-agent-api-version` header for Agent API
 
-## MongoDB & Data Access
+## Database (PostgreSQL + Drizzle ORM)
 
-- **Collections:** snake_case (e.g., `hash_lists`, `project_users`)
-- **Mongoose models:** In `backend/src/models/` with TypeScript interfaces
+- **Tables:** snake_case (e.g., `hash_lists`, `project_users`)
+- **Schema:** Defined in `packages/shared/src/db/schema.ts`
+- **Migrations:** Generated by `drizzle-kit` (`just db-generate`, `just db-migrate`)
 - **No destructive updates:** Use explicit status fields, preserve audit trails
-- **Indexes:** Add for common query patterns (see `.kiro/steering/structure.md`)
+- **Indexes:** Add for common query patterns
 
 ## Infrastructure Dependencies
 
 ```yaml
 # docker-compose.yml provides:
-MongoDB: localhost:27017       # Primary datastore
-Redis: localhost:6379          # BullMQ queues + caching
-MinIO: localhost:9000/9001     # S3-compatible storage (minioadmin/minioadmin)
+PostgreSQL: localhost:5432        # Primary datastore
+Redis: localhost:6379             # BullMQ queues + caching
+MinIO: localhost:9000/9001        # S3-compatible storage (minioadmin/minioadmin)
 ```
 
 ## Naming Conventions
@@ -126,33 +121,22 @@ MinIO: localhost:9000/9001     # S3-compatible storage (minioadmin/minioadmin)
 - Functions: `camelCase`
 - Types/Interfaces: `PascalCase`
 - Constants: `UPPER_SNAKE_CASE`
-- MongoDB collections: `snake_case`
+- Database tables: `snake_case`
 
 ## Common Pitfalls
 
-- **Don't put business logic in routes** - use service layer
-- **Don't use console.log** - use Pino logger
-- **Don't skip Zod validation** - validate all external input
-- **Don't commit secrets** - use .env files (gitignored)
-- **Agent API changes require OpenAPI spec updates** - keep contract in sync
-- **Read `.kiro/specs/mern-migration/design.md` before implementing services** - detailed architecture and interactions documented there
-
-## Real-Time Updates
-
-- EventService broadcasts project-scoped events via WebSocket/SSE
-- Frontend integrates with React Query for cache invalidation
-- Agent status, campaign progress, and crack results update live
-
-## Task Distribution Algorithm
-
-- BullMQ-based queue system with capability-tagged queues
-- Keyspace partitioning for parallel agent work
-- Dead-letter queues for retry and manual intervention
-- See `.kiro/specs/mern-migration/design.md` for detailed flow
+- **`exactOptionalPropertyTypes`:** Use spread `...(val ? {k: val} : {})` not `k: val ?? undefined`
+- **`noUncheckedIndexedAccess`:** All `arr[i]` returns `T | undefined` — guard with null check
+- **`noPropertyAccessFromIndexSignature`:** Use `obj['key']` bracket notation for index signatures
+- **Biome `useLiteralKeys: "off"`:** Must stay off — conflicts with TS setting above
+- **Don't skip Zod validation** — validate all external input
+- **Don't commit secrets** — use .env files (gitignored)
+- **Agent API changes require OpenAPI spec updates** — keep contract in sync
+- **Read `.kiro/specs/mern-migration/design.md` before implementing services**
 
 ## Type Safety
 
-- Shared types in `shared/src/types/` for backend/frontend consistency
-- Mongoose schemas export TypeScript interfaces
-- OpenAPI spec generates types for Agent API (planned)
+- Shared types in `packages/shared/src/types/` for backend/frontend consistency
+- Drizzle schema exports select/insert types via drizzle-zod
+- OpenAPI spec defines Agent API contract types
 - Zod schemas provide runtime validation + static types

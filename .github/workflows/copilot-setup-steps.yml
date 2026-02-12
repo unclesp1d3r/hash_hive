@@ -4,12 +4,6 @@ name: Copilot Setup
 jobs:
   setup:
     runs-on: ubuntu-latest
-    env:
-      # Testcontainers configuration for GitHub Copilot
-      # Ryuk is a container that cleans up resources; enable it for proper cleanup
-      TESTCONTAINERS_RYUK_DISABLED: false
-      # Use the local Docker daemon
-      DOCKER_HOST: unix:///var/run/docker.sock
     steps:
       - uses: actions/checkout@v5
 
@@ -33,24 +27,8 @@ jobs:
       - name: Run type checking
         run: bun run --filter '*' type-check
 
-      - name: Verify Docker is available for Testcontainers
-        run: |
-          docker --version
-          docker info
-          echo "Docker socket permissions:"
-          ls -la /var/run/docker.sock
-
-      - name: Pre-pull Docker images for Testcontainers
-        run: |
-          echo "Pulling Docker images used by integration tests..."
-          docker pull mongo:7 &
-          docker pull redis:7-alpine &
-          docker pull minio/minio:latest &
-          wait
-          echo "All images pulled successfully"
-
       - name: Validate setup
-        run: just validate
+        run: just ci-check
 
       - name: Display environment info
         run: just info
