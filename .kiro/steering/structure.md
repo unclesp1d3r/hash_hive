@@ -46,7 +46,6 @@ HashHive follows a Turborepo + Bun workspaces monorepo structure with separate b
 │
 ├── docs/                 # Documentation
 │   ├── MERN_proposal.md
-│   ├── MERN_GUIDANCE.md
 │   └── v2_rewrite_implementation_plan/
 │
 ├── turbo.json            # Turborepo configuration
@@ -60,7 +59,7 @@ HashHive follows a Turborepo + Bun workspaces monorepo structure with separate b
 ### Route Organization
 
 - **Agent API routes** (`src/routes/agent/`): Batch operations for Go-based agents
-  - Token-based authentication
+  - Pre-shared token authentication
   - Bulk inserts for hash submissions (use Drizzle or raw Bun.SQL for performance)
   - Endpoints: sessions, heartbeat, tasks/next, tasks/:id/report
 - **Dashboard API routes** (`src/routes/dashboard/`): Standard REST API for React frontend
@@ -84,8 +83,7 @@ Only create service modules when route handlers become complex:
 
 - **users**: User accounts with authentication and audit fields
 - **projects**: Project definitions with settings
-- **project_users**: Many-to-many user-project-role associations
-- **roles**: Role definitions (admin, operator, analyst, agent_owner)
+- **project_users**: Many-to-many user-project associations with roles (text array: admin, power-user, user)
 - **operating_systems**: Static catalog for agent capabilities
 - **agents**: Agent registration, status, capabilities, hardware profiles
 - **agent_errors**: Error logs with severity and context
@@ -102,7 +100,7 @@ Only create service modules when route handlers become complex:
 ### Agent API (`/api/v1/agent/*`)
 
 - **Purpose**: Batch operations for Go-based hashcat agents
-- **Authentication**: Token-based
+- **Authentication**: Pre-shared tokens (sent on every request, no JWT exchange)
 - **Contract**: Defined by OpenAPI specification in `openapi/agent-api.yaml`
 - **Key endpoints**:
   - `POST /agent/sessions` - Agent authentication
@@ -113,7 +111,7 @@ Only create service modules when route handlers become complex:
 ### Dashboard API (`/api/v1/dashboard/*`)
 
 - **Purpose**: Standard REST API for React frontend (1-3 concurrent users)
-- **Authentication**: Session-based (HttpOnly cookies)
+- **Authentication**: JWT + HttpOnly session cookies
 - **Pattern**: Standard REST CRUD operations (no tRPC)
 - **Key endpoints**: Projects, agents, campaigns, attacks, tasks, resources, hash analysis
 
@@ -124,7 +122,7 @@ Only create service modules when route handlers become complex:
 - **Zustand**: Client-side UI state (selected agents, filters, dashboard layout)
 - **shadcn/ui**: Components copied into project via CLI (no external component library)
 - **React Hook Form + Zod**: Form handling with shared Zod schemas from `shared/` package
-- **WebSocket/SSE**: Real-time updates for dashboard (agent heartbeats, crack results)
+- **WebSocket**: Real-time updates for dashboard with polling fallback (agent heartbeats, crack results)
 
 ## Testing Organization
 
@@ -148,4 +146,4 @@ Only create service modules when route handlers become complex:
 - **Functions**: camelCase (e.g., `createCampaign`)
 - **Types/Interfaces**: PascalCase (e.g., `AgentStatus`)
 - **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_RETRY_ATTEMPTS`)
-- **MongoDB Collections**: snake_case (e.g., `hash_lists`)
+- **PostgreSQL Tables**: snake_case (e.g., `hash_lists`)

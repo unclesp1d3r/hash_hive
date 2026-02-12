@@ -1,15 +1,10 @@
 # Dependencies
 node_modules/
 package-lock.json
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
 # Build outputs
 dist/
 build/
-.next/
-out/
 
 # Environment variables
 .env
@@ -20,7 +15,6 @@ out/
 
 # Testing
 coverage/
-.nyc_output/
 
 # IDE
 .vscode/
@@ -42,8 +36,13 @@ tmp/
 temp/
 **/tsconfig.tsbuildinfo
 
-# Test results
-frontend/test-results/
-frontend/playwright-report/
-.nx/
+# Turborepo
+.turbo/
+
+# Playwright
+packages/frontend/test-results/
+packages/frontend/playwright-report/
+
+# Local config
 .claude.local.md
+.plan/

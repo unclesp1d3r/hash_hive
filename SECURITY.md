@@ -40,9 +40,8 @@ The security model assumes:
 ### Authentication & Authorization
 
 - **Web UI**: Session-based authentication with HttpOnly cookies
-- **Agent API**: JWT-based token authentication with API version headers
-- **Control API**: Token-based authentication for automation tools
-- **Project-scoped access**: Role-based permissions (admin, operator, analyst, agent_owner)
+- **Agent API**: Pre-shared token authentication with API version headers
+- **Project-scoped access**: Role-based permissions (admin, power-user, user)
 
 ### Data Protection
 

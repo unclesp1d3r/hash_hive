@@ -62,20 +62,22 @@
   },
   "overrides": [
     {
-      "includes": ["frontend/next-env.d.ts"],
-      "linter": {
-        "enabled": false
-      },
-      "formatter": {
-        "enabled": false
-      }
-    },
-    {
       "includes": ["*.config.js", "*.config.ts", "*.config.mjs"],
       "linter": {
         "rules": {
           "style": {
             "noDefaultExport": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/scripts/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off",
+            "noExplicitAny": "off"
           }
         }
       }
@@ -89,20 +91,6 @@
           },
           "complexity": {
             "noBannedTypes": "off"
-          },
-          "style": {
-            "noNonNullAssertion": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["**/*.example.ts", "**/*.example.tsx"],
-      "linter": {
-        "rules": {
-          "suspicious": {
-            "noConsole": "off",
-            "noExplicitAny": "off"
           },
           "style": {
             "noNonNullAssertion": "off"

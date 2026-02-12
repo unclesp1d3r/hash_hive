@@ -10,7 +10,7 @@ HashHive is a 2026 TypeScript reimplementation of CipherSwarm, running on Bun wi
 - **Framework**: Hono (running natively on Bun.serve())
 - **Database**: PostgreSQL with Drizzle ORM
 - **Validation**: Zod for all data shapes, drizzle-zod for schema generation
-- **Authentication**: JWT tokens for Agent API, HttpOnly session cookies for Dashboard API
+- **Authentication**: Pre-shared tokens for Agent API, JWT + HttpOnly session cookies for Dashboard API
 - **Testing**: bun:test (Bun's built-in test runner)
 - **WebSockets**: hono/websocket for real-time dashboard updates
 
@@ -27,7 +27,9 @@ HashHive is a 2026 TypeScript reimplementation of CipherSwarm, running on Bun wi
 
 ### Infrastructure
 
-- **Database**: PostgreSQL (sole data store, no Redis or MongoDB)
+- **Database**: PostgreSQL with Drizzle ORM (primary data store)
+- **Task Queue**: Redis + BullMQ for async job processing (hash list parsing, task generation, heartbeat monitoring)
+- **Storage**: MinIO (S3-compatible) for binary artifacts (hash lists, wordlists, rulelists, masklists)
 - **Configuration**: Environment variables + centralized config module
 
 ### Tooling

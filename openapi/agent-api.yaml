@@ -11,55 +11,18 @@ servers:
     description: Development server
 
 tags:
-  - name: Authentication
-    description: Agent authentication and session management
   - name: Heartbeat
     description: Agent status and capability reporting
   - name: Tasks
     description: Task retrieval and progress reporting
 
 paths:
-  /sessions:
-    post:
-      summary: Create agent session
-      description: Authenticate agent and create a new session
-      tags:
-        - Authentication
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - token
-                - agentId
-              properties:
-                token:
-                  type: string
-                  description: Agent authentication token
-                agentId:
-                  type: string
-                  description: Unique agent identifier
-      responses:
-        '200':
-          description: Session created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  sessionToken:
-                    type: string
-                  config:
-                    type: object
-        '401':
-          description: Authentication failed
-
   /heartbeat:
     post:
       summary: Send agent heartbeat
-      description: Report agent status and capabilities
+      description: |
+        Report agent status and capabilities.
+        The Bearer token is the agent's pre-shared authentication token (not a JWT).
       tags:
         - Heartbeat
       security:
@@ -95,7 +58,9 @@ paths:
   /tasks/next:
     post:
       summary: Request next task
-      description: Retrieve the next available task for the agent
+      description: |
+        Retrieve the next available task for the agent.
+        The Bearer token is the agent's pre-shared authentication token (not a JWT).
       tags:
         - Tasks
       security:
@@ -130,7 +95,9 @@ paths:
   /tasks/{taskId}/report:
     post:
       summary: Report task progress
-      description: Update task status and progress
+      description: |
+        Update task status and progress.
+        The Bearer token is the agent's pre-shared authentication token (not a JWT).
       tags:
         - Tasks
       security:
@@ -176,4 +143,4 @@ components:
     BearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
+      description: Pre-shared agent authentication token

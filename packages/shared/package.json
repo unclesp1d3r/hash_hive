@@ -1,0 +1,31 @@
+{
+  "name": "@hashhive/shared",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared Drizzle schema, Zod schemas, and TypeScript types",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "biome check ./src",
+    "type-check": "tsc --noEmit",
+    "test": "echo 'No tests yet' && exit 0"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.44.0",
+    "drizzle-zod": "^0.7.0",
+    "postgres": "^3.4.5",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.0",
+    "typescript": "^5.9.3"
+  }
+}

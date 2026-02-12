@@ -84,7 +84,9 @@ When adding new modules or services, follow this monorepo layout. Hono route han
 
 - **Runtime**: Bun (latest stable) — JavaScript runtime, package manager, and test runner
 - **Backend framework**: Hono running natively on `Bun.serve()` (not Express, not Fastify)
-- **Database**: PostgreSQL with Drizzle ORM (sole data store — no Redis, no MongoDB)
+- **Database**: PostgreSQL with Drizzle ORM (primary data store)
+- **Task Queue**: Redis + BullMQ for async processing (hash list parsing, task generation, heartbeat monitoring)
+- **Storage**: MinIO (S3-compatible) for binary artifacts (hash lists, wordlists, rulelists, masklists)
 - **Frontend**: React 19 + Vite (not Next.js, not CRA)
 - **UI**: Tailwind CSS + shadcn/ui components
 - **State**: TanStack Query v5 for server state, Zustand for client-side UI state
@@ -92,7 +94,7 @@ When adding new modules or services, follow this monorepo layout. Hono route han
 - **Linting/Formatting**: Biome (not ESLint, not Prettier)
 - **Testing**: bun:test for all tests, Testing Library for components, Playwright for E2E
 
-See `.kiro/steering/tech.md` for the full stack details and `MERN_GUIDANCE.md` for architectural principles and constraints.
+See `.kiro/steering/tech.md` for the full-stack details and `spec/epic/specs/Tech_Plan__HashHive_Architecture.md` for architectural principles.
 
 ## Architectural big picture
 
@@ -116,9 +118,9 @@ The backend is a Bun + Hono + TypeScript service:
   - `AgentService`: registration, capability detection, heartbeat handling
   - `CampaignService`: campaign lifecycle, DAG validation, attack configuration
   - `TaskDistributionService`: keyspace partitioning, task generation, assignment
-  - `ResourceService`: file uploads, hash list parsing
+  - `ResourceService`: file uploads to MinIO, hash list parsing coordination
   - `HashAnalysisService`: hash-type identification, hashcat mode mapping
-  - `EventService`: WebSocket broadcasting for real-time dashboard updates
+  - `EventService`: WebSocket broadcasting for real-time dashboard updates (in-memory v1, Redis pub/sub extension path)
 - **Database (`src/db/`)** — Drizzle client setup and connection config
 - **Middleware (`src/middleware/`)** — auth, validation, error handling
 
@@ -127,12 +129,12 @@ The backend is a Bun + Hono + TypeScript service:
 Two API surfaces on the same Hono instance, backed by the same service and data layer:
 
 - **Agent API (`/api/v1/agent/*`)**
-  - Token-authenticated REST API for Go-based hashcat agents
+  - Pre-shared token authenticated REST API for Go-based hashcat agents
   - Defined by `openapi/agent-api.yaml` (single source of truth for contract)
   - Supports batch operations: bulk inserts for hash submissions via Drizzle or raw `Bun.SQL`
-  - Core endpoints: `POST /agent/sessions`, `POST /agent/heartbeat`, `POST /agent/tasks/next`, `POST /agent/tasks/:id/report`
+  - Core endpoints: `POST /agent/heartbeat`, `POST /agent/tasks/next`, `POST /agent/tasks/:id/report`
 - **Dashboard API (`/api/v1/dashboard/*`)**
-  - Session-authenticated REST API for the React frontend
+  - JWT + HttpOnly session cookie authenticated REST API for the React frontend
   - Standard CRUD operations with Zod validation
   - Low traffic (1-3 concurrent users)
 
@@ -142,15 +144,16 @@ Agent API contract tests should validate responses against the OpenAPI spec to k
 
 The frontend is a Vite + React 19 SPA (no server components, no meta-framework):
 
+- **TanStack Query mutations**: Use `onSuccess(_data, variables)` for cache invalidation keys, not Zustand store state (can be stale)
 - Tailwind CSS and shadcn/ui for UI components
 - Forms built with React Hook Form + Zod schemas from the `shared/` package
 - Data fetching and caching via TanStack Query
-- Real-time updates delivered via WebSocket/SSE client
-- Zustand for client-side UI state (selected agents, filters, dashboard layout)
+- Real-time updates delivered via WebSocket client (with polling fallback on disconnect)
+- Zustand for client-side UI state (project selection, filters, wizard state)
 
 ### Data model (PostgreSQL tables)
 
-- **Identity & access**: `users`, `projects`, `project_users`, `roles`
+- **Identity & access**: `users`, `projects`, `project_users` (roles as text array)
 - **Agents & telemetry**: `operating_systems`, `agents`, `agent_errors`
 - **Campaign orchestration**: `campaigns`, `attacks` (with DAG dependencies), `tasks` (work ranges, progress, results)
 - **Resources**: `hash_lists`, `hash_items`, `hash_types`, `word_lists`, `rule_lists`, `mask_lists`
@@ -196,22 +199,62 @@ Test the hot paths first: hash submission ingestion, work unit distribution, age
 
 ## Design and documentation sources
 
-Before making major changes, consult these documents:
+`.kiro/steering/` and `.kiro/specs/` are the **authoritative** sources for architecture, requirements, and constraints. When code conflicts with these documents, the documents win. Update the docs first if behavior needs to change.
+
+### Authoritative (`.kiro/`)
 
 - `.kiro/steering/product.md` — product overview and core capabilities
 - `.kiro/steering/structure.md` — repository structure, table list, and API routes
-- `.kiro/steering/tech.md` — technology stack, commands, and key libraries
+- `.kiro/steering/tech.md` — technology stack, commands, key libraries, and "what NOT to introduce"
 - `.kiro/specs/mern-migration/requirements.md` — detailed functional requirements
 - `.kiro/specs/mern-migration/design.md` — end-to-end architecture and data models
 - `.kiro/specs/mern-migration/tasks.md` — implementation task breakdown
-- `MERN_GUIDANCE.md` — architectural principles, constraints, and "what not to introduce"
+
+### Epic specifications (`spec/epic/`)
+
+- `spec/epic/specs/Epic_Brief__HashHive_-_Modern_Distributed_Password_Cracking_Platform.md` — epic-level product brief
+- `spec/epic/specs/Tech_Plan__HashHive_Architecture.md` — comprehensive technical architecture and design decisions
+- `spec/epic/specs/Core_Flows__HashHive_User_Journeys.md` — user flows, wireframes, and UI specifications
+- `spec/epic/tickets/` — feature-level implementation tickets
+
+### Supplementary
+
 - `docs/v2_rewrite_implementation_plan/*` — historical context from CipherSwarm migration
 
-These documents are the primary source of truth for architecture and behavior. Keep code changes aligned with them and update the docs when behavior diverges.
+## TypeScript strict mode gotchas
+
+The tsconfig.base.json enables maximum strictness. Key patterns:
+
+- **`exactOptionalPropertyTypes`**: Use `...(val ? { key: val } : {})` spread, never `key: val ?? undefined`
+- **`noUncheckedIndexedAccess`**: All `arr[i]` returns `T | undefined` — guard with null check before use
+- **`noPropertyAccessFromIndexSignature`**: Use `obj['key']` bracket notation for index signatures
+- **Biome `useLiteralKeys: "off"`**: MUST stay off — conflicts with the TS setting above
+
+## Hono error handling
+
+The `app.onError()` handler must check `instanceof HTTPException` before returning a generic 500:
+
+```typescript
+app.onError((err, c) => {
+  if (err instanceof HTTPException) return err.getResponse();
+  // ... generic error handling
+});
+```
+
+Without this, auth middleware 401 responses get swallowed into 500s.
+
+## Testing infrastructure
+
+- Backend contract tests validate auth (401) and validation (400) without a running DB
+- Drizzle mock chains must match production code — e.g. `insert().values()` returning `{ onConflictDoNothing: mock() }`
+- Frontend tests use `happy-dom` with manual global injection (not `@happy-dom/global-registrator`)
+- Always call `afterEach(cleanup)` in Testing Library tests — DOM persists in happy-dom
+- Test fixtures: `packages/backend/tests/fixtures.ts` — factory functions + token helpers
+- Biome overrides: `**/scripts/**` disables `noConsole` and `noExplicitAny` for CLI tools
 
 ## AI agent notes
 
-- Treat `.kiro/**` as canonical planning/steering context; align major structural changes with those documents rather than inferring architecture solely from the current code.
-- `MERN_GUIDANCE.md` contains explicit constraints on what NOT to introduce (see its "What NOT to Introduce" section). Respect these constraints.
+- `.kiro/steering/` and `.kiro/specs/` are authoritative — always align structural changes with those documents rather than inferring architecture solely from current code.
+- `.kiro/steering/tech.md` contains explicit constraints on what NOT to introduce. Respect these constraints.
 - Prefer mermaid diagrams for architectural or sequence diagrams in documentation.
 - Agents are the primary API consumer. Never break the agent API to improve the dashboard experience.
