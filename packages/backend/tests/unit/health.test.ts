@@ -15,14 +15,16 @@ mock.module('../../src/config/storage.js', () => ({
 import { app } from '../../src/index.js';
 
 describe('GET /health', () => {
-  it('should return status ok', async () => {
+  it('should return health status', async () => {
     const res = await app.request('/health');
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body['status']).toBe('ok');
+    expect(['ok', 'degraded']).toContain(body['status']);
     expect(body['version']).toBe('1.0.0');
     expect(body['timestamp']).toBeDefined();
+    expect(body['services']['database']).toBeDefined();
+    expect(['connected', 'disconnected']).toContain(body['services']['database']['status']);
   });
 
   it('should include MinIO health status', async () => {

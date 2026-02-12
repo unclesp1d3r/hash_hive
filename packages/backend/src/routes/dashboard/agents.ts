@@ -2,6 +2,7 @@ import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { requireSession } from '../../middleware/auth.js';
+import { requireProjectAccess, requireRole } from '../../middleware/rbac.js';
 import { getAgentById, getAgentErrors, listAgents, updateAgent } from '../../services/agents.js';
 import type { AppEnv } from '../../types.js';
 
@@ -10,7 +11,7 @@ const dashboardAgentRoutes = new Hono<AppEnv>();
 dashboardAgentRoutes.use('*', requireSession);
 
 // GET /agents — list agents with optional filtering
-dashboardAgentRoutes.get('/', async (c) => {
+dashboardAgentRoutes.get('/', requireProjectAccess(), async (c) => {
   const projectId = c.req.query('projectId') ? Number(c.req.query('projectId')) : undefined;
   const status = c.req.query('status') ?? undefined;
   const limit = c.req.query('limit') ? Number(c.req.query('limit')) : undefined;
@@ -21,7 +22,7 @@ dashboardAgentRoutes.get('/', async (c) => {
 });
 
 // GET /agents/:id — get agent details
-dashboardAgentRoutes.get('/:id', async (c) => {
+dashboardAgentRoutes.get('/:id', requireProjectAccess(), async (c) => {
   const agentId = Number(c.req.param('id'));
   const agent = await getAgentById(agentId);
 
@@ -38,20 +39,25 @@ const updateAgentSchema = z.object({
   status: z.enum(['online', 'offline', 'busy', 'error']).optional(),
 });
 
-dashboardAgentRoutes.patch('/:id', zValidator('json', updateAgentSchema), async (c) => {
-  const agentId = Number(c.req.param('id'));
-  const data = c.req.valid('json');
-  const agent = await updateAgent(agentId, data);
+dashboardAgentRoutes.patch(
+  '/:id',
+  requireRole('admin', 'operator'),
+  zValidator('json', updateAgentSchema),
+  async (c) => {
+    const agentId = Number(c.req.param('id'));
+    const data = c.req.valid('json');
+    const agent = await updateAgent(agentId, data);
 
-  if (!agent) {
-    return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Agent not found' } }, 404);
+    if (!agent) {
+      return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Agent not found' } }, 404);
+    }
+
+    return c.json({ agent });
   }
-
-  return c.json({ agent });
-});
+);
 
 // GET /agents/:id/errors — get agent errors
-dashboardAgentRoutes.get('/:id/errors', async (c) => {
+dashboardAgentRoutes.get('/:id/errors', requireProjectAccess(), async (c) => {
   const agentId = Number(c.req.param('id'));
   const limit = c.req.query('limit') ? Number(c.req.query('limit')) : undefined;
   const offset = c.req.query('offset') ? Number(c.req.query('offset')) : undefined;

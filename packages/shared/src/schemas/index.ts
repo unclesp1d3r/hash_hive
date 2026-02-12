@@ -108,6 +108,22 @@ export const createCampaignRequestSchema = insertCampaignSchema.pick({
   priority: true,
 });
 
+export const createAttackRequestSchema = insertAttackSchema.pick({
+  mode: true,
+  hashTypeId: true,
+  wordlistId: true,
+  rulelistId: true,
+  masklistId: true,
+  dependencies: true,
+});
+
+export const hashCandidateSchema = z.object({
+  name: z.string(),
+  hashcatMode: z.number().int(),
+  category: z.string(),
+  confidence: z.number().min(0).max(1),
+});
+
 export const agentHeartbeatSchema = z.object({
   status: z.enum(['online', 'busy', 'error']),
   capabilities: z

@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { createBunWebSocket } from 'hono/bun';
 import { cors } from 'hono/cors';
@@ -5,6 +6,7 @@ import { HTTPException } from 'hono/http-exception';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { checkMinioHealth } from './config/storage.js';
+import { db } from './db/index.js';
 import { requestId } from './middleware/request-id.js';
 import { requestLogger } from './middleware/request-logger.js';
 import { securityHeaders } from './middleware/security-headers.js';
@@ -43,16 +45,33 @@ app.use(
 
 app.get('/health', async (c) => {
   const qm = getQueueManager();
-  const [redisHealth, minioHealth] = await Promise.all([
+  let dbCheck: Promise<{ status: 'connected' | 'disconnected' }>;
+  try {
+    dbCheck = db
+      .execute(sql`SELECT 1`)
+      .then(() => ({ status: 'connected' as const }))
+      .catch(() => ({ status: 'disconnected' as const }));
+  } catch {
+    dbCheck = Promise.resolve({ status: 'disconnected' as const });
+  }
+
+  const [databaseHealth, redisHealth, minioHealth] = await Promise.all([
+    dbCheck,
     qm ? qm.getHealth() : Promise.resolve({ status: 'disconnected' as const, queues: {} }),
     checkMinioHealth(),
   ]);
 
+  const allConnected =
+    databaseHealth.status === 'connected' &&
+    redisHealth.status === 'connected' &&
+    minioHealth.status === 'connected';
+
   return c.json({
-    status: 'ok',
+    status: allConnected ? 'ok' : 'degraded',
     timestamp: new Date().toISOString(),
     version: '1.0.0',
     services: {
+      database: databaseHealth,
       redis: redisHealth,
       minio: minioHealth,
     },

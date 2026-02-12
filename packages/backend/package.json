@@ -8,6 +8,8 @@
     "dev": "bun --hot src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
     "start": "bun dist/index.js",
+    "worker:tasks": "bun src/worker-task-generation.ts",
+    "worker:jobs": "bun src/worker-jobs.ts",
     "test": "bun test --preload ./tests/preload.ts",
     "lint": "biome check ./src",
     "type-check": "tsc --noEmit",

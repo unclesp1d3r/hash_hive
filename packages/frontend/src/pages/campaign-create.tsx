@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 import { z } from 'zod';
@@ -38,6 +38,11 @@ export function CampaignCreatePage() {
   const createAttack = useCreateAttack(createdCampaignId ?? 0);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset wizard state on unmount only
+  useEffect(() => {
+    return () => wizard.reset();
+  }, []);
 
   const basicInfoForm = useForm<BasicInfoForm>({
     resolver: zodResolver(basicInfoSchema),

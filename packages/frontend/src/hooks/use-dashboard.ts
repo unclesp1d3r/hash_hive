@@ -101,19 +101,26 @@ export function useAgents(options?: { status?: string; limit?: number; offset?: 
 }
 
 export function useAgent(agentId: number) {
+  const { selectedProjectId } = useUiStore();
+
   return useQuery({
-    queryKey: ['agent', agentId],
-    queryFn: () => api.get<{ agent: Agent }>(`/dashboard/agents/${agentId}`),
-    enabled: agentId > 0,
+    queryKey: ['agent', agentId, selectedProjectId],
+    queryFn: () =>
+      api.get<{ agent: Agent }>(`/dashboard/agents/${agentId}?projectId=${selectedProjectId}`),
+    enabled: agentId > 0 && !!selectedProjectId,
   });
 }
 
 export function useAgentErrors(agentId: number) {
+  const { selectedProjectId } = useUiStore();
+
   return useQuery({
-    queryKey: ['agent-errors', agentId],
+    queryKey: ['agent-errors', agentId, selectedProjectId],
     queryFn: () =>
-      api.get<{ errors: AgentError[] }>(`/dashboard/agents/${agentId}/errors?limit=50`),
-    enabled: agentId > 0,
+      api.get<{ errors: AgentError[] }>(
+        `/dashboard/agents/${agentId}/errors?projectId=${selectedProjectId}&limit=50`
+      ),
+    enabled: agentId > 0 && !!selectedProjectId,
   });
 }
 

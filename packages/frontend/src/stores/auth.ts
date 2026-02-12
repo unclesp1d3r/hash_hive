@@ -19,6 +19,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   fetchUser: () => Promise<void>;
+  clearAuth: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -35,6 +36,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: async () => {
     await api.post('/dashboard/auth/logout');
     set({ user: null, isAuthenticated: false });
+  },
+
+  clearAuth: () => {
+    set({ user: null, isAuthenticated: false, isLoading: false });
   },
 
   fetchUser: async () => {
