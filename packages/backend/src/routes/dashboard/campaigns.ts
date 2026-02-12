@@ -7,6 +7,7 @@ import {
   createAttack,
   createCampaign,
   deleteAttack,
+  getAttackById,
   getCampaignById,
   listAttacks,
   listCampaigns,
@@ -193,7 +194,15 @@ campaignRoutes.patch(
   requireRole('admin', 'operator'),
   zValidator('json', updateAttackSchema),
   async (c) => {
+    const campaignId = Number(c.req.param('id'));
     const attackId = Number(c.req.param('attackId'));
+
+    // Verify attack belongs to the specified campaign
+    const existing = await getAttackById(attackId);
+    if (!existing || existing.campaignId !== campaignId) {
+      return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Attack not found' } }, 404);
+    }
+
     const data = c.req.valid('json');
     const attack = await updateAttack(attackId, data);
 
@@ -206,7 +215,15 @@ campaignRoutes.patch(
 );
 
 campaignRoutes.delete('/:id/attacks/:attackId', requireRole('admin', 'operator'), async (c) => {
+  const campaignId = Number(c.req.param('id'));
   const attackId = Number(c.req.param('attackId'));
+
+  // Verify attack belongs to the specified campaign
+  const existing = await getAttackById(attackId);
+  if (!existing || existing.campaignId !== campaignId) {
+    return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Attack not found' } }, 404);
+  }
+
   const attack = await deleteAttack(attackId);
 
   if (!attack) {

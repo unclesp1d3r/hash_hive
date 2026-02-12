@@ -4,8 +4,8 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router';
 import { z } from 'zod';
 import { StatusBadge } from '../components/features/status-badge';
-import { useCreateAttack, useCreateCampaign } from '../hooks/use-campaigns';
-import { ApiError } from '../lib/api';
+import { useCreateCampaign } from '../hooks/use-campaigns';
+import { ApiError, api } from '../lib/api';
 import { useCampaignWizard } from '../stores/campaign-wizard';
 import { useUiStore } from '../stores/ui';
 
@@ -34,8 +34,6 @@ export function CampaignCreatePage() {
   const wizard = useCampaignWizard();
   const navigate = useNavigate();
   const createCampaign = useCreateCampaign();
-  const [createdCampaignId, setCreatedCampaignId] = useState<number | null>(null);
-  const createAttack = useCreateAttack(createdCampaignId ?? 0);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -96,14 +94,16 @@ export function CampaignCreatePage() {
       });
 
       const campaignId = result.campaign.id;
-      setCreatedCampaignId(campaignId);
 
-      // Create attacks sequentially to maintain order
+      // Create attacks sequentially using direct API calls to avoid stale hook state
       for (const attack of wizard.attacks) {
-        await createAttack.mutateAsync({
-          ...attack,
-          ...(attack.dependencies.length > 0 ? { dependencies: attack.dependencies } : {}),
-        });
+        await api.post(
+          `/dashboard/campaigns/${campaignId}/attacks?projectId=${selectedProjectId}`,
+          {
+            ...attack,
+            ...(attack.dependencies.length > 0 ? { dependencies: attack.dependencies } : {}),
+          }
+        );
       }
 
       wizard.reset();

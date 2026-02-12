@@ -43,10 +43,14 @@ export async function validateToken(token: string): Promise<{
   }
 }
 
+// Dummy hash for constant-time comparison when user is not found
+const DUMMY_HASH = '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4aLQHkMAJnlCp4bu';
+
 export async function login(email: string, password: string) {
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
   if (!user) {
+    await verifyPassword(password, DUMMY_HASH);
     return null;
   }
 

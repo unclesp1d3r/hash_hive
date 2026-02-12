@@ -52,18 +52,23 @@ export async function deleteFile(key: string, bucket?: string) {
   );
 }
 
+function sanitizeFilename(filename: string): string {
+  return filename.replace(/["\r\n;]/g, '_');
+}
+
 export async function getPresignedUrl(
   key: string,
   expiresIn = 3600,
   opts?: { bucket?: string; filename?: string }
 ): Promise<string> {
+  const safeFilename = opts?.filename ? sanitizeFilename(opts.filename) : undefined;
   return getSignedUrl(
     s3,
     new GetObjectCommand({
       Bucket: opts?.bucket ?? env.S3_BUCKET,
       Key: key,
-      ...(opts?.filename
-        ? { ResponseContentDisposition: `attachment; filename="${opts.filename}"` }
+      ...(safeFilename
+        ? { ResponseContentDisposition: `attachment; filename="${safeFilename}"` }
         : {}),
     }),
     { expiresIn }

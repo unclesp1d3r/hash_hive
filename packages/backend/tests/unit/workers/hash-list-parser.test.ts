@@ -12,7 +12,8 @@ mock.module('../../../src/config/logger.js', () => ({
 }));
 
 // Mock DB with chainable query builder
-const mockInsertValues = mock(() => Promise.resolve());
+const mockInsertOnConflict = mock(() => Promise.resolve());
+const mockInsertValues = mock(() => ({ onConflictDoNothing: mockInsertOnConflict }));
 const mockUpdateSetWhere = mock(() => Promise.resolve());
 mock.module('../../../src/db/index.js', () => ({
   db: {

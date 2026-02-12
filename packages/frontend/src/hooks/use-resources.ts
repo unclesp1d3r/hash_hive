@@ -80,7 +80,6 @@ export function useGuessHashType() {
 
 export function useCreateHashList() {
   const queryClient = useQueryClient();
-  const { selectedProjectId } = useUiStore();
 
   return useMutation({
     mutationFn: (data: { name: string; projectId: number; hashTypeId?: number }) =>
@@ -88,8 +87,8 @@ export function useCreateHashList() {
         `/dashboard/resources/hash-lists?projectId=${data.projectId}`,
         data
       ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['hash-lists', selectedProjectId] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['hash-lists', variables.projectId] });
     },
   });
 }

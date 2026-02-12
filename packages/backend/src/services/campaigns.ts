@@ -147,7 +147,9 @@ export async function transitionCampaign(id: number, targetStatus: CampaignStatu
 
   const [updated] = await db.update(campaigns).set(updates).where(eq(campaigns.id, id)).returning();
 
-  if (updated) {
+  // Emit status for non-running transitions immediately; for 'running',
+  // defer until after task generation enqueue succeeds to avoid premature events.
+  if (updated && targetStatus !== 'running') {
     emitCampaignStatus(campaign.projectId, id, targetStatus);
   }
 
@@ -185,6 +187,11 @@ export async function transitionCampaign(id: number, targetStatus: CampaignStatu
           return { error: 'Failed to enqueue task generation', code: 'QUEUE_UNAVAILABLE' as const };
         }
       }
+    }
+
+    // Emit after successful enqueue
+    if (updated) {
+      emitCampaignStatus(campaign.projectId, id, targetStatus);
     }
   }
 

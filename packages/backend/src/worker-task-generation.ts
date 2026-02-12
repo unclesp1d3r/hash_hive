@@ -21,7 +21,7 @@ async function main() {
   async function shutdown(signal: string) {
     logger.info({ signal }, 'Shutting down task generation workers');
     await Promise.all(workers.map((w) => w.close()));
-    connection.disconnect();
+    await connection.disconnect();
     process.exit(0);
   }
 
