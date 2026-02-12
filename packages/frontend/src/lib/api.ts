@@ -22,6 +22,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      // Session expired — clear auth state and redirect to login
+      const { useAuthStore } = await import('../stores/auth');
+      useAuthStore.getState().clearAuth();
+      window.location.href = '/login';
+    }
+
     const body = await res.json().catch(() => ({}));
     const error = body.error ?? {};
     throw new ApiError(res.status, error.code ?? 'UNKNOWN_ERROR', error.message ?? res.statusText);

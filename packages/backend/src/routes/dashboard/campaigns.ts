@@ -2,6 +2,7 @@ import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { requireSession } from '../../middleware/auth.js';
+import { requireProjectAccess, requireRole } from '../../middleware/rbac.js';
 import {
   createAttack,
   createCampaign,
@@ -22,7 +23,7 @@ campaignRoutes.use('*', requireSession);
 
 // ─── Campaign CRUD ──────────────────────────────────────────────────
 
-campaignRoutes.get('/', async (c) => {
+campaignRoutes.get('/', requireProjectAccess(), async (c) => {
   const projectId = c.req.query('projectId') ? Number(c.req.query('projectId')) : undefined;
   const status = c.req.query('status') ?? undefined;
   const limit = c.req.query('limit') ? Number(c.req.query('limit')) : undefined;
@@ -40,14 +41,19 @@ const createCampaignSchema = z.object({
   priority: z.number().int().min(1).max(10).optional(),
 });
 
-campaignRoutes.post('/', zValidator('json', createCampaignSchema), async (c) => {
-  const data = c.req.valid('json');
-  const { userId } = c.get('currentUser');
-  const campaign = await createCampaign({ ...data, createdBy: userId });
-  return c.json({ campaign }, 201);
-});
+campaignRoutes.post(
+  '/',
+  requireRole('admin', 'operator'),
+  zValidator('json', createCampaignSchema),
+  async (c) => {
+    const data = c.req.valid('json');
+    const { userId } = c.get('currentUser');
+    const campaign = await createCampaign({ ...data, createdBy: userId });
+    return c.json({ campaign }, 201);
+  }
+);
 
-campaignRoutes.get('/:id', async (c) => {
+campaignRoutes.get('/:id', requireProjectAccess(), async (c) => {
   const id = Number(c.req.param('id'));
   const campaign = await getCampaignById(id);
 
@@ -65,17 +71,22 @@ const updateCampaignSchema = z.object({
   priority: z.number().int().min(1).max(10).optional(),
 });
 
-campaignRoutes.patch('/:id', zValidator('json', updateCampaignSchema), async (c) => {
-  const id = Number(c.req.param('id'));
-  const data = c.req.valid('json');
-  const campaign = await updateCampaign(id, data);
+campaignRoutes.patch(
+  '/:id',
+  requireRole('admin', 'operator'),
+  zValidator('json', updateCampaignSchema),
+  async (c) => {
+    const id = Number(c.req.param('id'));
+    const data = c.req.valid('json');
+    const campaign = await updateCampaign(id, data);
 
-  if (!campaign) {
-    return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Campaign not found' } }, 404);
+    if (!campaign) {
+      return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Campaign not found' } }, 404);
+    }
+
+    return c.json({ campaign });
   }
-
-  return c.json({ campaign });
-});
+);
 
 // ─── Campaign Lifecycle ─────────────────────────────────────────────
 
@@ -83,33 +94,38 @@ const lifecycleSchema = z.object({
   action: z.enum(['start', 'pause', 'stop', 'cancel']),
 });
 
-campaignRoutes.post('/:id/lifecycle', zValidator('json', lifecycleSchema), async (c) => {
-  const id = Number(c.req.param('id'));
-  const { action } = c.req.valid('json');
+campaignRoutes.post(
+  '/:id/lifecycle',
+  requireRole('admin', 'operator'),
+  zValidator('json', lifecycleSchema),
+  async (c) => {
+    const id = Number(c.req.param('id'));
+    const { action } = c.req.valid('json');
 
-  const statusMap = {
-    start: 'running',
-    pause: 'paused',
-    stop: 'completed',
-    cancel: 'cancelled',
-  } as const;
+    const statusMap = {
+      start: 'running',
+      pause: 'paused',
+      stop: 'completed',
+      cancel: 'cancelled',
+    } as const;
 
-  const targetStatus = statusMap[action];
-  const result = await transitionCampaign(id, targetStatus);
+    const targetStatus = statusMap[action];
+    const result = await transitionCampaign(id, targetStatus);
 
-  if ('error' in result) {
-    if ('code' in result && result.code === 'QUEUE_UNAVAILABLE') {
-      return c.json({ error: { code: 'SERVICE_UNAVAILABLE', message: result.error } }, 503);
+    if ('error' in result) {
+      if ('code' in result && result.code === 'QUEUE_UNAVAILABLE') {
+        return c.json({ error: { code: 'SERVICE_UNAVAILABLE', message: result.error } }, 503);
+      }
+      return c.json({ error: { code: 'INVALID_TRANSITION', message: result.error } }, 400);
     }
-    return c.json({ error: { code: 'INVALID_TRANSITION', message: result.error } }, 400);
-  }
 
-  return c.json({ campaign: result.campaign });
-});
+    return c.json({ campaign: result.campaign });
+  }
+);
 
 // ─── DAG Validation ─────────────────────────────────────────────────
 
-campaignRoutes.get('/:id/validate', async (c) => {
+campaignRoutes.get('/:id/validate', requireProjectAccess(), async (c) => {
   const id = Number(c.req.param('id'));
   const campaign = await getCampaignById(id);
 
@@ -133,25 +149,30 @@ const createAttackSchema = z.object({
   dependencies: z.array(z.number().int().positive()).optional(),
 });
 
-campaignRoutes.post('/:id/attacks', zValidator('json', createAttackSchema), async (c) => {
-  const campaignId = Number(c.req.param('id'));
-  const campaign = await getCampaignById(campaignId);
+campaignRoutes.post(
+  '/:id/attacks',
+  requireRole('admin', 'operator'),
+  zValidator('json', createAttackSchema),
+  async (c) => {
+    const campaignId = Number(c.req.param('id'));
+    const campaign = await getCampaignById(campaignId);
 
-  if (!campaign) {
-    return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Campaign not found' } }, 404);
+    if (!campaign) {
+      return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Campaign not found' } }, 404);
+    }
+
+    const data = c.req.valid('json');
+    const attack = await createAttack({
+      ...data,
+      campaignId,
+      projectId: campaign.projectId,
+    });
+
+    return c.json({ attack }, 201);
   }
+);
 
-  const data = c.req.valid('json');
-  const attack = await createAttack({
-    ...data,
-    campaignId,
-    projectId: campaign.projectId,
-  });
-
-  return c.json({ attack }, 201);
-});
-
-campaignRoutes.get('/:id/attacks', async (c) => {
+campaignRoutes.get('/:id/attacks', requireProjectAccess(), async (c) => {
   const campaignId = Number(c.req.param('id'));
   const campaignAttacks = await listAttacks(campaignId);
   return c.json({ attacks: campaignAttacks });
@@ -169,6 +190,7 @@ const updateAttackSchema = z.object({
 
 campaignRoutes.patch(
   '/:id/attacks/:attackId',
+  requireRole('admin', 'operator'),
   zValidator('json', updateAttackSchema),
   async (c) => {
     const attackId = Number(c.req.param('attackId'));
@@ -183,7 +205,7 @@ campaignRoutes.patch(
   }
 );
 
-campaignRoutes.delete('/:id/attacks/:attackId', async (c) => {
+campaignRoutes.delete('/:id/attacks/:attackId', requireRole('admin', 'operator'), async (c) => {
   const attackId = Number(c.req.param('attackId'));
   const attack = await deleteAttack(attackId);
 

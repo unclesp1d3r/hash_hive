@@ -71,13 +71,13 @@ export function useEvents(options: UseEventsOptions = {}) {
 
           const eventType = data['type'] as string;
           if (eventType === 'agent_status') {
-            queryClient.invalidateQueries({ queryKey: ['agents'] });
+            queryClient.invalidateQueries({ queryKey: ['agents', selectedProjectId] });
           } else if (eventType === 'campaign_status') {
-            queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+            queryClient.invalidateQueries({ queryKey: ['campaigns', selectedProjectId] });
           } else if (eventType === 'task_update') {
-            queryClient.invalidateQueries({ queryKey: ['tasks'] });
+            queryClient.invalidateQueries({ queryKey: ['tasks', selectedProjectId] });
           } else if (eventType === 'crack_result') {
-            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats', selectedProjectId] });
           }
 
           onEventRef.current?.(data as unknown as AppEvent);
@@ -120,13 +120,13 @@ export function useEvents(options: UseEventsOptions = {}) {
     if (!polling) return;
 
     const interval = setInterval(() => {
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['agents'] });
-      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats', selectedProjectId] });
+      queryClient.invalidateQueries({ queryKey: ['agents', selectedProjectId] });
+      queryClient.invalidateQueries({ queryKey: ['campaigns', selectedProjectId] });
     }, 30_000);
 
     return () => clearInterval(interval);
-  }, [polling, queryClient]);
+  }, [polling, queryClient, selectedProjectId]);
 
   return { connected, polling };
 }

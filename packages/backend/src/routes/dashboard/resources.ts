@@ -2,6 +2,7 @@ import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { requireSession } from '../../middleware/auth.js';
+import { requireProjectAccess, requireRole } from '../../middleware/rbac.js';
 import {
   createHashList,
   createMaskList,
@@ -39,7 +40,7 @@ resourceRoutes.get('/hash-types', async (c) => {
 
 // ─── Hash Lists ─────────────────────────────────────────────────────
 
-resourceRoutes.get('/hash-lists', async (c) => {
+resourceRoutes.get('/hash-lists', requireProjectAccess(), async (c) => {
   const projectId = Number(c.req.query('projectId'));
   if (!projectId || Number.isNaN(projectId)) {
     return c.json(
@@ -59,13 +60,18 @@ const createHashListSchema = z.object({
   source: z.string().max(50).optional(),
 });
 
-resourceRoutes.post('/hash-lists', zValidator('json', createHashListSchema), async (c) => {
-  const data = c.req.valid('json');
-  const hashList = await createHashList(data);
-  return c.json({ hashList }, 201);
-});
+resourceRoutes.post(
+  '/hash-lists',
+  requireRole('admin', 'operator'),
+  zValidator('json', createHashListSchema),
+  async (c) => {
+    const data = c.req.valid('json');
+    const hashList = await createHashList(data);
+    return c.json({ hashList }, 201);
+  }
+);
 
-resourceRoutes.get('/hash-lists/:id', async (c) => {
+resourceRoutes.get('/hash-lists/:id', requireProjectAccess(), async (c) => {
   const id = Number(c.req.param('id'));
   const hashList = await getHashListById(id);
 
@@ -76,7 +82,7 @@ resourceRoutes.get('/hash-lists/:id', async (c) => {
   return c.json({ hashList });
 });
 
-resourceRoutes.post('/hash-lists/:id/upload', async (c) => {
+resourceRoutes.post('/hash-lists/:id/upload', requireRole('admin', 'operator'), async (c) => {
   const id = Number(c.req.param('id'));
   const hashList = await getHashListById(id);
 
@@ -95,7 +101,7 @@ resourceRoutes.post('/hash-lists/:id/upload', async (c) => {
   return c.json(result);
 });
 
-resourceRoutes.post('/hash-lists/:id/import', async (c) => {
+resourceRoutes.post('/hash-lists/:id/import', requireRole('admin', 'operator'), async (c) => {
   const id = Number(c.req.param('id'));
   const result = await importHashList(id);
 
@@ -110,7 +116,7 @@ resourceRoutes.post('/hash-lists/:id/import', async (c) => {
   return c.json(result);
 });
 
-resourceRoutes.get('/hash-lists/:id/items', async (c) => {
+resourceRoutes.get('/hash-lists/:id/items', requireProjectAccess(), async (c) => {
   const id = Number(c.req.param('id'));
   const limit = c.req.query('limit') ? Number(c.req.query('limit')) : undefined;
   const offset = c.req.query('offset') ? Number(c.req.query('offset')) : undefined;
@@ -119,7 +125,7 @@ resourceRoutes.get('/hash-lists/:id/items', async (c) => {
   return c.json(result);
 });
 
-resourceRoutes.get('/hash-lists/:id/download', async (c) => {
+resourceRoutes.get('/hash-lists/:id/download', requireProjectAccess(), async (c) => {
   const id = Number(c.req.param('id'));
   const hashList = await getHashListById(id);
 
@@ -157,7 +163,7 @@ function createResourceRoutes(
     name: z.string().min(1).max(255),
   });
 
-  resourceRoutes.get(`/${prefix}`, async (c) => {
+  resourceRoutes.get(`/${prefix}`, requireProjectAccess(), async (c) => {
     const projectId = Number(c.req.query('projectId'));
     if (!projectId || Number.isNaN(projectId)) {
       return c.json(
@@ -170,13 +176,18 @@ function createResourceRoutes(
     return c.json({ [prefix]: items });
   });
 
-  resourceRoutes.post(`/${prefix}`, zValidator('json', createSchema), async (c) => {
-    const data = c.req.valid('json');
-    const item = await createFn(data);
-    return c.json({ item }, 201);
-  });
+  resourceRoutes.post(
+    `/${prefix}`,
+    requireRole('admin', 'operator'),
+    zValidator('json', createSchema),
+    async (c) => {
+      const data = c.req.valid('json');
+      const item = await createFn(data);
+      return c.json({ item }, 201);
+    }
+  );
 
-  resourceRoutes.get(`/${prefix}/:id`, async (c) => {
+  resourceRoutes.get(`/${prefix}/:id`, requireProjectAccess(), async (c) => {
     const id = Number(c.req.param('id'));
     const item = await getByIdFn(id);
 
@@ -190,7 +201,7 @@ function createResourceRoutes(
     return c.json({ item });
   });
 
-  resourceRoutes.post(`/${prefix}/:id/upload`, async (c) => {
+  resourceRoutes.post(`/${prefix}/:id/upload`, requireRole('admin', 'operator'), async (c) => {
     const id = Number(c.req.param('id'));
     const item = await getByIdFn(id);
 
@@ -215,7 +226,7 @@ function createResourceRoutes(
     return c.json(result);
   });
 
-  resourceRoutes.get(`/${prefix}/:id/download`, async (c) => {
+  resourceRoutes.get(`/${prefix}/:id/download`, requireProjectAccess(), async (c) => {
     const id = Number(c.req.param('id'));
     const item = await getByIdFn(id);
 

@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { requireSession } from '../../middleware/auth.js';
+import { requireProjectAccess } from '../../middleware/rbac.js';
 import { getTaskById, listTasks } from '../../services/tasks.js';
 import type { AppEnv } from '../../types.js';
 
@@ -9,7 +10,7 @@ taskRoutes.use('*', requireSession);
 
 // ─── GET / — list tasks with filtering ──────────────────────────────
 
-taskRoutes.get('/', async (c) => {
+taskRoutes.get('/', requireProjectAccess(), async (c) => {
   const campaignId = c.req.query('campaignId') ? Number(c.req.query('campaignId')) : undefined;
   const attackId = c.req.query('attackId') ? Number(c.req.query('attackId')) : undefined;
   const agentId = c.req.query('agentId') ? Number(c.req.query('agentId')) : undefined;
@@ -23,7 +24,7 @@ taskRoutes.get('/', async (c) => {
 
 // ─── GET /:id — get task details ────────────────────────────────────
 
-taskRoutes.get('/:id', async (c) => {
+taskRoutes.get('/:id', requireProjectAccess(), async (c) => {
   const id = Number(c.req.param('id'));
   const task = await getTaskById(id);
 

@@ -1,7 +1,9 @@
+import type { HashCandidate } from '@hashhive/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useUiStore } from '../stores/ui';
 
+// API response types — represent JSON-serialized shapes (dates as strings)
 interface HashList {
   id: number;
   name: string;
@@ -25,13 +27,6 @@ interface Resource {
   projectId: number;
   fileRef: Record<string, unknown> | null;
   createdAt: string;
-}
-
-interface HashCandidate {
-  name: string;
-  hashcatMode: number;
-  category: string;
-  confidence: number;
 }
 
 export function useHashTypes() {
@@ -111,12 +106,16 @@ export function useGuessHashType() {
 
 export function useCreateHashList() {
   const queryClient = useQueryClient();
+  const { selectedProjectId } = useUiStore();
 
   return useMutation({
     mutationFn: (data: { name: string; projectId: number; hashTypeId?: number }) =>
-      api.post<{ hashList: HashList }>('/dashboard/resources/hash-lists', data),
+      api.post<{ hashList: HashList }>(
+        `/dashboard/resources/hash-lists?projectId=${data.projectId}`,
+        data
+      ),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['hash-lists'] });
+      queryClient.invalidateQueries({ queryKey: ['hash-lists', selectedProjectId] });
     },
   });
 }

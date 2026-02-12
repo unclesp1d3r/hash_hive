@@ -1,17 +1,11 @@
+import type { LoginRequest } from '@hashhive/shared';
+import { loginRequestSchema } from '@hashhive/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Navigate } from 'react-router';
-import { z } from 'zod';
 import { ApiError } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
-
-const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const { login, isAuthenticated } = useAuthStore();
@@ -21,15 +15,15 @@ export function LoginPage() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<LoginRequest>({
+    resolver: zodResolver(loginRequestSchema),
   });
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
 
-  const onSubmit = async (data: LoginForm) => {
+  const onSubmit = async (data: LoginRequest) => {
     setError(null);
     try {
       await login(data.email, data.password);

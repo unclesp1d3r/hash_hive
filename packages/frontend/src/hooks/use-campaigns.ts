@@ -1,23 +1,9 @@
+import type { CreateAttackRequest, CreateCampaignRequest } from '@hashhive/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import { useUiStore } from '../stores/ui';
 
-interface CreateCampaignData {
-  projectId: number;
-  name: string;
-  description?: string;
-  hashListId: number;
-  priority?: number;
-}
-
-interface CreateAttackData {
-  mode: number;
-  hashTypeId?: number;
-  wordlistId?: number;
-  rulelistId?: number;
-  masklistId?: number;
-  dependencies?: number[];
-}
-
+// API response types — represent JSON-serialized shapes (dates as strings)
 interface Campaign {
   id: number;
   name: string;
@@ -33,22 +19,27 @@ interface Attack {
 
 export function useCreateCampaign() {
   const queryClient = useQueryClient();
+  const { selectedProjectId } = useUiStore();
 
   return useMutation({
-    mutationFn: (data: CreateCampaignData) =>
-      api.post<{ campaign: Campaign }>('/dashboard/campaigns', data),
+    mutationFn: (data: CreateCampaignRequest) =>
+      api.post<{ campaign: Campaign }>(`/dashboard/campaigns?projectId=${data.projectId}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['campaigns', selectedProjectId] });
     },
   });
 }
 
 export function useCreateAttack(campaignId: number) {
   const queryClient = useQueryClient();
+  const { selectedProjectId } = useUiStore();
 
   return useMutation({
-    mutationFn: (data: CreateAttackData) =>
-      api.post<{ attack: Attack }>(`/dashboard/campaigns/${campaignId}/attacks`, data),
+    mutationFn: (data: CreateAttackRequest) =>
+      api.post<{ attack: Attack }>(
+        `/dashboard/campaigns/${campaignId}/attacks?projectId=${selectedProjectId}`,
+        data
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
     },
@@ -57,14 +48,16 @@ export function useCreateAttack(campaignId: number) {
 
 export function useCampaignLifecycle(campaignId: number) {
   const queryClient = useQueryClient();
+  const { selectedProjectId } = useUiStore();
 
   return useMutation({
     mutationFn: (action: 'start' | 'pause' | 'stop' | 'cancel') =>
-      api.post<{ campaign: Campaign }>(`/dashboard/campaigns/${campaignId}/lifecycle`, {
-        action,
-      }),
+      api.post<{ campaign: Campaign }>(
+        `/dashboard/campaigns/${campaignId}/lifecycle?projectId=${selectedProjectId}`,
+        { action }
+      ),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['campaigns', selectedProjectId] });
       queryClient.invalidateQueries({ queryKey: ['campaign', campaignId] });
     },
   });
