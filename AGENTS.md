@@ -144,6 +144,7 @@ Agent API contract tests should validate responses against the OpenAPI spec to k
 
 The frontend is a Vite + React 19 SPA (no server components, no meta-framework):
 
+- **TanStack Query mutations**: Use `onSuccess(_data, variables)` for cache invalidation keys, not Zustand store state (can be stale)
 - Tailwind CSS and shadcn/ui for UI components
 - Forms built with React Hook Form + Zod schemas from the `shared/` package
 - Data fetching and caching via TanStack Query
@@ -245,6 +246,7 @@ Without this, auth middleware 401 responses get swallowed into 500s.
 ## Testing infrastructure
 
 - Backend contract tests validate auth (401) and validation (400) without a running DB
+- Drizzle mock chains must match production code — e.g. `insert().values()` returning `{ onConflictDoNothing: mock() }`
 - Frontend tests use `happy-dom` with manual global injection (not `@happy-dom/global-registrator`)
 - Always call `afterEach(cleanup)` in Testing Library tests — DOM persists in happy-dom
 - Test fixtures: `packages/backend/tests/fixtures.ts` — factory functions + token helpers
