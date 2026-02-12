@@ -44,12 +44,12 @@ Both authentication methods are backed by the same user model and service layer,
 
 The system implements project-scoped RBAC with the following roles:
 
-- **admin**: Full access to project, can manage all resources
-- **operator**: Can manage campaigns and tasks, limited resource access
-- **analyst**: Read-only access to view results and analytics
-- **agent_owner**: Can manage agents and access wordlists/rulelists/masklists
+- **admin**: Global administrator — full access across all projects (manage users, projects, campaigns, resources, results)
+- **operator**: Project-level power user — full access within assigned projects (manage campaigns, resources, project membership)
+- **analyst**: Read-only user — can view campaigns, resources, and results (cannot create or modify)
+- **agent_owner**: Agent manager — can register and manage agents within assigned projects
 
-Roles are assigned at the project level through the `ProjectUser` junction model, allowing users to have different roles in different projects.
+Roles are assigned at the project level through the `project_users` table (as a text array), allowing users to have different roles in different projects.
 
 ## Components
 
@@ -61,11 +61,6 @@ Roles are assigned at the project level through the `ProjectUser` junction model
 - Tracks user status (active/disabled) and last login timestamp
 - Provides `comparePassword()` instance method for password validation
 - Provides `hashPassword()` static method for password hashing
-
-#### Role Model (`backend/src/models/role.model.ts`)
-
-- Defines available roles and their associated permissions
-- Stores permission keys (e.g., 'project:read', 'campaign:create')
 
 #### Project Model (`backend/src/models/project.model.ts`)
 
@@ -170,8 +165,8 @@ Roles are assigned at the project level through the `ProjectUser` junction model
 Utility functions for common permission checks:
 
 - `canViewProject(user, projectId)`: Check if user can view project
-- `canManageCampaign(user, projectId)`: Check if user can manage campaigns (admin or operator)
-- `canManageAgents(user, projectId)`: Check if user can manage agents (admin or agent_owner)
+- `canManageCampaign(user, projectId)`: Check if user can manage campaigns (admin or power-user)
+- `canManageAgents(user, projectId)`: Check if user can manage agents (admin or power-user)
 - `isProjectAdmin(user, projectId)`: Check if user is project admin
 - `canAccessResource(user, projectId, resourceType)`: Check resource access based on role
 
@@ -251,9 +246,9 @@ import { requireProjectRole } from '../middleware/authz.middleware';
 
 router.post('/projects/:projectId/campaigns',
   authenticateSession,
-  requireProjectRole('projectId', 'admin', 'operator'),
+  requireProjectRole('projectId', 'admin', 'power-user'),
   async (req, res) => {
-    // Only admin or operator can create campaigns
+    // Only admin or power-user can create campaigns
     res.json({ campaign: {} });
   }
 );

@@ -1,0 +1,13 @@
+node_modules
+.git
+.kiro
+docs
+*.md
+!packages/*/package.json
+packages/*/tests
+packages/*/e2e
+packages/frontend/dist
+packages/backend/dist
+.env
+.env.*
+backups

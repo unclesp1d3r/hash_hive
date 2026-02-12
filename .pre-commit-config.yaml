@@ -11,13 +11,13 @@ repos:
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace
-        exclude: ^(node_modules/|dist/|\.next/|coverage/|\.git/|package-lock\.json)
+        exclude: ^(node_modules/|dist/|coverage/|\.git/|package-lock\.json)
       - id: end-of-file-fixer
-        exclude: ^(node_modules/|dist/|\.next/|coverage/|\.git/|\.hook)
+        exclude: ^(node_modules/|dist/|coverage/|\.git/|\.hook)
       - id: check-yaml
         args: [--unsafe] # Allow custom tags in YAML
       - id: check-json
-        exclude: ^(node_modules/|dist/|\.next/|coverage/|\.git/|package-lock\.json)
+        exclude: ^(node_modules/|dist/|coverage/|\.git/|package-lock\.json)
       - id: check-added-large-files
         args: [--maxkb=1000] # Warn on files > 1MB
       - id: check-merge-conflict
@@ -28,9 +28,6 @@ repos:
       - id: check-illegal-windows-names
       - id: check-shebang-scripts-are-executable
       - id: check-symlinks
-      - id: check-vcs-permalinks
-      - id: check-xml
-      - id: check-yaml
 
   # Local hooks for Biome and TypeScript
   - repo: local

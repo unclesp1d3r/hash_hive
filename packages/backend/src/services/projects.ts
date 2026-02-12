@@ -1,0 +1,114 @@
+import { projects, projectUsers } from '@hashhive/shared';
+import { and, eq } from 'drizzle-orm';
+import { db } from '../db/index.js';
+
+export async function createProject(data: {
+  name: string;
+  description?: string | undefined;
+  slug: string;
+  settings?: Record<string, unknown> | undefined;
+  createdBy: number;
+}) {
+  return db.transaction(async (tx) => {
+    const [project] = await tx
+      .insert(projects)
+      .values({
+        name: data.name,
+        description: data.description ?? null,
+        slug: data.slug,
+        settings: data.settings ?? {},
+        createdBy: data.createdBy,
+      })
+      .returning();
+
+    if (!project) {
+      return null;
+    }
+
+    // Add the creator as admin
+    await tx.insert(projectUsers).values({
+      userId: data.createdBy,
+      projectId: project.id,
+      roles: ['admin'],
+    });
+
+    return project;
+  });
+}
+
+export async function getProjectById(projectId: number) {
+  const [project] = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
+  return project ?? null;
+}
+
+export async function getUserProjects(userId: number) {
+  return db
+    .select({
+      id: projects.id,
+      name: projects.name,
+      slug: projects.slug,
+      description: projects.description,
+      settings: projects.settings,
+      roles: projectUsers.roles,
+      createdAt: projects.createdAt,
+    })
+    .from(projectUsers)
+    .innerJoin(projects, eq(projectUsers.projectId, projects.id))
+    .where(eq(projectUsers.userId, userId));
+}
+
+export async function updateProject(
+  projectId: number,
+  data: {
+    name?: string | undefined;
+    description?: string | undefined;
+    settings?: Record<string, unknown> | undefined;
+  }
+) {
+  const [updated] = await db
+    .update(projects)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(projects.id, projectId))
+    .returning();
+
+  return updated ?? null;
+}
+
+export async function addUserToProject(projectId: number, userId: number, roles: string[]) {
+  const [membership] = await db
+    .insert(projectUsers)
+    .values({ projectId, userId, roles })
+    .returning();
+
+  return membership ?? null;
+}
+
+export async function removeUserFromProject(projectId: number, userId: number) {
+  const [removed] = await db
+    .delete(projectUsers)
+    .where(and(eq(projectUsers.projectId, projectId), eq(projectUsers.userId, userId)))
+    .returning();
+
+  return removed ?? null;
+}
+
+export async function getProjectMembers(projectId: number) {
+  return db
+    .select({
+      userId: projectUsers.userId,
+      roles: projectUsers.roles,
+      createdAt: projectUsers.createdAt,
+    })
+    .from(projectUsers)
+    .where(eq(projectUsers.projectId, projectId));
+}
+
+export async function updateMemberRoles(projectId: number, userId: number, roles: string[]) {
+  const [updated] = await db
+    .update(projectUsers)
+    .set({ roles })
+    .where(and(eq(projectUsers.projectId, projectId), eq(projectUsers.userId, userId)))
+    .returning();
+
+  return updated ?? null;
+}
