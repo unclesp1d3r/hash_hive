@@ -4,9 +4,10 @@
 
 ### Prerequisites
 
-- Node.js 20+ and npm 10+
+- Bun 1.2+ (runtime, package manager, and test runner)
 - Docker and Docker Compose
 - Git
+- [just](https://github.com/casey/just) (optional, for convenience commands)
 
 ### Initial Setup
 
@@ -17,54 +18,62 @@ git clone <repository-url>
 cd hashhive
 ```
 
-2. **Run the setup script**
+2. **Run the setup command**
 
 ```bash
-./scripts/setup.sh
+just setup
 ```
 
 Or manually:
 
 ```bash
 # Install dependencies
-npm install
+bun install
 
 # Copy environment files
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
+cp packages/backend/.env.example packages/backend/.env
 
-# Start infrastructure services
+# Start infrastructure services (PostgreSQL, Redis, MinIO)
 docker compose up -d
 ```
 
 3. **Start development servers**
 
 ```bash
-npm run dev
+bun dev
 ```
 
-This starts both backend (port 3001) and frontend (port 3000) in watch mode.
+This starts both backend and frontend in watch mode via Turborepo.
 
 ## Project Structure
 
 ```
 hashhive/
-├── backend/              # Node.js + Express API
-│   ├── src/
-│   │   ├── config/       # Configuration management
-│   │   ├── models/       # Mongoose models
-│   │   ├── routes/       # API routes
-│   │   ├── services/     # Business logic
-│   │   ├── middleware/   # Express middleware
-│   │   └── utils/        # Utilities
-│   └── tests/            # Backend tests
-├── frontend/             # Next.js + React UI
-│   ├── app/              # Next.js App Router
-│   ├── components/       # React components
-│   └── lib/              # Frontend utilities
-├── shared/               # Shared TypeScript types
-│   └── src/types/        # Common type definitions
-└── openapi/              # API specifications
+├── packages/
+│   ├── backend/          # Bun + Hono API
+│   │   ├── src/
+│   │   │   ├── config/       # Configuration management
+│   │   │   ├── db/           # Drizzle client setup
+│   │   │   ├── routes/       # Hono route handlers by domain
+│   │   │   ├── services/     # Business logic (optional)
+│   │   │   ├── middleware/   # Hono middleware
+│   │   │   └── queue/        # BullMQ workers and queue config
+│   │   └── tests/            # Backend tests
+│   ├── frontend/         # React 19 + Vite UI
+│   │   ├── src/
+│   │   │   ├── components/   # React components (ui/ + features/)
+│   │   │   ├── pages/        # Route-level page components
+│   │   │   ├── hooks/        # TanStack Query wrappers
+│   │   │   ├── stores/       # Zustand stores
+│   │   │   └── lib/          # Utilities and API client
+│   │   └── tests/            # Frontend tests
+│   ├── shared/           # Drizzle schema, Zod schemas, types
+│   │   └── src/
+│   │       ├── db/           # Schema + migrations
+│   │       ├── schemas/      # Zod schemas (drizzle-zod + custom)
+│   │       └── types/        # Inferred types (z.infer exports)
+│   └── openapi/          # API specifications
+└── turbo.json            # Turborepo configuration
 ```
 
 ## Development Workflow
@@ -74,96 +83,69 @@ hashhive/
 Use `just` commands for convenience:
 
 ```bash
-# Start all services
-just dev
-
-# Start backend only
-just dev-backend
-
-# Start frontend only
-just dev-frontend
-
-# Start infrastructure (MongoDB, Redis, MinIO)
-just docker-up
+just dev              # Start all services
+just dev-backend      # Start backend only
+just dev-frontend     # Start frontend only
+just docker-up        # Start infrastructure (PostgreSQL, Redis, MinIO)
 ```
 
-Or use npm directly:
+Or use bun directly:
 
 ```bash
-npm run dev              # All services
-npm run dev -w backend   # Backend only
-npm run dev -w frontend  # Frontend only
-docker compose up -d     # Infrastructure
+bun dev                      # All services
+bun --filter backend dev     # Backend only
+bun --filter frontend dev    # Frontend only
+docker compose up -d         # Infrastructure
 ```
 
 ### Code Quality
 
 ```bash
-# Using just
-just lint                # Lint all code
-just format              # Format code
+just lint                # Lint all code (Biome)
+just format              # Format code (Biome)
 just format-check        # Check formatting
-just type-check          # Type check
-
-# Or npm directly
-npm run lint
-npm run format
-npm run format:check
-npm run type-check
+just type-check          # TypeScript type check
 ```
 
 ### Testing
 
 ```bash
-# Using just
-just test                # Run all tests
-just test-backend        # Backend unit tests
-just test-integration    # Backend integration tests
+just test                # Run all tests (bun:test)
+just test-backend        # Backend tests
 just test-frontend       # Frontend tests
-just test-e2e            # E2E tests
-just test-watch          # Watch mode
-
-# Or npm directly
-npm test
-npm run test -w backend
-npm run test:integration -w backend
-npm run test -w frontend
-npm run test:e2e -w frontend
-npm run test:watch -w backend
+just test-e2e            # E2E tests (Playwright)
 ```
 
 ### Building
 
 ```bash
-# Using just
-just build               # Build all packages
+just build               # Build all packages (Turborepo cached)
 just build-backend       # Build backend
 just build-frontend      # Build frontend
 just build-shared        # Build shared
+```
 
-# Or npm directly
-npm run build
-npm run build -w backend
-npm run build -w frontend
-npm run build -w shared
+### Full CI Check
+
+```bash
+just ci-check            # lint + format-check + type-check + build + test
 ```
 
 ## Coding Standards
 
 ### TypeScript
 
-- Use strict mode (enabled by default)
+- Strict mode enabled (`exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`, etc.)
 - Avoid `any` types
 - Use explicit return types for public APIs
 - Leverage type inference for internal code
 
 ### Code Style
 
-- Follow ESLint rules
-- Use Prettier for formatting
+- **Biome** for linting and formatting (not ESLint, not Prettier)
 - 2 spaces for indentation
 - Single quotes for strings
-- Trailing commas in ES5
+- Trailing commas
 
 ### Naming Conventions
 
@@ -177,7 +159,7 @@ npm run build -w shared
 
 1. Create a feature branch from `main`
 2. Make your changes
-3. Run tests and linting
+3. Run `just ci-check`
 4. Commit with descriptive messages
 5. Push and create a pull request
 
@@ -185,53 +167,20 @@ npm run build -w shared
 
 The project uses [pre-commit](https://pre-commit.com) for automated quality checks:
 
-**Pre-commit Hook:**
-
-- Automatically runs on `git commit`
-- Formats staged files with Prettier
-- Runs TypeScript type checking
-- Ensures consistent code style
-
-**Pre-push Hook:**
-
-- Automatically runs on `git push`
-- Runs TypeScript type checking across all workspaces
-- Runs all test suites
-- Prevents pushing broken code
-
-**Installation:**
+- Biome format and lint checks
+- TypeScript type checking
+- Trailing whitespace and file hygiene
 
 ```bash
-# Install pre-commit (requires Python)
 pip install pre-commit
-
-# Install hooks
 pre-commit install
-just install-hooks  # Or use the justfile command
-```
-
-The setup script (`./scripts/setup.sh`) will automatically install hooks if pre-commit is available.
-
-**Updating Hooks:**
-
-```bash
-pre-commit autoupdate
-# Or via justfile
-just update-deps
-```
-
-To skip hooks in emergencies (not recommended):
-
-```bash
-git commit --no-verify
-git push --no-verify
 ```
 
 ### Commit Messages
 
 Follow conventional commits:
 
-```markdown
+```
 feat: add agent heartbeat endpoint
 fix: resolve task assignment race condition
 docs: update API documentation
@@ -250,8 +199,7 @@ refactor: simplify task distribution logic
 
 ### Integration Tests
 
-- Use Testcontainers for real services
-- Test API endpoints end-to-end
+- Test API endpoints with a test database
 - Verify database operations
 - Test queue operations
 
@@ -262,24 +210,18 @@ refactor: simplify task distribution logic
 - Test real-time features
 - Verify authentication flows
 
-## Documentation
-
-- Document public APIs with JSDoc
-- Update README for major changes
-- Keep OpenAPI specs in sync with code
-- Add inline comments for complex logic
-
 ## Infrastructure Services
 
-### MongoDB
+### PostgreSQL
 
-- Connection: `mongodb://localhost:27017/hashhive`
-- GUI: Use MongoDB Compass or mongosh
+- Connection: `localhost:5432`
+- Database: `hashhive`
+- GUI: Use Drizzle Studio (`just db-studio`) or psql (`just psql-shell`)
 
 ### Redis
 
 - Connection: `localhost:6379`
-- GUI: Use RedisInsight or redis-cli
+- GUI: Use RedisInsight or redis-cli (`just redis-cli`)
 
 ### MinIO
 
@@ -291,39 +233,35 @@ refactor: simplify task distribution logic
 
 ### Port Conflicts
 
-If ports are already in use:
-
 ```bash
-# Stop existing services
 docker compose down
-
-# Change ports in docker-compose.yml
-# Update .env files accordingly
+# Change ports in docker-compose.yml and update .env files
 ```
 
 ### Database Issues
 
 ```bash
-# Reset MongoDB
+# Reset PostgreSQL
 docker compose down -v
-docker compose up -d mongodb
+docker compose up -d
+
+# Run migrations
+just db-migrate
 
 # View logs
-docker compose logs mongodb
+docker compose logs postgres
 ```
 
 ### Dependency Issues
 
 ```bash
-# Clean install
-rm -rf node_modules package-lock.json
-rm -rf backend/node_modules frontend/node_modules shared/node_modules
-npm install
+just clean       # Remove all node_modules and build artifacts
+bun install      # Fresh install
 ```
 
 ## Getting Help
 
-- Check existing documentation in `docs/`
-- Review OpenAPI specifications in `openapi/`
+- Check documentation in `docs/`
+- Review OpenAPI specifications in `packages/openapi/`
+- Review architecture in `.kiro/steering/`
 - Ask questions in pull requests
-- Review implementation plans in `.kiro/specs/`
