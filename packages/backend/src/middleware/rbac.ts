@@ -16,34 +16,36 @@ function httpError(status: 401 | 403 | 400, code: string, message: string): HTTP
   });
 }
 
-/**
- * Require that the current user has at least one of the given roles
- * within the specified project. Project ID is read from the route
- * param `:projectId` or the query string `projectId`.
- */
+async function checkMembership(c: {
+  get: (key: 'currentUser') => { userId: number } | undefined;
+  req: { param: (key: string) => string | undefined; query: (key: string) => string | undefined };
+}) {
+  const user = c.get('currentUser');
+  if (!user) {
+    throw httpError(401, 'AUTH_TOKEN_INVALID', 'Authentication required');
+  }
+
+  const projectId = Number(c.req.param('projectId')) || Number(c.req.query('projectId')) || null;
+  if (!projectId) {
+    throw httpError(400, 'VALIDATION_FAILED', 'Project ID is required for this operation');
+  }
+
+  const [membership] = await db
+    .select()
+    .from(projectUsers)
+    .where(and(eq(projectUsers.userId, user.userId), eq(projectUsers.projectId, projectId)))
+    .limit(1);
+
+  if (!membership) {
+    throw httpError(403, 'AUTHZ_PROJECT_ACCESS_DENIED', 'Not a member of this project');
+  }
+
+  return membership;
+}
+
 export function requireRole(...roles: Role[]) {
   return createMiddleware<AppEnv>(async (c, next) => {
-    const user = c.get('currentUser');
-    if (!user) {
-      throw httpError(401, 'AUTH_TOKEN_INVALID', 'Authentication required');
-    }
-
-    const projectId = Number(c.req.param('projectId')) || Number(c.req.query('projectId')) || null;
-
-    if (!projectId) {
-      throw httpError(400, 'VALIDATION_FAILED', 'Project ID is required for this operation');
-    }
-
-    const [membership] = await db
-      .select()
-      .from(projectUsers)
-      .where(and(eq(projectUsers.userId, user.userId), eq(projectUsers.projectId, projectId)))
-      .limit(1);
-
-    if (!membership) {
-      throw httpError(403, 'AUTHZ_PROJECT_ACCESS_DENIED', 'Not a member of this project');
-    }
-
+    const membership = await checkMembership(c);
     const hasRole = membership.roles.some((r) => roles.includes(r as Role));
     if (!hasRole) {
       throw httpError(
@@ -52,38 +54,13 @@ export function requireRole(...roles: Role[]) {
         `Requires one of: ${roles.join(', ')}`
       );
     }
-
     await next();
   });
 }
 
-/**
- * Require that the current user is a member of the specified project
- * (any role). Lighter check than requireRole.
- */
 export function requireProjectAccess() {
   return createMiddleware<AppEnv>(async (c, next) => {
-    const user = c.get('currentUser');
-    if (!user) {
-      throw httpError(401, 'AUTH_TOKEN_INVALID', 'Authentication required');
-    }
-
-    const projectId = Number(c.req.param('projectId')) || Number(c.req.query('projectId')) || null;
-
-    if (!projectId) {
-      throw httpError(400, 'VALIDATION_FAILED', 'Project ID is required for this operation');
-    }
-
-    const [membership] = await db
-      .select()
-      .from(projectUsers)
-      .where(and(eq(projectUsers.userId, user.userId), eq(projectUsers.projectId, projectId)))
-      .limit(1);
-
-    if (!membership) {
-      throw httpError(403, 'AUTHZ_PROJECT_ACCESS_DENIED', 'Not a member of this project');
-    }
-
+    await checkMembership(c);
     await next();
   });
 }

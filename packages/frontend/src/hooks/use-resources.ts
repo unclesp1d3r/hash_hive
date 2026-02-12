@@ -49,50 +49,24 @@ export function useHashLists() {
   });
 }
 
-export function useWordlists() {
+function useResourceList(type: 'wordlists' | 'rulelists' | 'masklists') {
   const { selectedProjectId } = useUiStore();
 
   return useQuery({
-    queryKey: ['wordlists', selectedProjectId],
+    queryKey: [type, selectedProjectId],
     queryFn: () => {
       const query = selectedProjectId ? `?projectId=${selectedProjectId}` : '';
       return api.get<{ resources: Resource[]; total: number }>(
-        `/dashboard/resources/wordlists${query}`
+        `/dashboard/resources/${type}${query}`
       );
     },
     enabled: !!selectedProjectId,
   });
 }
 
-export function useRulelists() {
-  const { selectedProjectId } = useUiStore();
-
-  return useQuery({
-    queryKey: ['rulelists', selectedProjectId],
-    queryFn: () => {
-      const query = selectedProjectId ? `?projectId=${selectedProjectId}` : '';
-      return api.get<{ resources: Resource[]; total: number }>(
-        `/dashboard/resources/rulelists${query}`
-      );
-    },
-    enabled: !!selectedProjectId,
-  });
-}
-
-export function useMasklists() {
-  const { selectedProjectId } = useUiStore();
-
-  return useQuery({
-    queryKey: ['masklists', selectedProjectId],
-    queryFn: () => {
-      const query = selectedProjectId ? `?projectId=${selectedProjectId}` : '';
-      return api.get<{ resources: Resource[]; total: number }>(
-        `/dashboard/resources/masklists${query}`
-      );
-    },
-    enabled: !!selectedProjectId,
-  });
-}
+export const useWordlists = () => useResourceList('wordlists');
+export const useRulelists = () => useResourceList('rulelists');
+export const useMasklists = () => useResourceList('masklists');
 
 export function useGuessHashType() {
   return useMutation({

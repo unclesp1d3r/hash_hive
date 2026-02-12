@@ -64,23 +64,23 @@ export function useEvents(options: UseEventsOptions = {}) {
         reconnectAttemptsRef.current = 0;
       };
 
+      const invalidationKeys: Record<string, string[]> = {
+        agent_status: ['agents', 'dashboard-stats'],
+        campaign_status: ['campaigns', 'dashboard-stats'],
+        task_update: ['tasks', 'dashboard-stats'],
+        crack_result: ['dashboard-stats'],
+      };
+
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data) as Record<string, unknown>;
           if (data['type'] === 'connected' || data['type'] === 'pong') return;
 
-          const eventType = data['type'] as string;
-          if (eventType === 'agent_status') {
-            queryClient.invalidateQueries({ queryKey: ['agents', selectedProjectId] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard-stats', selectedProjectId] });
-          } else if (eventType === 'campaign_status') {
-            queryClient.invalidateQueries({ queryKey: ['campaigns', selectedProjectId] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard-stats', selectedProjectId] });
-          } else if (eventType === 'task_update') {
-            queryClient.invalidateQueries({ queryKey: ['tasks', selectedProjectId] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard-stats', selectedProjectId] });
-          } else if (eventType === 'crack_result') {
-            queryClient.invalidateQueries({ queryKey: ['dashboard-stats', selectedProjectId] });
+          const keys = invalidationKeys[data['type'] as string];
+          if (keys) {
+            for (const key of keys) {
+              queryClient.invalidateQueries({ queryKey: [key, selectedProjectId] });
+            }
           }
 
           onEventRef.current?.(data as unknown as AppEvent);
