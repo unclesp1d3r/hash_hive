@@ -1,33 +1,15 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
 import { ConnectionIndicator } from '../components/features/connection-indicator';
 import { StatCard } from '../components/features/stat-card';
 import { useDashboardStats } from '../hooks/use-dashboard';
-import { type AppEvent, useEvents } from '../hooks/use-events';
+import { useEvents } from '../hooks/use-events';
 import { useUiStore } from '../stores/ui';
 
 export function DashboardPage() {
   const { selectedProjectId } = useUiStore();
   const { data: stats, isLoading } = useDashboardStats();
-  const queryClient = useQueryClient();
 
-  const handleEvent = useCallback(
-    (event: AppEvent) => {
-      // Invalidate relevant queries on real-time events
-      if (event.type === 'agent_status') {
-        queryClient.invalidateQueries({ queryKey: ['agents'] });
-        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      } else if (event.type === 'campaign_status') {
-        queryClient.invalidateQueries({ queryKey: ['campaigns'] });
-        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      } else if (event.type === 'task_update' || event.type === 'crack_result') {
-        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-      }
-    },
-    [queryClient]
-  );
-
-  const { connected } = useEvents({ onEvent: handleEvent });
+  // Query invalidation is handled inside useEvents — no duplicate handler needed
+  const { connected } = useEvents();
 
   if (!selectedProjectId) {
     return (

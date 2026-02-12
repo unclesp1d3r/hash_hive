@@ -124,7 +124,10 @@ export const hashLists = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index('hash_lists_project_id_idx').on(table.projectId)]
+  (table) => [
+    index('hash_lists_project_id_idx').on(table.projectId),
+    index('hash_lists_status_idx').on(table.status),
+  ]
 );
 
 export const hashItems = pgTable(
@@ -140,7 +143,10 @@ export const hashItems = pgTable(
     metadata: jsonb('metadata').default({}),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index('hash_items_hash_list_id_idx').on(table.hashListId)]
+  (table) => [
+    index('hash_items_hash_list_id_idx').on(table.hashListId),
+    index('hash_items_cracked_at_idx').on(table.crackedAt),
+  ]
 );
 
 export const wordLists = pgTable('word_lists', {
@@ -259,5 +265,6 @@ export const tasks = pgTable(
     index('tasks_campaign_id_idx').on(table.campaignId),
     index('tasks_agent_id_idx').on(table.agentId),
     index('tasks_status_idx').on(table.status),
+    index('tasks_status_campaign_id_idx').on(table.status, table.campaignId),
   ]
 );

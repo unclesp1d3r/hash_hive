@@ -1,27 +1,45 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { StrictMode, useEffect } from 'react';
+import { lazy, StrictMode, Suspense, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { ErrorBoundary } from './components/features/error-boundary';
 import { AppLayout } from './components/features/layout';
 import { ProtectedRoute } from './components/features/protected-route';
 import './index.css';
-import { AgentDetailPage } from './pages/agent-detail';
-import { AgentsPage } from './pages/agents';
-import { CampaignCreatePage } from './pages/campaign-create';
-import { CampaignDetailPage } from './pages/campaign-detail';
-import { CampaignsPage } from './pages/campaigns';
-import { DashboardPage } from './pages/dashboard';
-import { LoginPage } from './pages/login';
-import { NotFoundPage } from './pages/not-found';
-import { ResourcesPage } from './pages/resources';
 import { useAuthStore } from './stores/auth';
+
+// Route-level code splitting — each page is loaded on demand
+const DashboardPage = lazy(() =>
+  import('./pages/dashboard').then((m) => ({ default: m.DashboardPage }))
+);
+const LoginPage = lazy(() => import('./pages/login').then((m) => ({ default: m.LoginPage })));
+const AgentsPage = lazy(() => import('./pages/agents').then((m) => ({ default: m.AgentsPage })));
+const AgentDetailPage = lazy(() =>
+  import('./pages/agent-detail').then((m) => ({ default: m.AgentDetailPage }))
+);
+const CampaignsPage = lazy(() =>
+  import('./pages/campaigns').then((m) => ({ default: m.CampaignsPage }))
+);
+const CampaignCreatePage = lazy(() =>
+  import('./pages/campaign-create').then((m) => ({ default: m.CampaignCreatePage }))
+);
+const CampaignDetailPage = lazy(() =>
+  import('./pages/campaign-detail').then((m) => ({ default: m.CampaignDetailPage }))
+);
+const ResourcesPage = lazy(() =>
+  import('./pages/resources').then((m) => ({ default: m.ResourcesPage }))
+);
+const NotFoundPage = lazy(() =>
+  import('./pages/not-found').then((m) => ({ default: m.NotFoundPage }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
       retry: 1,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
     },
   },
 });
@@ -37,21 +55,23 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route element={<ProtectedRoute />}>
-              <Route element={<AppLayout />}>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/campaigns" element={<CampaignsPage />} />
-                <Route path="/campaigns/new" element={<CampaignCreatePage />} />
-                <Route path="/campaigns/:id" element={<CampaignDetailPage />} />
-                <Route path="/agents" element={<AgentsPage />} />
-                <Route path="/agents/:id" element={<AgentDetailPage />} />
-                <Route path="/resources" element={<ResourcesPage />} />
+          <Suspense>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route element={<ProtectedRoute />}>
+                <Route element={<AppLayout />}>
+                  <Route path="/" element={<DashboardPage />} />
+                  <Route path="/campaigns" element={<CampaignsPage />} />
+                  <Route path="/campaigns/new" element={<CampaignCreatePage />} />
+                  <Route path="/campaigns/:id" element={<CampaignDetailPage />} />
+                  <Route path="/agents" element={<AgentsPage />} />
+                  <Route path="/agents/:id" element={<AgentDetailPage />} />
+                  <Route path="/resources" element={<ResourcesPage />} />
+                </Route>
               </Route>
-            </Route>
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </QueryClientProvider>
     </ErrorBoundary>
