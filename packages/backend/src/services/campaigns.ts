@@ -193,11 +193,9 @@ export async function transitionCampaign(id: number, targetStatus: CampaignStatu
       }
 
       if (estimatedTasks <= INLINE_GENERATION_THRESHOLD) {
-        // Generate inline — small enough to not block the request meaningfully
+        // Generate inline in parallel — small enough to not block the request meaningfully
         const { generateTasksForAttack } = await import('./tasks.js');
-        for (const atk of campaignAttacks) {
-          await generateTasksForAttack(atk.id);
-        }
+        await Promise.all(campaignAttacks.map((atk) => generateTasksForAttack(atk.id)));
       } else {
         // Enqueue to the dedicated task-generation job queue
         const { getQueueManager } = await import('../queue/context.js');
@@ -220,10 +218,16 @@ export async function transitionCampaign(id: number, targetStatus: CampaignStatu
           });
 
           if (!enqueued) {
-            // Roll back the status transition
+            // Roll back the entire status transition including timestamps/progress
             await db
               .update(campaigns)
-              .set({ status: campaign.status, updatedAt: new Date() })
+              .set({
+                status: campaign.status,
+                startedAt: campaign.startedAt,
+                completedAt: campaign.completedAt,
+                progress: campaign.progress ?? {},
+                updatedAt: new Date(),
+              })
               .where(eq(campaigns.id, id));
             return {
               error: 'Failed to enqueue task generation',

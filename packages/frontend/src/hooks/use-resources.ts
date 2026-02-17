@@ -87,20 +87,18 @@ type ResourceType = 'hash-lists' | 'wordlists' | 'rulelists' | 'masklists';
 
 export function useCreateResource(type: ResourceType) {
   const queryClient = useQueryClient();
-  const { selectedProjectId } = useUiStore();
 
   return useMutation({
     mutationFn: (data: { name: string }) =>
       api.post<{ resource: Resource }>(`/dashboard/resources/${type}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [type, selectedProjectId] });
+      queryClient.invalidateQueries({ queryKey: [type] });
     },
   });
 }
 
 export function useUploadResourceFile(type: ResourceType) {
   const queryClient = useQueryClient();
-  const { selectedProjectId } = useUiStore();
 
   return useMutation({
     mutationFn: ({ id, file }: { id: number; file: File }) => {
@@ -121,7 +119,7 @@ export function useUploadResourceFile(type: ResourceType) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [type, selectedProjectId] });
+      queryClient.invalidateQueries({ queryKey: [type] });
     },
   });
 }

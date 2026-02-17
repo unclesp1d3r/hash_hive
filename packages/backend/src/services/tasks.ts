@@ -103,9 +103,21 @@ function agentMatchesCapabilities(
       return false;
     }
 
-    // Non-boolean values: exact match or agent value includes required value
-    if (typeof requiredValue !== 'boolean' && agentValue !== requiredValue) {
-      return false;
+    // Non-boolean values: exact match or array containment
+    if (typeof requiredValue !== 'boolean') {
+      // hashcatMode required by task → check against agent's hashModes array
+      if (key === 'hashcatMode' && Array.isArray(agentCaps['hashModes'])) {
+        if (!agentCaps['hashModes'].includes(requiredValue)) {
+          return false;
+        }
+      } else if (Array.isArray(agentValue)) {
+        // Generic array containment: agent array must include required value
+        if (!agentValue.includes(requiredValue)) {
+          return false;
+        }
+      } else if (agentValue !== requiredValue) {
+        return false;
+      }
     }
   }
   return true;

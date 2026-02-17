@@ -4,8 +4,6 @@ name: CI
     branches: [main]
   pull_request:
   workflow_dispatch:
-permissions:
-  contents: read
 jobs:
   ci-check:
     runs-on: ubuntu-latest
