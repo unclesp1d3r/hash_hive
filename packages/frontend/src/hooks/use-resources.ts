@@ -41,10 +41,7 @@ export function useHashLists() {
 
   return useQuery({
     queryKey: ['hash-lists', selectedProjectId],
-    queryFn: () => {
-      const query = selectedProjectId ? `?projectId=${selectedProjectId}` : '';
-      return api.get<{ hashLists: HashList[] }>(`/dashboard/resources/hash-lists${query}`);
-    },
+    queryFn: () => api.get<{ hashLists: HashList[] }>('/dashboard/resources/hash-lists'),
     enabled: !!selectedProjectId,
   });
 }
@@ -54,12 +51,8 @@ function useResourceList(type: 'wordlists' | 'rulelists' | 'masklists') {
 
   return useQuery({
     queryKey: [type, selectedProjectId],
-    queryFn: () => {
-      const query = selectedProjectId ? `?projectId=${selectedProjectId}` : '';
-      return api.get<{ resources: Resource[]; total: number }>(
-        `/dashboard/resources/${type}${query}`
-      );
-    },
+    queryFn: () =>
+      api.get<{ resources: Resource[]; total: number }>(`/dashboard/resources/${type}`),
     enabled: !!selectedProjectId,
   });
 }
@@ -82,13 +75,10 @@ export function useCreateHashList() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { name: string; projectId: number; hashTypeId?: number }) =>
-      api.post<{ hashList: HashList }>(
-        `/dashboard/resources/hash-lists?projectId=${data.projectId}`,
-        data
-      ),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['hash-lists', variables.projectId] });
+    mutationFn: (data: { name: string; hashTypeId?: number }) =>
+      api.post<{ hashList: HashList }>('/dashboard/resources/hash-lists', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hash-lists'] });
     },
   });
 }

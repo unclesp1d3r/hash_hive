@@ -86,7 +86,6 @@ export function CampaignCreatePage() {
     setError(null);
     try {
       const result = await createCampaign.mutateAsync({
-        projectId: selectedProjectId,
         name: wizard.name,
         hashListId: wizard.hashListId ?? 0,
         priority: wizard.priority,
@@ -97,13 +96,10 @@ export function CampaignCreatePage() {
 
       // Create attacks sequentially using direct API calls to avoid stale hook state
       for (const attack of wizard.attacks) {
-        await api.post(
-          `/dashboard/campaigns/${campaignId}/attacks?projectId=${selectedProjectId}`,
-          {
-            ...attack,
-            ...(attack.dependencies.length > 0 ? { dependencies: attack.dependencies } : {}),
-          }
-        );
+        await api.post(`/dashboard/campaigns/${campaignId}/attacks`, {
+          ...attack,
+          ...(attack.dependencies.length > 0 ? { dependencies: attack.dependencies } : {}),
+        });
       }
 
       wizard.reset();

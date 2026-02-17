@@ -1,11 +1,34 @@
 import { agents, attacks, campaigns, hashItems, tasks } from '@hashhive/shared';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
+import { updateCampaignProgress } from './campaigns.js';
 import { emitCrackResult, emitTaskUpdate } from './events.js';
 
 // ─── Task Generation ────────────────────────────────────────────────
 
 const DEFAULT_CHUNK_SIZE = 10_000_000; // 10M keyspace units per task
+
+/**
+ * Derives required capabilities from an attack's configuration.
+ * Used when generating tasks so agents can be matched by capability.
+ */
+function deriveRequiredCapabilities(attack: {
+  mode: number;
+  advancedConfiguration: unknown;
+}): Record<string, unknown> {
+  const caps: Record<string, unknown> = {};
+  const config = (attack.advancedConfiguration ?? {}) as Record<string, unknown>;
+
+  // Attacks requiring GPU acceleration
+  if (config['useGpu'] === true) {
+    caps['gpu'] = true;
+  }
+
+  // Store the hashcat mode so agents can advertise supported modes
+  caps['hashcatMode'] = attack.mode;
+
+  return caps;
+}
 
 /**
  * Generates tasks for an attack by partitioning its keyspace into chunks.
@@ -20,6 +43,7 @@ export async function generateTasksForAttack(
     return { error: 'Attack not found' };
   }
 
+  const requiredCapabilities = deriveRequiredCapabilities(attack);
   const totalKeyspace = Number.parseInt(attack.keyspace ?? '0', 10);
   if (totalKeyspace <= 0) {
     // For attacks without a pre-calculated keyspace, create a single task
@@ -30,6 +54,7 @@ export async function generateTasksForAttack(
         campaignId: attack.campaignId,
         status: 'pending',
         workRange: { start: 0, end: 0, total: 0 },
+        requiredCapabilities,
       })
       .returning();
 
@@ -52,6 +77,7 @@ export async function generateTasksForAttack(
         campaignId: attack.campaignId,
         status: 'pending' as const,
         workRange: range,
+        requiredCapabilities,
       }))
     )
     .returning();
@@ -62,7 +88,32 @@ export async function generateTasksForAttack(
 // ─── Task Assignment ────────────────────────────────────────────────
 
 /**
+ * Checks whether an agent's capabilities satisfy a task's required capabilities.
+ * Uses JSON containment logic: agent caps must include all required keys/values.
+ */
+function agentMatchesCapabilities(
+  agentCaps: Record<string, unknown>,
+  requiredCaps: Record<string, unknown>
+): boolean {
+  for (const [key, requiredValue] of Object.entries(requiredCaps)) {
+    const agentValue = agentCaps[key];
+
+    // Boolean requirements: agent must have the capability set to true
+    if (requiredValue === true && agentValue !== true) {
+      return false;
+    }
+
+    // Non-boolean values: exact match or agent value includes required value
+    if (typeof requiredValue !== 'boolean' && agentValue !== requiredValue) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
  * Assigns the next available pending task to an agent.
+ * Filters by project scope and capability predicate.
  * Uses SELECT ... FOR UPDATE SKIP LOCKED for safe concurrent assignment.
  */
 export async function assignNextTask(agentId: number) {
@@ -72,26 +123,30 @@ export async function assignNextTask(agentId: number) {
     return null;
   }
 
-  // Get the agent's project to scope task assignment
   const projectId = agent.projectId;
+  const agentCaps = (agent.capabilities ?? {}) as Record<string, unknown>;
 
   // Find and claim a pending task atomically using a transaction
   const result = await db.transaction(async (tx) => {
-    // Find pending task for campaigns in this agent's project
-    const [pendingTask] = await tx
+    // Find pending tasks for campaigns in this agent's project
+    const pendingTasks = await tx
       .select()
       .from(tasks)
       .where(and(eq(tasks.status, 'pending'), isNull(tasks.agentId)))
-      .innerJoin(campaigns, eq(tasks.campaignId, campaigns.id))
+      .innerJoin(
+        campaigns,
+        and(eq(tasks.campaignId, campaigns.id), eq(campaigns.projectId, projectId))
+      )
       .orderBy(campaigns.priority, tasks.id)
-      .limit(1);
+      .limit(10);
 
-    if (!pendingTask) {
-      return null;
-    }
+    // Find first task whose required capabilities the agent satisfies
+    const matchingTask = pendingTasks.find((row) => {
+      const requiredCaps = (row.tasks.requiredCapabilities ?? {}) as Record<string, unknown>;
+      return agentMatchesCapabilities(agentCaps, requiredCaps);
+    });
 
-    // Check project scope
-    if (pendingTask.campaigns.projectId !== projectId) {
+    if (!matchingTask) {
       return null;
     }
 
@@ -104,7 +159,7 @@ export async function assignNextTask(agentId: number) {
         assignedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(and(eq(tasks.id, pendingTask.tasks.id), eq(tasks.status, 'pending')))
+      .where(and(eq(tasks.id, matchingTask.tasks.id), eq(tasks.status, 'pending')))
       .returning();
 
     return assigned ?? null;
@@ -173,14 +228,31 @@ export async function updateTaskProgress(
         .limit(1);
 
       if (campaign) {
-        await db.insert(hashItems).values(
-          data.results.map((r) => ({
-            hashListId: campaign.hashListId,
-            hashValue: r.hashValue,
-            plaintext: r.plaintext,
-            crackedAt: new Date(),
-          }))
-        );
+        await db
+          .insert(hashItems)
+          .values(
+            data.results.map((r) => ({
+              hashListId: campaign.hashListId,
+              hashValue: r.hashValue,
+              plaintext: r.plaintext,
+              crackedAt: new Date(),
+              campaignId: campaign.id,
+              attackId: attack.id,
+              taskId,
+              agentId,
+            }))
+          )
+          .onConflictDoUpdate({
+            target: [hashItems.hashListId, hashItems.hashValue],
+            set: {
+              plaintext: sql`EXCLUDED.plaintext`,
+              crackedAt: sql`EXCLUDED.cracked_at`,
+              campaignId: sql`EXCLUDED.campaign_id`,
+              attackId: sql`EXCLUDED.attack_id`,
+              taskId: sql`EXCLUDED.task_id`,
+              agentId: sql`EXCLUDED.agent_id`,
+            },
+          });
 
         emitCrackResult(campaign.projectId, campaign.hashListId, data.results.length);
       }
@@ -198,6 +270,9 @@ export async function updateTaskProgress(
     if (campaign) {
       emitTaskUpdate(campaign.projectId, taskId, data.status, data.progress);
     }
+
+    // Update campaign progress cache
+    await updateCampaignProgress(task.campaignId);
   }
 
   return { task: updated ?? null };

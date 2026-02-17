@@ -1,8 +1,11 @@
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
+import { setCookie } from 'hono/cookie';
 import { z } from 'zod';
+import { env } from '../../config/env.js';
 import { requireSession } from '../../middleware/auth.js';
-import { requireProjectAccess, requireRole } from '../../middleware/rbac.js';
+import { requireParamProjectAccess, requireParamProjectRole } from '../../middleware/rbac.js';
+import { selectProject } from '../../services/auth.js';
 import {
   addUserToProject,
   createProject,
@@ -53,6 +56,34 @@ projectRoutes.get('/', async (c) => {
   return c.json({ projects: result });
 });
 
+// POST /projects/select — select a project (re-issues JWT with projectId)
+const selectProjectSchema = z.object({
+  projectId: z.number().int().positive(),
+});
+
+projectRoutes.post('/select', zValidator('json', selectProjectSchema), async (c) => {
+  const { userId } = c.get('currentUser');
+  const { projectId } = c.req.valid('json');
+
+  const result = await selectProject(userId, projectId);
+  if (!result) {
+    return c.json(
+      { error: { code: 'AUTHZ_PROJECT_ACCESS_DENIED', message: 'Not a member of this project' } },
+      403
+    );
+  }
+
+  setCookie(c, 'session', result.token, {
+    httpOnly: true,
+    secure: env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24,
+  });
+
+  return c.json({ success: true, projectId: result.projectId });
+});
+
 // POST /projects — create a new project
 projectRoutes.post('/', zValidator('json', createProjectSchema), async (c) => {
   const { userId } = c.get('currentUser');
@@ -62,7 +93,7 @@ projectRoutes.post('/', zValidator('json', createProjectSchema), async (c) => {
 });
 
 // GET /projects/:projectId — get project details
-projectRoutes.get('/:projectId', requireProjectAccess(), async (c) => {
+projectRoutes.get('/:projectId', requireParamProjectAccess(), async (c) => {
   const projectId = Number(c.req.param('projectId'));
   const project = await getProjectById(projectId);
 
@@ -76,7 +107,7 @@ projectRoutes.get('/:projectId', requireProjectAccess(), async (c) => {
 // PATCH /projects/:projectId — update project (admin only)
 projectRoutes.patch(
   '/:projectId',
-  requireRole('admin'),
+  requireParamProjectRole('admin'),
   zValidator('json', updateProjectSchema),
   async (c) => {
     const projectId = Number(c.req.param('projectId'));
@@ -92,7 +123,7 @@ projectRoutes.patch(
 );
 
 // GET /projects/:projectId/members — list project members
-projectRoutes.get('/:projectId/members', requireProjectAccess(), async (c) => {
+projectRoutes.get('/:projectId/members', requireParamProjectAccess(), async (c) => {
   const projectId = Number(c.req.param('projectId'));
   const members = await getProjectMembers(projectId);
   return c.json({ members });
@@ -101,7 +132,7 @@ projectRoutes.get('/:projectId/members', requireProjectAccess(), async (c) => {
 // POST /projects/:projectId/members — add a member (admin only)
 projectRoutes.post(
   '/:projectId/members',
-  requireRole('admin'),
+  requireParamProjectRole('admin'),
   zValidator('json', addMemberSchema),
   async (c) => {
     const projectId = Number(c.req.param('projectId'));
@@ -114,7 +145,7 @@ projectRoutes.post(
 // PATCH /projects/:projectId/members/:userId — update roles (admin only)
 projectRoutes.patch(
   '/:projectId/members/:userId',
-  requireRole('admin'),
+  requireParamProjectRole('admin'),
   zValidator('json', updateRolesSchema),
   async (c) => {
     const projectId = Number(c.req.param('projectId'));
@@ -134,7 +165,7 @@ projectRoutes.patch(
 );
 
 // DELETE /projects/:projectId/members/:userId — remove a member (admin only)
-projectRoutes.delete('/:projectId/members/:userId', requireRole('admin'), async (c) => {
+projectRoutes.delete('/:projectId/members/:userId', requireParamProjectRole('admin'), async (c) => {
   const projectId = Number(c.req.param('projectId'));
   const userId = Number(c.req.param('userId'));
   const removed = await removeUserFromProject(projectId, userId);

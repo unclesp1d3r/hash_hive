@@ -70,7 +70,7 @@ export function useEvents(options: UseEventsOptions = {}) {
         agent_status: ['agents', 'dashboard-stats'],
         campaign_status: ['campaigns', 'dashboard-stats'],
         task_update: ['tasks', 'dashboard-stats'],
-        crack_result: ['dashboard-stats'],
+        crack_result: ['dashboard-stats', 'results'],
         resource_update: ['hash-lists', 'wordlists', 'rulelists', 'masklists'],
       };
 

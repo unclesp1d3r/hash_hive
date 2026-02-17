@@ -25,17 +25,16 @@ campaignRoutes.use('*', requireSession);
 // ─── Campaign CRUD ──────────────────────────────────────────────────
 
 campaignRoutes.get('/', requireProjectAccess(), async (c) => {
-  const projectId = c.req.query('projectId') ? Number(c.req.query('projectId')) : undefined;
+  const { projectId } = c.get('currentUser');
   const status = c.req.query('status') ?? undefined;
   const limit = c.req.query('limit') ? Number(c.req.query('limit')) : undefined;
   const offset = c.req.query('offset') ? Number(c.req.query('offset')) : undefined;
 
-  const result = await listCampaigns({ projectId, status, limit, offset });
+  const result = await listCampaigns({ projectId: projectId ?? undefined, status, limit, offset });
   return c.json(result);
 });
 
 const createCampaignSchema = z.object({
-  projectId: z.number().int().positive(),
   name: z.string().min(1).max(255),
   description: z.string().max(2000).optional(),
   hashListId: z.number().int().positive(),
@@ -48,8 +47,14 @@ campaignRoutes.post(
   zValidator('json', createCampaignSchema),
   async (c) => {
     const data = c.req.valid('json');
-    const { userId } = c.get('currentUser');
-    const campaign = await createCampaign({ ...data, createdBy: userId });
+    const { userId, projectId } = c.get('currentUser');
+    if (!projectId) {
+      return c.json(
+        { error: { code: 'PROJECT_NOT_SELECTED', message: 'No project selected' } },
+        400
+      );
+    }
+    const campaign = await createCampaign({ ...data, projectId, createdBy: userId });
     return c.json({ campaign }, 201);
   }
 );
@@ -106,7 +111,7 @@ campaignRoutes.post(
     const statusMap = {
       start: 'running',
       pause: 'paused',
-      stop: 'completed',
+      stop: 'draft',
       cancel: 'cancelled',
     } as const;
 

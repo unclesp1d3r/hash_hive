@@ -13,6 +13,9 @@ const DashboardPage = lazy(() =>
   import('./pages/dashboard').then((m) => ({ default: m.DashboardPage }))
 );
 const LoginPage = lazy(() => import('./pages/login').then((m) => ({ default: m.LoginPage })));
+const SelectProjectPage = lazy(() =>
+  import('./pages/select-project').then((m) => ({ default: m.SelectProjectPage }))
+);
 const AgentsPage = lazy(() => import('./pages/agents').then((m) => ({ default: m.AgentsPage })));
 const AgentDetailPage = lazy(() =>
   import('./pages/agent-detail').then((m) => ({ default: m.AgentDetailPage }))
@@ -29,6 +32,7 @@ const CampaignDetailPage = lazy(() =>
 const ResourcesPage = lazy(() =>
   import('./pages/resources').then((m) => ({ default: m.ResourcesPage }))
 );
+const ResultsPage = lazy(() => import('./pages/results').then((m) => ({ default: m.ResultsPage })));
 const NotFoundPage = lazy(() =>
   import('./pages/not-found').then((m) => ({ default: m.NotFoundPage }))
 );
@@ -60,6 +64,7 @@ function App() {
           >
             <Routes>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/select-project" element={<SelectProjectPage />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
                   <Route path="/" element={<DashboardPage />} />
@@ -69,6 +74,7 @@ function App() {
                   <Route path="/agents" element={<AgentsPage />} />
                   <Route path="/agents/:id" element={<AgentDetailPage />} />
                   <Route path="/resources" element={<ResourcesPage />} />
+                  <Route path="/results" element={<ResultsPage />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFoundPage />} />

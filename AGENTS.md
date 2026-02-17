@@ -102,6 +102,8 @@ See `.kiro/steering/tech.md` for the full-stack details and `spec/epic/specs/Tec
 
 Drizzle table definitions → drizzle-zod → Zod schemas → TypeScript types. One direction, no duplication.
 
+When backend route validation changes (e.g., removing a field), update the corresponding shared Zod schema in `shared/src/schemas/index.ts` — the frontend imports these types via `@hashhive/shared`.
+
 - **Drizzle tables** in `shared/src/db/schema.ts` define the database schema and generate migrations
 - **drizzle-zod** generates Zod schemas from Drizzle tables for API validation
 - **z.infer** derives TypeScript types from Zod schemas — no manually duplicated interfaces
@@ -114,6 +116,7 @@ The backend is a Bun + Hono + TypeScript service:
   - HTTP endpoints grouped by API surface: Agent API, Dashboard API
   - Thin handlers: parse/validate input with Zod, call Drizzle queries or service layer, return responses
 - **Services (`src/services/`)** — optional, only when route handlers become complex
+  - **Circular import note:** `campaigns.ts` and `tasks.ts` have a circular dependency. Resolved via dynamic `await import('./tasks.js')` in campaigns.ts. Maintain this pattern when adding cross-service calls.
   - `AuthService`: login/logout, JWT/session management
   - `AgentService`: registration, capability detection, heartbeat handling
   - `CampaignService`: campaign lifecycle, DAG validation, attack configuration
@@ -123,6 +126,12 @@ The backend is a Bun + Hono + TypeScript service:
   - `EventService`: WebSocket broadcasting for real-time dashboard updates (in-memory v1, Redis pub/sub extension path)
 - **Database (`src/db/`)** — Drizzle client setup and connection config
 - **Middleware (`src/middleware/`)** — auth, validation, error handling
+
+### RBAC middleware
+
+Two RBAC middleware variants in `src/middleware/rbac.ts`:
+- `requireProjectAccess()` / `requireRole()` — reads projectId from JWT context (`currentUser.projectId`); used by most dashboard routes
+- `requireParamProjectAccess()` / `requireParamProjectRole()` — reads projectId from URL param (`c.req.param('projectId')`); used by project management routes like `GET /projects/:projectId`
 
 ### API surfaces
 
@@ -135,6 +144,7 @@ Two API surfaces on the same Hono instance, backed by the same service and data 
   - Core endpoints: `POST /agent/heartbeat`, `POST /agent/tasks/next`, `POST /agent/tasks/:id/report`
 - **Dashboard API (`/api/v1/dashboard/*`)**
   - JWT + HttpOnly session cookie authenticated REST API for the React frontend
+  - Project scoping is JWT-bound: `projectId` is embedded in the session token and read from `c.get('currentUser').projectId` — frontend never sends projectId as a query param
   - Standard CRUD operations with Zod validation
   - Low traffic (1-3 concurrent users)
 
