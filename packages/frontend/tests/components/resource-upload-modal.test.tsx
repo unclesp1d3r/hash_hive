@@ -70,4 +70,34 @@ describe('ResourceUploadModal', () => {
     fireEvent.click(screen.getByText('Cancel'));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('should create resource and upload file on submit', async () => {
+    mockCreateMutateAsync.mockClear();
+    mockUploadMutateAsync.mockClear();
+
+    const onSuccess = mock(() => {});
+    const onClose = mock(() => {});
+    renderWithProviders(
+      <ResourceUploadModal type="wordlists" open={true} onClose={onClose} onSuccess={onSuccess} />
+    );
+
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'My Wordlist' } });
+
+    const file = new File(['test content'], 'test.txt', { type: 'text/plain' });
+    fireEvent.change(screen.getByLabelText('File'), { target: { files: [file] } });
+
+    const uploadButton = screen.getByText('Upload');
+    expect(uploadButton.hasAttribute('disabled')).toBe(false);
+
+    fireEvent.click(uploadButton);
+
+    await waitFor(() => {
+      expect(mockCreateMutateAsync).toHaveBeenCalledWith({ name: 'My Wordlist' });
+    });
+    await waitFor(() => {
+      expect(mockUploadMutateAsync).toHaveBeenCalledWith({ id: 42, file });
+      expect(onSuccess).toHaveBeenCalledWith(42);
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
 });

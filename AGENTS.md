@@ -201,6 +201,12 @@ bun --filter backend db:migrate  # Run migrations
 bun --filter backend db:studio   # Open Drizzle Studio
 ```
 
+### Local CI check
+
+```bash
+just ci-check    # Runs: lint → format-check → type-check → build → test (no Docker needed)
+```
+
 ## Testing strategy
 
 - **bun:test** for all tests (Bun's built-in test runner — not Jest, not Vitest)
@@ -244,6 +250,7 @@ The tsconfig.base.json enables maximum strictness. Key patterns:
 - **`noUncheckedIndexedAccess`**: All `arr[i]` returns `T | undefined` — guard with null check before use
 - **`noPropertyAccessFromIndexSignature`**: Use `obj['key']` bracket notation for index signatures
 - **Biome `useLiteralKeys: "off"`**: MUST stay off — conflicts with the TS setting above
+- **`z.preprocess` + React Hook Form**: `z.preprocess` widens input type to `unknown`, breaking `zodResolver` under strict mode. Define the form type as an explicit interface (not `z.infer`) and cast: `zodResolver(schema) as unknown as Resolver<FormType>`
 
 ## Hono error handling
 
@@ -267,6 +274,17 @@ Without this, auth middleware 401 responses get swallowed into 500s.
 - Always call `afterEach(cleanup)` in Testing Library tests — DOM persists in happy-dom
 - Test fixtures: `packages/backend/tests/fixtures.ts` — factory functions + token helpers
 - Biome overrides: `**/scripts/**` disables `noConsole` and `noExplicitAny` for CLI tools
+
+### Frontend test utilities
+
+- `tests/mocks/fetch.ts` — `mockFetch()` replaces global fetch with route-to-response mapping; call `restoreFetch()` in afterEach
+- `tests/mocks/websocket.ts` — `installMockWebSocket()` replaces global WebSocket; provides `simulateOpen/Close/Message`
+- `tests/fixtures/api-responses.ts` — factory functions: `mockLoginResponse`, `mockMeResponse`, `mockDashboardStats`
+- `tests/utils/store-reset.ts` — `resetAllStores()` resets all Zustand stores; call in afterEach
+- `tests/test-utils.tsx` — `renderWithProviders()` (single component), `renderWithRouter()` (navigation tests), `cleanupAll()` (DOM + stores)
+- **401 gotcha**: `api.ts` globally intercepts all 401 responses as "Session expired" — login tests must use 400 for invalid credentials
+- `@testing-library/user-event` is NOT installed — use `fireEvent` from `@testing-library/react`
+- **Run tests per-package**: Use `bun --filter @hashhive/frontend test` / `bun --filter @hashhive/backend test` — root `bun test` skips per-package `bunfig.toml` (happy-dom), causing `document is not defined`
 
 ## AI agent notes
 

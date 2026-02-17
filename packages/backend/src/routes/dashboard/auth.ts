@@ -15,8 +15,8 @@ auth.post('/login', zValidator('json', loginRequestSchema), async (c) => {
 
   if (!result) {
     return c.json(
-      { error: { code: 'AUTH_INVALID_CREDENTIALS', message: 'Invalid email or password' } },
-      401
+      { error: { code: 'VALIDATION_INVALID_CREDENTIALS', message: 'Invalid email or password' } },
+      400
     );
   }
 

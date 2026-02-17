@@ -25,12 +25,13 @@ describe('LoginPage', () => {
   });
 
   it('shows error on invalid credentials', async () => {
-    // Use 400 (not 401) because the global api.ts 401 handler intercepts all 401s
-    // and shows "Session expired" — the backend login endpoint uses 400 for bad credentials.
+    // Backend returns 400 for invalid credentials (validation error), not 401 (auth token missing/expired)
     fetchMock = mockFetch({
       '/dashboard/auth/login': {
         status: 400,
-        body: { error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' } },
+        body: {
+          error: { code: 'VALIDATION_INVALID_CREDENTIALS', message: 'Invalid email or password' },
+        },
       },
     });
 
