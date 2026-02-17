@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import postgres from 'postgres';
 
 export const TEST_USER = {
@@ -12,8 +13,19 @@ export const TEST_PROJECT = {
 } as const;
 
 /**
+ * Hashes a password using Bun's built-in bcrypt via a subprocess.
+ * Playwright runs under Node.js, so we delegate to Bun for bcrypt support.
+ */
+function hashPassword(password: string): string {
+  const script = `
+    const hash = await Bun.password.hash(${JSON.stringify(password)}, { algorithm: "bcrypt", cost: 12 });
+    process.stdout.write(hash);
+  `;
+  return execFileSync('bun', ['-e', script], { encoding: 'utf-8' });
+}
+
+/**
  * Seeds the test database with a user, project, and project membership.
- * Uses Bun.password.hash for bcrypt hashing (same as the backend auth service).
  */
 export async function seedTestData(databaseUrl: string): Promise<{
   userId: number;
@@ -22,10 +34,7 @@ export async function seedTestData(databaseUrl: string): Promise<{
   const sql = postgres(databaseUrl, { max: 1 });
 
   try {
-    const passwordHash = await Bun.password.hash(TEST_USER.password, {
-      algorithm: 'bcrypt',
-      cost: 12,
-    });
+    const passwordHash = hashPassword(TEST_USER.password);
 
     // Insert user
     const [user] = await sql`
