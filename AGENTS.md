@@ -166,6 +166,8 @@ The frontend is a Vite + React 19 SPA (no server components, no meta-framework):
 - **Identity & access**: `users`, `projects`, `project_users` (roles as text array)
 - **Agents & telemetry**: `operating_systems`, `agents`, `agent_errors`
 - **Campaign orchestration**: `campaigns`, `attacks` (with DAG dependencies), `tasks` (work ranges, progress, results)
+  - Campaign lifecycle: `draft` → `running` → `paused` / `completed` / `cancelled`. Stop action returns to `draft` (not `completed`). Start requires ≥1 attack.
+  - `hash_items` has unique constraint on `(hashListId, hashValue)` — use `onConflictDoUpdate` for crack result attribution
 - **Resources**: `hash_lists`, `hash_items`, `hash_types`, `word_lists`, `rule_lists`, `mask_lists`
 
 ## Development commands
@@ -173,6 +175,9 @@ The frontend is a Vite + React 19 SPA (no server components, no meta-framework):
 Commands are run from the workspace root using Bun and Turborepo:
 
 ```bash
+# Workspace filters use package.json names — `@hashhive/shared`, `@hashhive/backend`, `@hashhive/frontend`
+# Shorthand like `bun --filter shared` may fail; use full name: `bun --filter @hashhive/shared build`
+
 # Development
 bun dev                          # Start all services via Turborepo
 bun --filter backend dev         # Start backend only
@@ -257,6 +262,7 @@ Without this, auth middleware 401 responses get swallowed into 500s.
 
 - Backend contract tests validate auth (401) and validation (400) without a running DB
 - Drizzle mock chains must match production code — e.g. `insert().values()` returning `{ onConflictDoNothing: mock() }`
+- BullMQ worker test mocks: if worker does `db.select()`, mock must return chainable `{ from: mock(() => chain), where: mock(() => Promise.resolve([])) }`
 - Frontend tests use `happy-dom` with manual global injection (not `@happy-dom/global-registrator`)
 - Always call `afterEach(cleanup)` in Testing Library tests — DOM persists in happy-dom
 - Test fixtures: `packages/backend/tests/fixtures.ts` — factory functions + token helpers
