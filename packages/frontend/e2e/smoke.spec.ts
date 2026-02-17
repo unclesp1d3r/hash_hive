@@ -5,11 +5,12 @@ const TEST_PASSWORD = 'TestPassword123!';
 
 /**
  * Wait for the login form to be interactive.
- * Vite dev server in CI can trigger repeated HMR/dep-optimization reloads,
- * so we wait for network idle + the email input to be visible.
+ * Vite dev server keeps HMR connections open, so 'networkidle' never fires.
+ * Use 'domcontentloaded' to avoid blocking on persistent connections,
+ * then wait for the React app to render the form.
  */
 async function waitForLoginForm(page: import('@playwright/test').Page) {
-  await page.goto('/login', { waitUntil: 'networkidle' });
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#email', { state: 'visible', timeout: 30_000 });
 }
 
