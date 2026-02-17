@@ -93,17 +93,17 @@ function buildBackendEnv(databaseUrl: string, redisUrl: string, s3Endpoint: stri
 }
 
 function runMigrations(databaseUrl: string, redisUrl: string, s3Endpoint: string): void {
-  console.log('[E2E] Running database migrations...');
+  console.log('[E2E] Pushing database schema...');
   try {
-    execFileSync('bun', ['run', 'db:migrate'], {
+    execFileSync('bun', ['run', 'db:push'], {
       cwd: BACKEND_CWD,
       env: buildBackendEnv(databaseUrl, redisUrl, s3Endpoint),
       stdio: ['ignore', 'pipe', 'pipe'],
     });
-    console.log('[E2E] Migrations complete');
+    console.log('[E2E] Schema push complete');
   } catch (err) {
     const stderr = err instanceof Error && 'stderr' in err ? String(err.stderr) : String(err);
-    throw new Error(`Migration failed: ${stderr}`);
+    throw new Error(`Schema push failed: ${stderr}`);
   }
 }
 
