@@ -1,27 +1,36 @@
+import { type ChildProcess, execFileSync, spawn } from 'node:child_process';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { CreateBucketCommand, HeadBucketCommand, S3Client } from '@aws-sdk/client-s3';
 import type { FullConfig } from '@playwright/test';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { GenericContainer, type StartedTestContainer, Wait } from 'testcontainers';
 import { seedTestData } from './seed-data';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const S3_BUCKET = 'hashhive';
 const S3_ACCESS_KEY = 'minioadmin';
 const S3_SECRET_KEY = 'minioadmin';
 const JWT_SECRET = 'e2e-test-secret-key-minimum-16-chars';
-const BACKEND_CWD = `${import.meta.dir}/../../../backend`;
+const BACKEND_CWD = resolve(__dirname, '../../../backend');
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 interface TestContainersState {
   mode: 'testcontainers';
   pgContainer: StartedPostgreSqlContainer;
   redisContainer: StartedTestContainer;
   minioContainer: StartedTestContainer;
-  backendProcess: ReturnType<typeof Bun.spawn>;
+  backendProcess: ChildProcess;
 }
 
 interface DockerComposeState {
   mode: 'docker-compose';
   composeFile: string;
-  backendProcess: ReturnType<typeof Bun.spawn>;
+  backendProcess: ChildProcess;
 }
 
 type E2EGlobalState = TestContainersState | DockerComposeState;
@@ -41,7 +50,7 @@ async function waitForServer(url: string, timeoutMs = 30_000): Promise<void> {
     } catch {
       // Server not ready yet
     }
-    await Bun.sleep(500);
+    await sleep(500);
   }
   throw new Error(`Server at ${url} did not become ready within ${timeoutMs}ms`);
 }
@@ -83,29 +92,23 @@ function buildBackendEnv(databaseUrl: string, redisUrl: string, s3Endpoint: stri
   };
 }
 
-async function runMigrations(
-  databaseUrl: string,
-  redisUrl: string,
-  s3Endpoint: string
-): Promise<void> {
+function runMigrations(databaseUrl: string, redisUrl: string, s3Endpoint: string): void {
   console.log('[E2E] Running database migrations...');
-  const migrateProc = Bun.spawn(['bun', 'run', 'db:migrate'], {
-    cwd: BACKEND_CWD,
-    env: buildBackendEnv(databaseUrl, redisUrl, s3Endpoint),
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-
-  const migrateExit = await migrateProc.exited;
-  if (migrateExit !== 0) {
-    const stderr = await new Response(migrateProc.stderr).text();
-    throw new Error(`Migration failed (exit ${migrateExit}): ${stderr}`);
+  try {
+    execFileSync('bun', ['run', 'db:migrate'], {
+      cwd: BACKEND_CWD,
+      env: buildBackendEnv(databaseUrl, redisUrl, s3Endpoint),
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    console.log('[E2E] Migrations complete');
+  } catch (err) {
+    const stderr = err instanceof Error && 'stderr' in err ? String(err.stderr) : String(err);
+    throw new Error(`Migration failed: ${stderr}`);
   }
-  console.log('[E2E] Migrations complete');
 }
 
-function startBackend(databaseUrl: string, redisUrl: string, s3Endpoint: string) {
-  return Bun.spawn(['bun', 'run', 'src/index.ts'], {
+function startBackend(databaseUrl: string, redisUrl: string, s3Endpoint: string): ChildProcess {
+  return spawn('bun', ['run', 'src/index.ts'], {
     cwd: BACKEND_CWD,
     env: {
       ...buildBackendEnv(databaseUrl, redisUrl, s3Endpoint),
@@ -115,8 +118,7 @@ function startBackend(databaseUrl: string, redisUrl: string, s3Endpoint: string)
       LOG_PRETTY: 'false',
       JWT_EXPIRY: '24h',
     },
-    stdout: 'inherit',
-    stderr: 'inherit',
+    stdio: 'inherit',
   });
 }
 
@@ -126,14 +128,13 @@ async function waitForDockerComposeReady(composeFile: string): Promise<void> {
   const timeoutMs = 60_000;
 
   while (Date.now() - start < timeoutMs) {
-    const proc = Bun.spawn(['docker', 'compose', '-f', composeFile, 'ps', '--format', 'json'], {
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    const output = await new Response(proc.stdout).text();
-    await proc.exited;
-
     try {
+      const output = execFileSync(
+        'docker',
+        ['compose', '-f', composeFile, 'ps', '--format', 'json'],
+        { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf-8' }
+      );
+
       // docker compose ps --format json outputs one JSON object per line
       const services = output
         .trim()
@@ -151,10 +152,10 @@ async function waitForDockerComposeReady(composeFile: string): Promise<void> {
         return;
       }
     } catch {
-      // JSON parse failed, services not ready yet
+      // Command failed or JSON parse failed, services not ready yet
     }
 
-    await Bun.sleep(2_000);
+    await sleep(2_000);
   }
 
   throw new Error(`Docker compose services did not become healthy within ${timeoutMs}ms`);
@@ -163,13 +164,12 @@ async function waitForDockerComposeReady(composeFile: string): Promise<void> {
 async function setupWithDockerCompose(composeFile: string): Promise<DockerComposeState> {
   console.log('[E2E] Starting infrastructure via docker compose...');
 
-  const upProc = Bun.spawn(['docker', 'compose', '-f', composeFile, 'up', '-d', '--wait'], {
-    stdout: 'inherit',
-    stderr: 'inherit',
-  });
-  const upExit = await upProc.exited;
-  if (upExit !== 0) {
-    throw new Error(`docker compose up failed (exit ${upExit})`);
+  try {
+    execFileSync('docker', ['compose', '-f', composeFile, 'up', '-d', '--wait'], {
+      stdio: 'inherit',
+    });
+  } catch {
+    throw new Error('docker compose up failed');
   }
 
   await waitForDockerComposeReady(composeFile);
@@ -183,7 +183,7 @@ async function setupWithDockerCompose(composeFile: string): Promise<DockerCompos
   await createMinioBucket(s3Endpoint);
 
   // Run migrations
-  await runMigrations(databaseUrl, redisUrl, s3Endpoint);
+  runMigrations(databaseUrl, redisUrl, s3Endpoint);
 
   // Seed test data
   console.log('[E2E] Seeding test data...');
@@ -240,7 +240,7 @@ async function setupWithTestcontainers(): Promise<TestContainersState> {
   await createMinioBucket(s3Endpoint);
 
   // Run migrations
-  await runMigrations(databaseUrl, redisUrl, s3Endpoint);
+  runMigrations(databaseUrl, redisUrl, s3Endpoint);
 
   // Seed test data
   console.log('[E2E] Seeding test data...');
@@ -260,7 +260,7 @@ async function globalSetup(_config: FullConfig): Promise<void> {
   console.log('[E2E] Starting test infrastructure...');
 
   const useDockerCompose = process.env['E2E_USE_DOCKER_COMPOSE'] === 'true';
-  const composeFile = `${import.meta.dir}/../../../../docker-compose.yml`;
+  const composeFile = resolve(__dirname, '../../../../docker-compose.yml');
 
   const state = useDockerCompose
     ? await setupWithDockerCompose(composeFile)

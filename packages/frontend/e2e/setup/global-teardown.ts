@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import type { FullConfig } from '@playwright/test';
 
 async function globalTeardown(_config: FullConfig): Promise<void> {
@@ -12,7 +13,6 @@ async function globalTeardown(_config: FullConfig): Promise<void> {
   // 1. Stop backend server
   try {
     state.backendProcess.kill();
-    await state.backendProcess.exited;
     console.log('[E2E] Backend server stopped');
   } catch {
     console.log('[E2E] Backend server already stopped');
@@ -21,11 +21,13 @@ async function globalTeardown(_config: FullConfig): Promise<void> {
   // 2. Stop infrastructure based on mode
   if (state.mode === 'docker-compose') {
     console.log('[E2E] Stopping docker compose stack...');
-    const downProc = Bun.spawn(['docker', 'compose', '-f', state.composeFile, 'down', '-v'], {
-      stdout: 'inherit',
-      stderr: 'inherit',
-    });
-    await downProc.exited;
+    try {
+      execFileSync('docker', ['compose', '-f', state.composeFile, 'down', '-v'], {
+        stdio: 'inherit',
+      });
+    } catch {
+      console.log('[E2E] docker compose down failed');
+    }
     console.log('[E2E] Docker compose stack stopped');
   } else {
     // Stop testcontainers in parallel
