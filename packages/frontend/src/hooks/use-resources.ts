@@ -82,3 +82,46 @@ export function useCreateHashList() {
     },
   });
 }
+
+type ResourceType = 'hash-lists' | 'wordlists' | 'rulelists' | 'masklists';
+
+export function useCreateResource(type: ResourceType) {
+  const queryClient = useQueryClient();
+  const { selectedProjectId } = useUiStore();
+
+  return useMutation({
+    mutationFn: (data: { name: string }) =>
+      api.post<{ resource: Resource }>(`/dashboard/resources/${type}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [type, selectedProjectId] });
+    },
+  });
+}
+
+export function useUploadResourceFile(type: ResourceType) {
+  const queryClient = useQueryClient();
+  const { selectedProjectId } = useUiStore();
+
+  return useMutation({
+    mutationFn: ({ id, file }: { id: number; file: File }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      return fetch(`/api/v1/dashboard/resources/${type}/${id}/upload`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      }).then(async (res) => {
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          const error = body.error ?? {};
+          throw new Error(error.message ?? 'Upload failed');
+        }
+        return res.json();
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [type, selectedProjectId] });
+    },
+  });
+}
