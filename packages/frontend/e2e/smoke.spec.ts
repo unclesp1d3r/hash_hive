@@ -3,21 +3,10 @@ import { expect, test } from '@playwright/test';
 const TEST_EMAIL = 'test@hashhive.local';
 const TEST_PASSWORD = 'TestPassword123!';
 
-/**
- * Wait for the login form to be interactive.
- * Vite dev server keeps HMR connections open, so 'networkidle' never fires.
- * Use 'domcontentloaded' to avoid blocking on persistent connections,
- * then wait for the React app to render the form.
- */
-async function waitForLoginForm(page: import('@playwright/test').Page) {
-  await page.goto('/login', { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('#email', { state: 'visible', timeout: 30_000 });
-}
-
 test.describe('E2E Smoke Suite', () => {
   test('login → select project → navigate core pages', async ({ page }) => {
-    // 1. Navigate to login page and wait for form to be interactive
-    await waitForLoginForm(page);
+    // 1. Navigate to login page
+    await page.goto('/login');
     await expect(page.locator('h1')).toContainText('HashHive');
 
     // 2. Fill login form with seeded credentials
@@ -58,7 +47,7 @@ test.describe('E2E Smoke Suite', () => {
   });
 
   test('invalid credentials show error', async ({ page }) => {
-    await waitForLoginForm(page);
+    await page.goto('/login');
 
     await page.fill('#email', 'wrong@example.com');
     await page.fill('#password', 'WrongPassword123!');
