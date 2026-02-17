@@ -11,9 +11,33 @@ mock.module('../../../src/config/logger.js', () => ({
   },
 }));
 
+// Build a chainable mock for db.select().from().where() patterns
+function createSelectChain(results: unknown[] = []) {
+  const chain = {
+    from: mock(() => chain),
+    where: mock(() => Promise.resolve(results)),
+  };
+  return chain;
+}
+
+// Build a chainable mock for db.update().set().where()
+function createUpdateChain() {
+  const chain = {
+    set: mock(() => chain),
+    where: mock(() => Promise.resolve()),
+  };
+  return chain;
+}
+
+const mockSelectChain = createSelectChain([]);
+const mockUpdateChain = createUpdateChain();
+
 // Mock the DB (services import it)
 mock.module('../../../src/db/index.js', () => ({
-  db: {},
+  db: {
+    select: mock(() => mockSelectChain),
+    update: mock(() => mockUpdateChain),
+  },
 }));
 
 // Mock the tasks service
@@ -23,11 +47,16 @@ mock.module('../../../src/services/tasks.js', () => ({
   generateTasksForAttack: mock(),
 }));
 
+// Mock the events service
+mock.module('../../../src/services/events.js', () => ({
+  emitAgentStatus: mock(),
+}));
+
 // Mock BullMQ Worker to capture the processor function
-let capturedProcessor: ((job: any) => Promise<any>) | null = null;
+let capturedProcessor: ((job: unknown) => Promise<unknown>) | null = null;
 mock.module('bullmq', () => ({
   Worker: class MockWorker {
-    constructor(_name: string, processor: any) {
+    constructor(_name: string, processor: (job: unknown) => Promise<unknown>) {
       capturedProcessor = processor;
     }
     on() {
@@ -74,7 +103,7 @@ describe('Heartbeat monitor worker', () => {
     const result = await capturedProcessor!(fakeJob);
 
     expect(mockReassignStaleTasks).toHaveBeenCalled();
-    expect(result).toEqual({ reassigned: 0 });
+    expect(result).toEqual({ reassigned: 0, offlineAgents: 0 });
   });
 
   test('processor returns reassignment count', async () => {
@@ -83,6 +112,6 @@ describe('Heartbeat monitor worker', () => {
     const fakeJob = { id: 'test-2', data: { triggeredAt: new Date().toISOString() } };
     const result = await capturedProcessor!(fakeJob);
 
-    expect(result).toEqual({ reassigned: 3 });
+    expect(result).toEqual({ reassigned: 3, offlineAgents: 0 });
   });
 });

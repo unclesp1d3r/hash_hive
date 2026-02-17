@@ -3,12 +3,15 @@ import { loginRequestSchema } from '@hashhive/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Navigate } from 'react-router';
+import { Navigate, useNavigate } from 'react-router';
 import { ApiError } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
+import { useUiStore } from '../stores/ui';
 
 export function LoginPage() {
   const { login, isAuthenticated } = useAuthStore();
+  const { selectedProjectId, setSelectedProject } = useUiStore();
+  const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -19,14 +22,21 @@ export function LoginPage() {
     resolver: zodResolver(loginRequestSchema),
   });
 
-  if (isAuthenticated) {
+  if (isAuthenticated && selectedProjectId) {
     return <Navigate to="/" replace />;
   }
 
   const onSubmit = async (data: LoginRequest) => {
     setError(null);
     try {
-      await login(data.email, data.password);
+      const result = await login(data.email, data.password);
+      if (result.selectedProjectId) {
+        // Auto-selected single project — set and go to dashboard
+        setSelectedProject(result.selectedProjectId);
+      } else {
+        // Multiple projects — redirect to project selection
+        navigate('/select-project');
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);

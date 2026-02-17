@@ -29,7 +29,7 @@ export function CampaignsPage() {
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
+            <option value="draft">Draft</option>
             <option value="running">Running</option>
             <option value="paused">Paused</option>
             <option value="completed">Completed</option>

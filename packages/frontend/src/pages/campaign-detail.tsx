@@ -41,7 +41,7 @@ const LIFECYCLE_ACTIONS: Record<
   string,
   Array<{ action: 'start' | 'pause' | 'stop' | 'cancel'; label: string }>
 > = {
-  pending: [{ action: 'start', label: 'Start' }],
+  draft: [{ action: 'start', label: 'Start' }],
   running: [
     { action: 'pause', label: 'Pause' },
     { action: 'stop', label: 'Stop' },
@@ -49,6 +49,7 @@ const LIFECYCLE_ACTIONS: Record<
   ],
   paused: [
     { action: 'start', label: 'Resume' },
+    { action: 'stop', label: 'Stop' },
     { action: 'cancel', label: 'Cancel' },
   ],
 };

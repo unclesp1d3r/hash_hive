@@ -102,6 +102,8 @@ See `.kiro/steering/tech.md` for the full-stack details and `spec/epic/specs/Tec
 
 Drizzle table definitions → drizzle-zod → Zod schemas → TypeScript types. One direction, no duplication.
 
+When backend route validation changes (e.g., removing a field), update the corresponding shared Zod schema in `shared/src/schemas/index.ts` — the frontend imports these types via `@hashhive/shared`.
+
 - **Drizzle tables** in `shared/src/db/schema.ts` define the database schema and generate migrations
 - **drizzle-zod** generates Zod schemas from Drizzle tables for API validation
 - **z.infer** derives TypeScript types from Zod schemas — no manually duplicated interfaces
@@ -114,6 +116,7 @@ The backend is a Bun + Hono + TypeScript service:
   - HTTP endpoints grouped by API surface: Agent API, Dashboard API
   - Thin handlers: parse/validate input with Zod, call Drizzle queries or service layer, return responses
 - **Services (`src/services/`)** — optional, only when route handlers become complex
+  - **Circular import note:** `campaigns.ts` and `tasks.ts` have a circular dependency. Resolved via dynamic `await import('./tasks.js')` in campaigns.ts. Maintain this pattern when adding cross-service calls.
   - `AuthService`: login/logout, JWT/session management
   - `AgentService`: registration, capability detection, heartbeat handling
   - `CampaignService`: campaign lifecycle, DAG validation, attack configuration
@@ -123,6 +126,12 @@ The backend is a Bun + Hono + TypeScript service:
   - `EventService`: WebSocket broadcasting for real-time dashboard updates (in-memory v1, Redis pub/sub extension path)
 - **Database (`src/db/`)** — Drizzle client setup and connection config
 - **Middleware (`src/middleware/`)** — auth, validation, error handling
+
+### RBAC middleware
+
+Two RBAC middleware variants in `src/middleware/rbac.ts`:
+- `requireProjectAccess()` / `requireRole()` — reads projectId from JWT context (`currentUser.projectId`); used by most dashboard routes
+- `requireParamProjectAccess()` / `requireParamProjectRole()` — reads projectId from URL param (`c.req.param('projectId')`); used by project management routes like `GET /projects/:projectId`
 
 ### API surfaces
 
@@ -135,6 +144,7 @@ Two API surfaces on the same Hono instance, backed by the same service and data 
   - Core endpoints: `POST /agent/heartbeat`, `POST /agent/tasks/next`, `POST /agent/tasks/:id/report`
 - **Dashboard API (`/api/v1/dashboard/*`)**
   - JWT + HttpOnly session cookie authenticated REST API for the React frontend
+  - Project scoping is JWT-bound: `projectId` is embedded in the session token and read from `c.get('currentUser').projectId` — frontend never sends projectId as a query param
   - Standard CRUD operations with Zod validation
   - Low traffic (1-3 concurrent users)
 
@@ -156,6 +166,8 @@ The frontend is a Vite + React 19 SPA (no server components, no meta-framework):
 - **Identity & access**: `users`, `projects`, `project_users` (roles as text array)
 - **Agents & telemetry**: `operating_systems`, `agents`, `agent_errors`
 - **Campaign orchestration**: `campaigns`, `attacks` (with DAG dependencies), `tasks` (work ranges, progress, results)
+  - Campaign lifecycle: `draft` → `running` → `paused` / `completed` / `cancelled`. Stop action returns to `draft` (not `completed`). Start requires ≥1 attack.
+  - `hash_items` has unique constraint on `(hashListId, hashValue)` — use `onConflictDoUpdate` for crack result attribution
 - **Resources**: `hash_lists`, `hash_items`, `hash_types`, `word_lists`, `rule_lists`, `mask_lists`
 
 ## Development commands
@@ -163,6 +175,9 @@ The frontend is a Vite + React 19 SPA (no server components, no meta-framework):
 Commands are run from the workspace root using Bun and Turborepo:
 
 ```bash
+# Workspace filters use package.json names — `@hashhive/shared`, `@hashhive/backend`, `@hashhive/frontend`
+# Shorthand like `bun --filter shared` may fail; use full name: `bun --filter @hashhive/shared build`
+
 # Development
 bun dev                          # Start all services via Turborepo
 bun --filter backend dev         # Start backend only
@@ -184,6 +199,12 @@ bun type-check                   # TypeScript type checking
 bun --filter backend db:generate # Generate Drizzle migrations
 bun --filter backend db:migrate  # Run migrations
 bun --filter backend db:studio   # Open Drizzle Studio
+```
+
+### Local CI check
+
+```bash
+just ci-check    # Runs: lint → format-check → type-check → build → test (no Docker needed)
 ```
 
 ## Testing strategy
@@ -229,6 +250,7 @@ The tsconfig.base.json enables maximum strictness. Key patterns:
 - **`noUncheckedIndexedAccess`**: All `arr[i]` returns `T | undefined` — guard with null check before use
 - **`noPropertyAccessFromIndexSignature`**: Use `obj['key']` bracket notation for index signatures
 - **Biome `useLiteralKeys: "off"`**: MUST stay off — conflicts with the TS setting above
+- **`z.preprocess` + React Hook Form**: `z.preprocess` widens input type to `unknown`, breaking `zodResolver` under strict mode. Define the form type as an explicit interface (not `z.infer`) and cast: `zodResolver(schema) as unknown as Resolver<FormType>`
 
 ## Hono error handling
 
@@ -247,10 +269,22 @@ Without this, auth middleware 401 responses get swallowed into 500s.
 
 - Backend contract tests validate auth (401) and validation (400) without a running DB
 - Drizzle mock chains must match production code — e.g. `insert().values()` returning `{ onConflictDoNothing: mock() }`
+- BullMQ worker test mocks: if worker does `db.select()`, mock must return chainable `{ from: mock(() => chain), where: mock(() => Promise.resolve([])) }`
 - Frontend tests use `happy-dom` with manual global injection (not `@happy-dom/global-registrator`)
 - Always call `afterEach(cleanup)` in Testing Library tests — DOM persists in happy-dom
 - Test fixtures: `packages/backend/tests/fixtures.ts` — factory functions + token helpers
 - Biome overrides: `**/scripts/**` disables `noConsole` and `noExplicitAny` for CLI tools
+
+### Frontend test utilities
+
+- `tests/mocks/fetch.ts` — `mockFetch()` replaces global fetch with route-to-response mapping; call `restoreFetch()` in afterEach
+- `tests/mocks/websocket.ts` — `installMockWebSocket()` replaces global WebSocket; provides `simulateOpen/Close/Message`
+- `tests/fixtures/api-responses.ts` — factory functions: `mockLoginResponse`, `mockMeResponse`, `mockDashboardStats`
+- `tests/utils/store-reset.ts` — `resetAllStores()` resets all Zustand stores; call in afterEach
+- `tests/test-utils.tsx` — `renderWithProviders()` (single component), `renderWithRouter()` (navigation tests), `cleanupAll()` (DOM + stores)
+- **401 gotcha**: `api.ts` globally intercepts all 401 responses as "Session expired" — login tests must use 400 for invalid credentials
+- `@testing-library/user-event` is NOT installed — use `fireEvent` from `@testing-library/react`
+- **Run tests per-package**: Use `bun --filter @hashhive/frontend test` / `bun --filter @hashhive/backend test` — root `bun test` skips per-package `bunfig.toml` (happy-dom), causing `document is not defined`
 
 ## AI agent notes
 

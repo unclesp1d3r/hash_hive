@@ -1,7 +1,10 @@
-import { attacks, campaigns } from '@hashhive/shared';
+import { attacks, campaigns, tasks } from '@hashhive/shared';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { emitCampaignStatus } from './events.js';
+
+// Threshold: if estimated task count is below this, generate inline
+const INLINE_GENERATION_THRESHOLD = 50;
 
 // ─── Campaign CRUD ──────────────────────────────────────────────────
 
@@ -95,8 +98,8 @@ type CampaignStatus = 'draft' | 'running' | 'paused' | 'completed' | 'cancelled'
 
 const VALID_TRANSITIONS: Record<string, CampaignStatus[]> = {
   draft: ['running', 'cancelled'],
-  running: ['paused', 'completed', 'cancelled'],
-  paused: ['running', 'cancelled'],
+  running: ['paused', 'completed', 'cancelled', 'draft'],
+  paused: ['running', 'cancelled', 'draft'],
   completed: [],
   cancelled: [],
 };
@@ -112,6 +115,14 @@ export async function transitionCampaign(id: number, targetStatus: CampaignStatu
     return {
       error: `Cannot transition from '${campaign.status}' to '${targetStatus}'`,
     };
+  }
+
+  // Validate campaign has attacks and resources before starting
+  if (targetStatus === 'running') {
+    const campaignAttacks = await listAttacks(id);
+    if (campaignAttacks.length === 0) {
+      return { error: 'Campaign must have at least one attack before starting' };
+    }
   }
 
   // When starting/resuming a campaign, verify queue availability before transitioning
@@ -133,6 +144,16 @@ export async function transitionCampaign(id: number, targetStatus: CampaignStatu
     }
   }
 
+  // Stop action: running/paused → draft means cancel running tasks and reset
+  if (targetStatus === 'draft' && (campaign.status === 'running' || campaign.status === 'paused')) {
+    await db
+      .update(tasks)
+      .set({ status: 'cancelled', updatedAt: new Date() })
+      .where(
+        and(eq(tasks.campaignId, id), sql`${tasks.status} IN ('pending', 'assigned', 'running')`)
+      );
+  }
+
   const updates: Record<string, unknown> = {
     status: targetStatus,
     updatedAt: new Date(),
@@ -144,6 +165,12 @@ export async function transitionCampaign(id: number, targetStatus: CampaignStatu
   if (targetStatus === 'completed' || targetStatus === 'cancelled') {
     updates['completedAt'] = new Date();
   }
+  // Stop resets timestamps
+  if (targetStatus === 'draft') {
+    updates['startedAt'] = null;
+    updates['completedAt'] = null;
+    updates['progress'] = {};
+  }
 
   const [updated] = await db.update(campaigns).set(updates).where(eq(campaigns.id, id)).returning();
 
@@ -153,43 +180,61 @@ export async function transitionCampaign(id: number, targetStatus: CampaignStatu
     emitCampaignStatus(campaign.projectId, id, targetStatus);
   }
 
-  // When starting a campaign, enqueue task generation for its attacks
+  // When starting a campaign, generate tasks — inline if few, queued if many
   if (targetStatus === 'running') {
     const campaignAttacks = await listAttacks(id);
     if (campaignAttacks.length > 0) {
-      const { getQueueManager } = await import('../queue/context.js');
-      const { getTaskQueueForPriority } = await import('../config/queue.js');
-      const { JOB_PRIORITY } = await import('../queue/types.js');
-      const qm = getQueueManager();
-      if (qm) {
-        const targetQueue = getTaskQueueForPriority(campaign.priority);
-        const priorityMap: Record<number, number> = {
-          1: JOB_PRIORITY.HIGH,
-          5: JOB_PRIORITY.NORMAL,
-          10: JOB_PRIORITY.LOW,
-        };
-        const jobPriority = priorityMap[campaign.priority] ?? JOB_PRIORITY.NORMAL;
+      // Estimate task count: sum keyspace / chunk-size across attacks
+      const CHUNK_SIZE = 10_000_000;
+      let estimatedTasks = 0;
+      for (const atk of campaignAttacks) {
+        const keyspace = Number.parseInt(atk.keyspace ?? '0', 10);
+        estimatedTasks += keyspace <= 0 ? 1 : Math.ceil(keyspace / CHUNK_SIZE);
+      }
 
-        // Enqueue to the priority-based task queue matching the campaign priority
-        const enqueued = await qm.enqueue(targetQueue, {
-          campaignId: id,
-          projectId: campaign.projectId,
-          attackIds: campaignAttacks.map((a) => a.id),
-          priority: jobPriority as 1 | 5 | 10,
-        });
+      if (estimatedTasks <= INLINE_GENERATION_THRESHOLD) {
+        // Generate inline — small enough to not block the request meaningfully
+        const { generateTasksForAttack } = await import('./tasks.js');
+        for (const atk of campaignAttacks) {
+          await generateTasksForAttack(atk.id);
+        }
+      } else {
+        // Enqueue to the dedicated task-generation job queue
+        const { getQueueManager } = await import('../queue/context.js');
+        const { QUEUE_NAMES } = await import('../config/queue.js');
+        const { JOB_PRIORITY } = await import('../queue/types.js');
+        const qm = getQueueManager();
+        if (qm) {
+          const priorityMap: Record<number, number> = {
+            1: JOB_PRIORITY.HIGH,
+            5: JOB_PRIORITY.NORMAL,
+            10: JOB_PRIORITY.LOW,
+          };
+          const jobPriority = priorityMap[campaign.priority] ?? JOB_PRIORITY.NORMAL;
 
-        if (!enqueued) {
-          // Roll back the status transition
-          await db
-            .update(campaigns)
-            .set({ status: campaign.status, updatedAt: new Date() })
-            .where(eq(campaigns.id, id));
-          return { error: 'Failed to enqueue task generation', code: 'QUEUE_UNAVAILABLE' as const };
+          const enqueued = await qm.enqueue(QUEUE_NAMES.TASK_GENERATION, {
+            campaignId: id,
+            projectId: campaign.projectId,
+            attackIds: campaignAttacks.map((a) => a.id),
+            priority: jobPriority as 1 | 5 | 10,
+          });
+
+          if (!enqueued) {
+            // Roll back the status transition
+            await db
+              .update(campaigns)
+              .set({ status: campaign.status, updatedAt: new Date() })
+              .where(eq(campaigns.id, id));
+            return {
+              error: 'Failed to enqueue task generation',
+              code: 'QUEUE_UNAVAILABLE' as const,
+            };
+          }
         }
       }
     }
 
-    // Emit after successful enqueue
+    // Emit after successful generation/enqueue
     if (updated) {
       emitCampaignStatus(campaign.projectId, id, targetStatus);
     }
@@ -263,6 +308,49 @@ export async function updateAttack(
 export async function deleteAttack(id: number) {
   const [deleted] = await db.delete(attacks).where(eq(attacks.id, id)).returning();
   return deleted ?? null;
+}
+
+// ─── Campaign Progress ─────────────────────────────────────────────
+
+export async function updateCampaignProgress(campaignId: number) {
+  const campaignTasks = await db
+    .select({
+      status: tasks.status,
+      progress: tasks.progress,
+    })
+    .from(tasks)
+    .where(eq(tasks.campaignId, campaignId));
+
+  if (campaignTasks.length === 0) return;
+
+  let completedCount = 0;
+  let totalProgress = 0;
+
+  for (const t of campaignTasks) {
+    if (t.status === 'completed' || t.status === 'exhausted') {
+      completedCount++;
+      totalProgress += 1;
+    } else if (t.status === 'running') {
+      const prog = (t.progress as Record<string, unknown>) ?? {};
+      const kp = typeof prog['keyspaceProgress'] === 'number' ? prog['keyspaceProgress'] : 0;
+      totalProgress += Math.min(kp, 1);
+    }
+  }
+
+  const overallProgress = campaignTasks.length > 0 ? totalProgress / campaignTasks.length : 0;
+
+  await db
+    .update(campaigns)
+    .set({
+      progress: {
+        totalTasks: campaignTasks.length,
+        completedTasks: completedCount,
+        overallProgress: Math.round(overallProgress * 10000) / 10000,
+        updatedAt: new Date().toISOString(),
+      },
+      updatedAt: new Date(),
+    })
+    .where(eq(campaigns.id, campaignId));
 }
 
 // ─── DAG Validation ─────────────────────────────────────────────────

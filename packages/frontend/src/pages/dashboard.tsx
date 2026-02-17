@@ -36,8 +36,8 @@ export function DashboardPage() {
         />
         <StatCard
           title="Campaigns"
-          value={stats?.campaigns.active ?? '--'}
-          subtitle="Active"
+          value={stats?.campaigns.running ?? '--'}
+          subtitle="Running"
           loading={isLoading}
         />
         <StatCard

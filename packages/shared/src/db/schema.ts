@@ -140,12 +140,18 @@ export const hashItems = pgTable(
     hashValue: varchar('hash_value', { length: 1024 }).notNull(),
     plaintext: text('plaintext'),
     crackedAt: timestamp('cracked_at', { withTimezone: true }),
+    campaignId: integer('campaign_id').references(() => campaigns.id),
+    attackId: integer('attack_id').references(() => attacks.id),
+    taskId: integer('task_id').references(() => tasks.id),
+    agentId: integer('agent_id').references(() => agents.id),
     metadata: jsonb('metadata').default({}),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    uniqueIndex('hash_items_hash_list_id_hash_value_idx').on(table.hashListId, table.hashValue),
     index('hash_items_hash_list_id_idx').on(table.hashListId),
     index('hash_items_cracked_at_idx').on(table.crackedAt),
+    index('hash_items_campaign_id_idx').on(table.campaignId),
   ]
 );
 
@@ -204,6 +210,7 @@ export const campaigns = pgTable(
       .references(() => hashLists.id),
     status: varchar('status', { length: 20 }).notNull().default('draft'),
     priority: integer('priority').notNull().default(5),
+    progress: jsonb('progress').default({}),
     metadata: jsonb('metadata').default({}),
     createdBy: integer('created_by').references(() => users.id),
     startedAt: timestamp('started_at', { withTimezone: true }),
@@ -254,6 +261,7 @@ export const tasks = pgTable(
     workRange: jsonb('work_range').default({}),
     progress: jsonb('progress').default({}),
     resultStats: jsonb('result_stats').default({}),
+    requiredCapabilities: jsonb('required_capabilities').default({}),
     assignedAt: timestamp('assigned_at', { withTimezone: true }),
     startedAt: timestamp('started_at', { withTimezone: true }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
