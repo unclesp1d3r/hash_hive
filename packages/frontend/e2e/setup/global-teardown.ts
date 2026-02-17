@@ -30,12 +30,17 @@ async function globalTeardown(_config: FullConfig): Promise<void> {
     }
     console.log('[E2E] Docker compose stack stopped');
   } else {
-    // Stop testcontainers in parallel
-    await Promise.all([
+    // Stop testcontainers — use allSettled so one failure doesn't leak the others
+    const results = await Promise.allSettled([
       state.pgContainer.stop().then(() => console.log('[E2E] PostgreSQL container stopped')),
       state.redisContainer.stop().then(() => console.log('[E2E] Redis container stopped')),
       state.minioContainer.stop().then(() => console.log('[E2E] MinIO container stopped')),
     ]);
+    for (const r of results) {
+      if (r.status === 'rejected') {
+        console.log(`[E2E] Container stop failed: ${r.reason}`);
+      }
+    }
   }
 
   globalThis.__e2eState = undefined;

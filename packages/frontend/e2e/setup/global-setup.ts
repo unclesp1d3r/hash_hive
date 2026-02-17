@@ -45,7 +45,10 @@ async function waitForServer(url: string, timeoutMs = 30_000): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
-      const res = await fetch(url);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5_000);
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timer);
       if (res.ok) return;
     } catch {
       // Server not ready yet
@@ -74,9 +77,9 @@ async function createMinioBucket(endpoint: string): Promise<void> {
     // Verify bucket was created
     await s3.send(new HeadBucketCommand({ Bucket: S3_BUCKET }));
     console.log(`[E2E] Created and verified bucket '${S3_BUCKET}'`);
+  } finally {
+    s3.destroy();
   }
-
-  s3.destroy();
 }
 
 function buildBackendEnv(databaseUrl: string, redisUrl: string, s3Endpoint: string) {
