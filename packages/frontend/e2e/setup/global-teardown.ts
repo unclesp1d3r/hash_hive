@@ -18,12 +18,23 @@ async function globalTeardown(_config: FullConfig): Promise<void> {
     console.log('[E2E] Backend server already stopped');
   }
 
-  // 2. Stop containers in parallel
-  await Promise.all([
-    state.pgContainer.stop().then(() => console.log('[E2E] PostgreSQL container stopped')),
-    state.redisContainer.stop().then(() => console.log('[E2E] Redis container stopped')),
-    state.minioContainer.stop().then(() => console.log('[E2E] MinIO container stopped')),
-  ]);
+  // 2. Stop infrastructure based on mode
+  if (state.mode === 'docker-compose') {
+    console.log('[E2E] Stopping docker compose stack...');
+    const downProc = Bun.spawn(['docker', 'compose', '-f', state.composeFile, 'down', '-v'], {
+      stdout: 'inherit',
+      stderr: 'inherit',
+    });
+    await downProc.exited;
+    console.log('[E2E] Docker compose stack stopped');
+  } else {
+    // Stop testcontainers in parallel
+    await Promise.all([
+      state.pgContainer.stop().then(() => console.log('[E2E] PostgreSQL container stopped')),
+      state.redisContainer.stop().then(() => console.log('[E2E] Redis container stopped')),
+      state.minioContainer.stop().then(() => console.log('[E2E] MinIO container stopped')),
+    ]);
+  }
 
   globalThis.__e2eState = undefined;
   console.log('[E2E] Teardown complete');
