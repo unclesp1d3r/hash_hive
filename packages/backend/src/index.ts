@@ -20,6 +20,8 @@ import { createEventRoutes } from './routes/dashboard/events.js';
 import { hashRoutes } from './routes/dashboard/hashes.js';
 import { projectRoutes } from './routes/dashboard/projects.js';
 import { resourceRoutes } from './routes/dashboard/resources.js';
+import { resultsRoutes } from './routes/dashboard/results.js';
+import { statsRoutes } from './routes/dashboard/stats.js';
 import { taskRoutes } from './routes/dashboard/tasks.js';
 import type { AppEnv } from './types.js';
 
@@ -87,6 +89,8 @@ app.route('/api/v1/dashboard/resources', resourceRoutes);
 app.route('/api/v1/dashboard/hashes', hashRoutes);
 app.route('/api/v1/dashboard/campaigns', campaignRoutes);
 app.route('/api/v1/dashboard/tasks', taskRoutes);
+app.route('/api/v1/dashboard/stats', statsRoutes);
+app.route('/api/v1/dashboard/results', resultsRoutes);
 app.route('/api/v1/dashboard/events', eventRoutes);
 
 app.route('/api/v1/agent', agentRoutes);

@@ -12,12 +12,12 @@ dashboardAgentRoutes.use('*', requireSession);
 
 // GET /agents — list agents with optional filtering
 dashboardAgentRoutes.get('/', requireProjectAccess(), async (c) => {
-  const projectId = c.req.query('projectId') ? Number(c.req.query('projectId')) : undefined;
+  const { projectId } = c.get('currentUser');
   const status = c.req.query('status') ?? undefined;
   const limit = c.req.query('limit') ? Number(c.req.query('limit')) : undefined;
   const offset = c.req.query('offset') ? Number(c.req.query('offset')) : undefined;
 
-  const result = await listAgents({ projectId, status, limit, offset });
+  const result = await listAgents({ projectId: projectId ?? undefined, status, limit, offset });
   return c.json(result);
 });
 

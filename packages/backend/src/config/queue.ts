@@ -6,6 +6,7 @@ export const QUEUE_NAMES = {
 
   // Job queues — dedicated async processing, each with its own worker process
   HASH_LIST_PARSING: 'jobs:hash-list-parsing',
+  TASK_GENERATION: 'jobs:task-generation',
   HEARTBEAT_MONITOR: 'jobs:heartbeat-monitor',
 } as const;
 

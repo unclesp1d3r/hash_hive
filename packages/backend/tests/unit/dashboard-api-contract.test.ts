@@ -4,7 +4,43 @@
  * Validates auth guards and request validation on dashboard endpoints.
  * Tests middleware layer behavior without requiring a running database.
  */
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, mock } from 'bun:test';
+import { jwtVerify, SignJWT } from 'jose';
+
+// Mock auth service so login() returns null without hitting the database.
+// bun:test hoists mock.module() above all imports, so this takes effect
+// before index.ts resolves the auth module.
+const jwtSecret = new TextEncoder().encode(
+  process.env['JWT_SECRET'] ?? 'test-secret-at-least-16-chars-long'
+);
+
+mock.module('../../src/services/auth.js', () => ({
+  hashPassword: async (password: string) =>
+    Bun.password.hash(password, { algorithm: 'bcrypt', cost: 12 }),
+  verifyPassword: async (password: string, hash: string) => Bun.password.verify(password, hash),
+  createToken: async (payload: { userId: number; email: string; type: string }) =>
+    new SignJWT({ sub: String(payload.userId), email: payload.email, type: payload.type })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(jwtSecret),
+  validateToken: async (token: string) => {
+    try {
+      const { payload } = await jwtVerify(token, jwtSecret);
+      return {
+        userId: Number(payload['sub']),
+        email: payload['email'] as string,
+        type: payload['type'] as string,
+      };
+    } catch {
+      return null;
+    }
+  },
+  login: async () => null,
+  getUserWithProjects: async () => null,
+  selectProject: async () => null,
+}));
+
 import { app } from '../../src/index.js';
 import { agentToken, sessionToken } from '../fixtures.js';
 
@@ -68,6 +104,18 @@ describe('Dashboard API: POST /auth/login', () => {
       body: JSON.stringify({ email: 'test@test.com', password: 'short' }),
     });
     expect(res.status).toBe(400);
+  });
+
+  it('should return 400 for invalid credentials', async () => {
+    const res = await app.request(`${DASH_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'nobody@example.com', password: 'wrongpassword1' }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body['error']['code']).toBe('VALIDATION_INVALID_CREDENTIALS');
+    expect(body['error']['message']).toBe('Invalid email or password');
   });
 });
 
