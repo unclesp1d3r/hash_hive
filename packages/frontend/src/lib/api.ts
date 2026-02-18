@@ -26,7 +26,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       // Session expired — clear auth state and redirect to login
       const { useAuthStore } = await import('../stores/auth');
       useAuthStore.getState().clearAuth();
-      window.location.href = '/login';
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
       throw new ApiError(401, 'AUTH_SESSION_EXPIRED', 'Session expired');
     }
 

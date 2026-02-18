@@ -1,5 +1,5 @@
 import { logger } from './config/logger.js';
-import { TASK_PRIORITY_QUEUES } from './config/queue.js';
+import { QUEUE_NAMES, TASK_PRIORITY_QUEUES } from './config/queue.js';
 import { createRedisClient } from './config/redis.js';
 import { createTaskGeneratorWorker } from './queue/workers/task-generator.js';
 
@@ -17,6 +17,14 @@ async function main() {
     logger.info({ queue: queueName }, 'Task generation worker started');
     return worker;
   });
+
+  // Also consume the dedicated task-generation job queue for hybrid generation
+  const dedicatedWorker = createTaskGeneratorWorker(connection, QUEUE_NAMES.TASK_GENERATION);
+  logger.info(
+    { queue: QUEUE_NAMES.TASK_GENERATION },
+    'Task generation worker started (dedicated queue)'
+  );
+  workers.push(dedicatedWorker);
 
   async function shutdown(signal: string) {
     logger.info({ signal }, 'Shutting down task generation workers');

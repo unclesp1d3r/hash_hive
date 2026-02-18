@@ -1,5 +1,5 @@
 import { projects, projectUsers, users } from '@hashhive/shared';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { jwtVerify, SignJWT } from 'jose';
 import { env } from '../config/env.js';
 import { db } from '../db/index.js';
@@ -18,8 +18,17 @@ export async function createToken(payload: {
   userId: number;
   email: string;
   type: 'session' | 'agent';
+  projectId?: number;
 }): Promise<string> {
-  return new SignJWT({ sub: String(payload.userId), email: payload.email, type: payload.type })
+  const claims: Record<string, unknown> = {
+    sub: String(payload.userId),
+    email: payload.email,
+    type: payload.type,
+  };
+  if (payload.projectId) {
+    claims['projectId'] = payload.projectId;
+  }
+  return new SignJWT(claims)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(env.JWT_EXPIRY)
@@ -30,12 +39,14 @@ export async function validateToken(token: string): Promise<{
   userId: number;
   email: string;
   type: 'session' | 'agent';
+  projectId?: number;
 } | null> {
   try {
     const { payload } = await jwtVerify(token, jwtSecret);
     const sub = payload['sub'];
     const email = payload['email'];
     const type = payload['type'];
+    const projectId = payload['projectId'];
 
     if (typeof sub !== 'string' || typeof email !== 'string') {
       return null;
@@ -44,7 +55,12 @@ export async function validateToken(token: string): Promise<{
       return null;
     }
 
-    return { userId: Number(sub), email, type };
+    return {
+      userId: Number(sub),
+      email,
+      type,
+      ...(typeof projectId === 'number' ? { projectId } : {}),
+    };
   } catch {
     return null;
   }
@@ -69,7 +85,20 @@ export async function login(email: string, password: string) {
   // Update last login
   await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, user.id));
 
-  const token = await createToken({ userId: user.id, email: user.email, type: 'session' });
+  // Check user's project memberships to auto-select if only one
+  const memberships = await db
+    .select({ projectId: projectUsers.projectId })
+    .from(projectUsers)
+    .where(eq(projectUsers.userId, user.id));
+
+  const autoProjectId = memberships.length === 1 ? memberships[0]?.projectId : undefined;
+
+  const token = await createToken({
+    userId: user.id,
+    email: user.email,
+    type: 'session',
+    ...(autoProjectId ? { projectId: autoProjectId } : {}),
+  });
 
   return {
     user: {
@@ -79,7 +108,35 @@ export async function login(email: string, password: string) {
       status: user.status,
     },
     token,
+    ...(autoProjectId ? { selectedProjectId: autoProjectId } : {}),
   };
+}
+
+export async function selectProject(userId: number, projectId: number) {
+  // Validate user is member of project
+  const [membership] = await db
+    .select()
+    .from(projectUsers)
+    .where(and(eq(projectUsers.userId, userId), eq(projectUsers.projectId, projectId)))
+    .limit(1);
+
+  if (!membership) {
+    return null;
+  }
+
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) {
+    return null;
+  }
+
+  const token = await createToken({
+    userId: user.id,
+    email: user.email,
+    type: 'session',
+    projectId,
+  });
+
+  return { token, projectId };
 }
 
 export async function getUserWithProjects(userId: number) {

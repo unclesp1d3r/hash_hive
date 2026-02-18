@@ -1,7 +1,8 @@
-import { agentErrors, agents } from '@hashhive/shared';
+import { agentErrors, agents, tasks } from '@hashhive/shared';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { emitAgentStatus } from './events.js';
+import { handleTaskFailure } from './tasks.js';
 
 export async function getAgentById(agentId: number) {
   const [agent] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
@@ -52,10 +53,18 @@ export async function processHeartbeat(
     status: string;
     capabilities?: Record<string, unknown> | undefined;
     deviceInfo?: Record<string, unknown> | undefined;
+    error?: { severity?: string; message?: string } | undefined;
   }
 ) {
+  // Determine effective status from heartbeat payload
+  let effectiveStatus = data.status;
+  const isFatalError = data.error?.severity === 'fatal';
+  if (isFatalError) {
+    effectiveStatus = 'error';
+  }
+
   const updates: Record<string, unknown> = {
-    status: data.status,
+    status: effectiveStatus,
     lastSeenAt: new Date(),
     updatedAt: new Date(),
   };
@@ -70,10 +79,41 @@ export async function processHeartbeat(
   const [updated] = await db.update(agents).set(updates).where(eq(agents.id, agentId)).returning();
 
   if (updated) {
-    emitAgentStatus(updated.projectId, updated.id, data.status);
+    emitAgentStatus(updated.projectId, updated.id, effectiveStatus);
   }
 
-  return updated ?? null;
+  // On fatal error, fail the agent's current tasks
+  if (isFatalError) {
+    const activeTasks = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(and(eq(tasks.agentId, agentId), sql`${tasks.status} IN ('assigned', 'running')`));
+
+    for (const activeTask of activeTasks) {
+      await handleTaskFailure(activeTask.id, data.error?.message ?? 'Agent fatal error');
+    }
+  }
+
+  // Check if there are high-priority pending tasks for this agent's project
+  let hasHighPriorityTasks = false;
+  if (updated) {
+    const { campaigns } = await import('@hashhive/shared');
+    const [highPriority] = await db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .innerJoin(campaigns, eq(tasks.campaignId, campaigns.id))
+      .where(
+        and(
+          eq(tasks.status, 'pending'),
+          eq(campaigns.projectId, updated.projectId),
+          sql`${campaigns.priority} <= 1`
+        )
+      )
+      .limit(1);
+    hasHighPriorityTasks = !!highPriority;
+  }
+
+  return { agent: updated ?? null, hasHighPriorityTasks };
 }
 
 export async function updateAgent(

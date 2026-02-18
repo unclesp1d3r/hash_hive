@@ -38,5 +38,6 @@ export type QueueJobMap = {
 
   // Job queues
   [QUEUE_NAMES.HASH_LIST_PARSING]: HashListParseJob;
+  [QUEUE_NAMES.TASK_GENERATION]: TaskGenerationJob;
   [QUEUE_NAMES.HEARTBEAT_MONITOR]: HeartbeatMonitorJob;
 };

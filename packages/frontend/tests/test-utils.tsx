@@ -5,11 +5,12 @@
  * that need React Query, Router, etc.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, type RenderOptions } from '@testing-library/react';
+import { cleanup, render, type RenderOptions } from '@testing-library/react';
 import type { ReactElement } from 'react';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes } from 'react-router';
+import { resetAllStores } from './utils/store-reset';
 
-function createTestQueryClient() {
+export function createTestQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0 },
@@ -22,18 +23,83 @@ interface WrapperProps {
   children: React.ReactNode;
 }
 
-function AllProviders({ children }: WrapperProps) {
-  const queryClient = createTestQueryClient();
-  return (
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter>{children}</MemoryRouter>
-    </QueryClientProvider>
+interface RenderWithProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
+  /** Initial route for the MemoryRouter. Defaults to "/". */
+  initialRoute?: string;
+  /** Optional QueryClient to use (e.g. for spying on invalidateQueries). */
+  queryClient?: QueryClient;
+}
+
+function createAllProviders(initialRoute: string, queryClient: QueryClient) {
+  return function AllProviders({ children }: WrapperProps) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[initialRoute]}>{children}</MemoryRouter>
+      </QueryClientProvider>
+    );
+  };
+}
+
+export function renderWithProviders(ui: ReactElement, options: RenderWithProvidersOptions = {}) {
+  const { initialRoute = '/', queryClient, ...renderOptions } = options;
+  const qc = queryClient ?? createTestQueryClient();
+  return render(ui, {
+    wrapper: createAllProviders(initialRoute, qc),
+    ...renderOptions,
+  });
+}
+
+interface RouteDefinition {
+  path: string;
+  element: ReactElement;
+}
+
+interface RenderWithRouterOptions extends Omit<RenderOptions, 'wrapper'> {
+  /** Initial route to navigate to. Defaults to first route path. */
+  initialRoute?: string;
+  /** Optional QueryClient to use. */
+  queryClient?: QueryClient;
+}
+
+/**
+ * Render a set of routes for testing navigation behavior.
+ *
+ * ```ts
+ * renderWithRouter([
+ *   { path: '/login', element: <LoginPage /> },
+ *   { path: '/select-project', element: <div>Select Project</div> },
+ *   { path: '/', element: <div>Dashboard</div> },
+ * ], { initialRoute: '/login' });
+ * ```
+ */
+export function renderWithRouter(routes: RouteDefinition[], options: RenderWithRouterOptions = {}) {
+  const { initialRoute, queryClient, ...renderOptions } = options;
+  const firstPath = routes[0]?.path ?? '/';
+  const startRoute = initialRoute ?? firstPath;
+  const qc = queryClient ?? createTestQueryClient();
+
+  return render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter initialEntries={[startRoute]}>
+        <Routes>
+          {routes.map((r) => (
+            <Route key={r.path} path={r.path} element={r.element} />
+          ))}
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+    renderOptions
   );
 }
 
-export function renderWithProviders(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
-  return render(ui, { wrapper: AllProviders, ...options });
+/**
+ * Combined cleanup helper. Call in `afterEach()` to clean up the DOM
+ * and reset all Zustand stores between tests.
+ */
+export function cleanupAll() {
+  cleanup();
+  resetAllStores();
 }
 
-export { render } from '@testing-library/react';
-export { screen, within, waitFor } from '@testing-library/react';
+export { render, cleanup } from '@testing-library/react';
+export { screen, within, waitFor, act, fireEvent } from '@testing-library/react';

@@ -15,8 +15,8 @@ auth.post('/login', zValidator('json', loginRequestSchema), async (c) => {
 
   if (!result) {
     return c.json(
-      { error: { code: 'AUTH_INVALID_CREDENTIALS', message: 'Invalid email or password' } },
-      401
+      { error: { code: 'VALIDATION_INVALID_CREDENTIALS', message: 'Invalid email or password' } },
+      400
     );
   }
 
@@ -28,7 +28,12 @@ auth.post('/login', zValidator('json', loginRequestSchema), async (c) => {
     maxAge: 60 * 60 * 24, // 24 hours
   });
 
-  return c.json({ user: result.user });
+  return c.json({
+    user: result.user,
+    ...('selectedProjectId' in result && result.selectedProjectId
+      ? { selectedProjectId: result.selectedProjectId }
+      : {}),
+  });
 });
 
 auth.post('/logout', requireSession, async (c) => {
@@ -37,14 +42,17 @@ auth.post('/logout', requireSession, async (c) => {
 });
 
 auth.get('/me', requireSession, async (c) => {
-  const { userId } = c.get('currentUser');
+  const { userId, projectId } = c.get('currentUser');
   const result = await getUserWithProjects(userId);
 
   if (!result) {
     return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'User not found' } }, 404);
   }
 
-  return c.json(result);
+  return c.json({
+    ...result,
+    ...(projectId ? { selectedProjectId: projectId } : {}),
+  });
 });
 
 export { auth as authRoutes };

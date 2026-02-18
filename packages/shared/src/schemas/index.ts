@@ -101,7 +101,6 @@ export const loginRequestSchema = z.object({
 });
 
 export const createCampaignRequestSchema = insertCampaignSchema.pick({
-  projectId: true,
   name: true,
   description: true,
   hashListId: true,

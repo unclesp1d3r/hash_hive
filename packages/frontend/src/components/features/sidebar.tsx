@@ -10,13 +10,26 @@ const navItems = [
   { label: 'Campaigns', href: '/campaigns', icon: 'target' },
   { label: 'Agents', href: '/agents', icon: 'cpu' },
   { label: 'Resources', href: '/resources', icon: 'database' },
+  { label: 'Results', href: '/results', icon: 'search' },
 ];
 
 export function Sidebar() {
   const { pathname } = useLocation();
-  const { user, logout } = useAuthStore();
+  const { user, logout, selectProject } = useAuthStore();
   const { sidebarOpen, selectedProjectId, setSelectedProject } = useUiStore();
   const { connected } = useEvents();
+
+  const handleProjectChange = async (value: string) => {
+    const projectId = value ? Number(value) : null;
+    setSelectedProject(projectId);
+    if (projectId) {
+      try {
+        await selectProject(projectId);
+      } catch {
+        // Cookie update failed — local state is still set, next request will work
+      }
+    }
+  };
 
   if (!sidebarOpen) return null;
 
@@ -35,7 +48,7 @@ export function Sidebar() {
             id="project-select"
             className="mt-1 w-full rounded-md border bg-background px-2 py-1 text-sm"
             value={selectedProjectId ?? ''}
-            onChange={(e) => setSelectedProject(e.target.value ? Number(e.target.value) : null)}
+            onChange={(e) => handleProjectChange(e.target.value)}
           >
             <option value="">All Projects</option>
             {user.projects.map((p) => (

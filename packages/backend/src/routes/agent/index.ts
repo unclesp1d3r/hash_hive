@@ -20,8 +20,11 @@ agentRoutes.use('/errors', requireAgentToken);
 agentRoutes.post('/heartbeat', zValidator('json', agentHeartbeatSchema), async (c) => {
   const { agentId } = c.get('agent');
   const data = c.req.valid('json');
-  await processHeartbeat(agentId, data);
-  return c.json({ acknowledged: true });
+  const result = await processHeartbeat(agentId, data);
+  return c.json({
+    acknowledged: true,
+    ...(result.hasHighPriorityTasks ? { hasHighPriorityTasks: true } : {}),
+  });
 });
 
 // ─── POST /tasks/next — request next task ───────────────────────────

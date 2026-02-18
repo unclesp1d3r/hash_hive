@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { requireSession } from '../../middleware/auth.js';
 import { requireProjectAccess, requireRole } from '../../middleware/rbac.js';
+import { guessHashType } from '../../services/hash-analysis.js';
 import {
   createHashList,
   createResource,
@@ -35,12 +36,9 @@ resourceRoutes.get('/hash-types', async (c) => {
 // ─── Hash Lists ─────────────────────────────────────────────────────
 
 resourceRoutes.get('/hash-lists', requireProjectAccess(), async (c) => {
-  const projectId = Number(c.req.query('projectId'));
-  if (!projectId || Number.isNaN(projectId)) {
-    return c.json(
-      { error: { code: 'VALIDATION_ERROR', message: 'projectId query parameter is required' } },
-      400
-    );
+  const { projectId } = c.get('currentUser');
+  if (!projectId) {
+    return c.json({ error: { code: 'PROJECT_NOT_SELECTED', message: 'No project selected' } }, 400);
   }
 
   const hashLists = await listHashLists(projectId);
@@ -48,7 +46,6 @@ resourceRoutes.get('/hash-lists', requireProjectAccess(), async (c) => {
 });
 
 const createHashListSchema = z.object({
-  projectId: z.number().int().positive(),
   name: z.string().min(1).max(255),
   hashTypeId: z.number().int().positive().optional(),
   source: z.string().max(50).optional(),
@@ -60,7 +57,14 @@ resourceRoutes.post(
   zValidator('json', createHashListSchema),
   async (c) => {
     const data = c.req.valid('json');
-    const hashList = await createHashList(data);
+    const { projectId } = c.get('currentUser');
+    if (!projectId) {
+      return c.json(
+        { error: { code: 'PROJECT_NOT_SELECTED', message: 'No project selected' } },
+        400
+      );
+    }
+    const hashList = await createHashList({ ...data, projectId });
     return c.json({ hashList }, 201);
   }
 );
@@ -143,19 +147,40 @@ resourceRoutes.get('/hash-lists/:id/download', requireProjectAccess(), async (c)
   return c.json({ url });
 });
 
+// ─── Hash Type Detection ─────────────────────────────────────────────
+
+const detectHashTypeSchema = z.object({
+  hashes: z.array(z.string().min(1).max(1024)).min(1).max(100),
+});
+
+resourceRoutes.post(
+  '/detect-hash-type',
+  requireSession,
+  zValidator('json', detectHashTypeSchema),
+  async (c) => {
+    const { hashes } = c.req.valid('json');
+
+    const results = hashes.map((hashValue) => ({
+      hashValue,
+      candidates: guessHashType(hashValue),
+    }));
+
+    return c.json({ results });
+  }
+);
+
 // ─── Generic resource routes factory ────────────────────────────────
 
 function createResourceRoutes(prefix: string, table: ResourceTable) {
   const createSchema = z.object({
-    projectId: z.number().int().positive(),
     name: z.string().min(1).max(255),
   });
 
   resourceRoutes.get(`/${prefix}`, requireProjectAccess(), async (c) => {
-    const projectId = Number(c.req.query('projectId'));
-    if (!projectId || Number.isNaN(projectId)) {
+    const { projectId } = c.get('currentUser');
+    if (!projectId) {
       return c.json(
-        { error: { code: 'VALIDATION_ERROR', message: 'projectId query parameter is required' } },
+        { error: { code: 'PROJECT_NOT_SELECTED', message: 'No project selected' } },
         400
       );
     }
@@ -170,7 +195,14 @@ function createResourceRoutes(prefix: string, table: ResourceTable) {
     zValidator('json', createSchema),
     async (c) => {
       const data = c.req.valid('json');
-      const item = await createResource(table, data);
+      const { projectId } = c.get('currentUser');
+      if (!projectId) {
+        return c.json(
+          { error: { code: 'PROJECT_NOT_SELECTED', message: 'No project selected' } },
+          400
+        );
+      }
+      const item = await createResource(table, { ...data, projectId });
       return c.json({ item }, 201);
     }
   );

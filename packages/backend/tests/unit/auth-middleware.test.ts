@@ -34,7 +34,7 @@ function createSessionApp() {
   app.use('*', requireSession);
   app.get('/protected', (c) => {
     const user = c.get('currentUser');
-    return c.json({ userId: user.userId, email: user.email });
+    return c.json({ userId: user.userId, email: user.email, projectId: user.projectId });
   });
   return app;
 }

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-interface AttackConfig {
+export interface AttackConfig {
   mode: number;
   hashTypeId?: number;
   wordlistId?: number;
@@ -25,6 +25,10 @@ interface WizardState {
   addAttack: (attack: AttackConfig) => void;
   removeAttack: (index: number) => void;
   updateAttack: (index: number, attack: AttackConfig) => void;
+  /** Adds a dependency: attack at attackIndex depends on attack at dependsOnIndex. */
+  addDependency: (attackIndex: number, dependsOnIndex: number) => void;
+  /** Removes a dependency from attack at attackIndex. */
+  removeDependency: (attackIndex: number, dependsOnIndex: number) => void;
   reset: () => void;
 }
 
@@ -43,10 +47,36 @@ export const useCampaignWizard = create<WizardState>((set) => ({
   setBasicInfo: (info) => set(info),
   setHashListId: (hashListId) => set({ hashListId }),
   addAttack: (attack) => set((s) => ({ attacks: [...s.attacks, attack] })),
-  removeAttack: (index) => set((s) => ({ attacks: s.attacks.filter((_, i) => i !== index) })),
+  removeAttack: (index) =>
+    set((s) => ({
+      attacks: s.attacks
+        .filter((_, i) => i !== index)
+        .map((a) => ({
+          ...a,
+          dependencies: a.dependencies
+            .filter((dep) => dep !== index)
+            .map((dep) => (dep > index ? dep - 1 : dep)),
+        })),
+    })),
   updateAttack: (index, attack) =>
     set((s) => ({
       attacks: s.attacks.map((a, i) => (i === index ? attack : a)),
+    })),
+  addDependency: (attackIndex, dependsOnIndex) =>
+    set((s) => ({
+      attacks: s.attacks.map((a, i) =>
+        i === attackIndex && !a.dependencies.includes(dependsOnIndex)
+          ? { ...a, dependencies: [...a.dependencies, dependsOnIndex] }
+          : a
+      ),
+    })),
+  removeDependency: (attackIndex, dependsOnIndex) =>
+    set((s) => ({
+      attacks: s.attacks.map((a, i) =>
+        i === attackIndex
+          ? { ...a, dependencies: a.dependencies.filter((dep) => dep !== dependsOnIndex) }
+          : a
+      ),
     })),
   reset: () => set(initialState),
 }));

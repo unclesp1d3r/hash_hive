@@ -4,6 +4,7 @@ export type AppEnv = {
     currentUser: {
       userId: number;
       email: string;
+      projectId: number | null;
     };
     agent: {
       agentId: number;

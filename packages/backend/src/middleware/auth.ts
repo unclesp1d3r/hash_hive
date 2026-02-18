@@ -31,7 +31,11 @@ export const requireSession = createMiddleware<AppEnv>(async (c, next) => {
     throw authError('Invalid or expired session');
   }
 
-  c.set('currentUser', { userId: payload.userId, email: payload.email });
+  c.set('currentUser', {
+    userId: payload.userId,
+    email: payload.email,
+    projectId: payload.projectId ?? null,
+  });
   await next();
 });
 
