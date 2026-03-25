@@ -1,7 +1,11 @@
 # HashHive justfile - Common development commands
 
-set shell := ["bash", "-c"]
+set shell := ["bash", "-cu"]
 set dotenv-load := true
+
+# Use mise to manage all dev tools (bun, biome, etc.)
+# See mise.toml for tool versions
+mise_exec := "mise exec --"
 
 # Show available recipes
 default:
@@ -13,34 +17,7 @@ default:
 
 # Install all dependencies
 install:
-    bun install
-
-# Complete setup (install deps, copy env files, start docker)
-setup:
-    #!/usr/bin/env bash
-    BUN_VERSION=$(bun --version)
-    BUN_MAJOR=$(echo "$BUN_VERSION" | cut -d'.' -f1)
-    BUN_MINOR=$(echo "$BUN_VERSION" | cut -d'.' -f2)
-    if [ "$BUN_MAJOR" -lt 1 ] || { [ "$BUN_MAJOR" -eq 1 ] && [ "$BUN_MINOR" -lt 2 ]; }; then
-        echo "Bun 1.2+ is required. Current version: $BUN_VERSION" >&2
-        exit 1
-    fi
-
-    bun install
-
-    if [ ! -f packages/backend/.env ]; then
-        cp packages/backend/.env.example packages/backend/.env
-    fi
-
-    docker compose up -d
-    sleep 5
-    docker compose ps
-
-    if command -v pre-commit >/dev/null 2>&1; then
-        pre-commit install
-    fi
-
-    echo "Setup complete."
+    {{ mise_exec }} bun install
 
 # Copy environment files from examples
 env-setup:
@@ -48,12 +25,12 @@ env-setup:
 
 # Install pre-commit hooks
 install-hooks:
-    pre-commit install
+    {{ mise_exec }} pre-commit install
 
 # Update dependencies
 update-deps:
-    bun update
-    pre-commit autoupdate
+    {{ mise_exec }} bun update
+    {{ mise_exec }} pre-commit autoupdate
 
 # -----------------------------
 # Development Environment
@@ -61,19 +38,19 @@ update-deps:
 
 # Start development servers (backend + frontend)
 dev:
-    bun run dev
+    {{ mise_exec }} bun run dev
 
 # Start backend only
 dev-backend:
-    bun --filter backend dev
+    {{ mise_exec }} bun --filter @hashhive/backend dev
 
 # Start frontend only
 dev-frontend:
-    bun --filter frontend dev
+    {{ mise_exec }} bun --filter @hashhive/frontend dev
 
 # Show environment info
 info:
-    @echo "Bun version: $(bun --version)"
+    @echo "Bun version: $({{ mise_exec }} bun --version)"
     @echo "Docker version: $(docker --version 2>/dev/null || echo 'not installed')"
     @echo ""
     @docker compose ps 2>/dev/null || echo "Docker services not running"
@@ -84,19 +61,19 @@ info:
 
 # Lint all code
 lint:
-    bun run lint
+    {{ mise_exec }} bun run lint
 
 # Format all code
 format:
-    bun run format
+    {{ mise_exec }} bun run format
 
 # Check code formatting
 format-check:
-    bun run format:check
+    {{ mise_exec }} bun run format:check
 
 # Run TypeScript type checking
 type-check:
-    bun run type-check
+    {{ mise_exec }} bun run type-check
 
 # -----------------------------
 # Testing
@@ -104,19 +81,19 @@ type-check:
 
 # Run all tests
 test:
-    bun run test
+    {{ mise_exec }} bun run test
 
 # Run backend tests
 test-backend:
-    bun --filter backend test
+    {{ mise_exec }} bun --filter @hashhive/backend test
 
 # Run frontend tests
 test-frontend:
-    bun --filter frontend test
+    {{ mise_exec }} bun --filter @hashhive/frontend test
 
 # Run E2E tests
 test-e2e:
-    bun run test:e2e
+    {{ mise_exec }} bun run test:e2e
 
 # -----------------------------
 # Build & Clean
@@ -124,17 +101,17 @@ test-e2e:
 
 # Build all packages (Turborepo cached, dependency-ordered)
 build:
-    bun run build
+    {{ mise_exec }} bun run build
 
 # Build specific package
 build-backend:
-    bun --filter backend build
+    {{ mise_exec }} bun --filter @hashhive/backend build
 
 build-frontend:
-    bun --filter frontend build
+    {{ mise_exec }} bun --filter @hashhive/frontend build
 
 build-shared:
-    bun --filter shared build
+    {{ mise_exec }} bun --filter @hashhive/shared build
 
 # Clean build artifacts and dependencies
 clean:
@@ -186,7 +163,7 @@ clean-all: clean clean-docker
 
 # Connect to PostgreSQL shell
 psql-shell:
-    docker compose exec postgres psql -U hashhive hashhive
+    psql -U hashhive hashhive
 
 # Connect to Redis CLI
 redis-cli:
@@ -194,15 +171,19 @@ redis-cli:
 
 # Generate Drizzle migrations
 db-generate:
-    bun --filter backend db:generate
+    {{ mise_exec }} bun --filter @hashhive/backend db:generate
 
 # Run Drizzle migrations
 db-migrate:
-    bun --filter backend db:migrate
+    {{ mise_exec }} bun --filter @hashhive/backend db:migrate
+
+# Seed admin user and default project
+db-seed:
+    {{ mise_exec }} bun --filter @hashhive/backend db:seed
 
 # Open Drizzle Studio
 db-studio:
-    bun --filter backend db:studio
+    {{ mise_exec }} bun --filter @hashhive/backend db:studio
 
 # -----------------------------
 # CI Workflow
