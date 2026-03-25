@@ -29,6 +29,10 @@ Referenced from [AGENTS.md](AGENTS.md) — read the relevant section before work
 - **No native `FOR UPDATE SKIP LOCKED`** — use raw `db.execute(sql`...`)` with a CTE for atomic claim patterns
 - **Never use `sql.raw()` for agent/user-supplied values** — use Drizzle's parameterized `${value}` in tagged templates. Arrays like `${[1,2,3]}::int[]` are bound safely. `sql.raw()` is only for static SQL fragments (table/column names).
 
+## BullMQ
+
+- **Queue names cannot contain `:`** (BullMQ 5.67+) — colons conflict with the Redis key separator. Use hyphens: `tasks-high`, `jobs-hash-list-parsing`.
+
 ## Service Layer
 
 - **Circular import: `campaigns.ts` ↔ `tasks.ts`** — resolved via dynamic `await import('./tasks.js')` and a `_deps` injection object in `campaigns.ts`. Maintain this pattern when adding cross-service calls.

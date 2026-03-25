@@ -200,6 +200,7 @@ bun type-check                   # TypeScript type checking
 bun --filter backend db:generate # Generate Drizzle migrations
 bun --filter backend db:migrate  # Run migrations
 bun --filter backend db:studio   # Open Drizzle Studio
+bun --filter backend db:seed    # Seed admin user (admin@hashhive.local / changeme123)
 ```
 
 ### Local CI check
