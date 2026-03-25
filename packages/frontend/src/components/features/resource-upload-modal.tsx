@@ -44,7 +44,7 @@ export function ResourceUploadModal({ type, open, onClose, onSuccess }: Resource
     setError(null);
     try {
       const result = await createResource.mutateAsync({ name: name.trim() });
-      const resourceId = result.resource.id;
+      const resourceId = result.item.id;
 
       await uploadFile.mutateAsync({ id: resourceId, file });
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ResourceUploadModal } from '../components/features/resource-upload-modal';
 import {
   useGuessHashType,
   useHashLists,
@@ -9,6 +10,8 @@ import {
 import { useUiStore } from '../stores/ui';
 
 type Tab = 'hash-lists' | 'wordlists' | 'rulelists' | 'masklists' | 'hash-detect';
+
+type UploadableTab = 'hash-lists' | 'wordlists' | 'rulelists' | 'masklists';
 
 export function ResourcesPage() {
   const { selectedProjectId } = useUiStore();
@@ -61,6 +64,35 @@ export function ResourcesPage() {
   );
 }
 
+function UploadButton({ type }: { type: UploadableTab }) {
+  const [open, setOpen] = useState(false);
+
+  const labels: Record<UploadableTab, string> = {
+    'hash-lists': 'Hash List',
+    wordlists: 'Wordlist',
+    rulelists: 'Rulelist',
+    masklists: 'Masklist',
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+      >
+        Upload {labels[type]}
+      </button>
+      <ResourceUploadModal
+        type={type}
+        open={open}
+        onClose={() => setOpen(false)}
+        onSuccess={() => {}}
+      />
+    </>
+  );
+}
+
 function HashListsTab() {
   const { data, isLoading } = useHashLists();
 
@@ -68,34 +100,40 @@ function HashListsTab() {
 
   const hashLists = data?.hashLists ?? [];
 
-  if (hashLists.length === 0) {
-    return <p className="text-muted-foreground">No hash lists found.</p>;
-  }
-
   return (
-    <div className="overflow-x-auto rounded-lg border">
-      <table className="w-full text-left text-sm">
-        <thead className="border-b bg-muted/50">
-          <tr>
-            <th className="px-4 py-3 font-medium">Name</th>
-            <th className="px-4 py-3 font-medium">Hashes</th>
-            <th className="px-4 py-3 font-medium">Cracked</th>
-            <th className="px-4 py-3 font-medium">Created</th>
-          </tr>
-        </thead>
-        <tbody>
-          {hashLists.map((hl) => (
-            <tr key={hl.id} className="border-b last:border-b-0">
-              <td className="px-4 py-3 font-medium">{hl.name}</td>
-              <td className="px-4 py-3">{hl.hashCount}</td>
-              <td className="px-4 py-3">{hl.crackedCount}</td>
-              <td className="px-4 py-3 text-muted-foreground">
-                {new Date(hl.createdAt).toLocaleDateString()}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <UploadButton type="hash-lists" />
+      </div>
+
+      {hashLists.length === 0 ? (
+        <p className="text-muted-foreground">No hash lists found.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b bg-muted/50">
+              <tr>
+                <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium">Hashes</th>
+                <th className="px-4 py-3 font-medium">Cracked</th>
+                <th className="px-4 py-3 font-medium">Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {hashLists.map((hl) => (
+                <tr key={hl.id} className="border-b last:border-b-0">
+                  <td className="px-4 py-3 font-medium">{hl.name}</td>
+                  <td className="px-4 py-3">{hl.hashCount}</td>
+                  <td className="px-4 py-3">{hl.crackedCount}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {new Date(hl.createdAt).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -112,30 +150,36 @@ function ResourceListTab({ type }: { type: 'wordlists' | 'rulelists' | 'masklist
 
   const resources = data?.resources ?? [];
 
-  if (resources.length === 0) {
-    return <p className="text-muted-foreground">No {type} found.</p>;
-  }
-
   return (
-    <div className="overflow-x-auto rounded-lg border">
-      <table className="w-full text-left text-sm">
-        <thead className="border-b bg-muted/50">
-          <tr>
-            <th className="px-4 py-3 font-medium">Name</th>
-            <th className="px-4 py-3 font-medium">Created</th>
-          </tr>
-        </thead>
-        <tbody>
-          {resources.map((r) => (
-            <tr key={r.id} className="border-b last:border-b-0">
-              <td className="px-4 py-3 font-medium">{r.name}</td>
-              <td className="px-4 py-3 text-muted-foreground">
-                {new Date(r.createdAt).toLocaleDateString()}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <UploadButton type={type} />
+      </div>
+
+      {resources.length === 0 ? (
+        <p className="text-muted-foreground">No {type} found.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b bg-muted/50">
+              <tr>
+                <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium">Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resources.map((r) => (
+                <tr key={r.id} className="border-b last:border-b-0">
+                  <td className="px-4 py-3 font-medium">{r.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {new Date(r.createdAt).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

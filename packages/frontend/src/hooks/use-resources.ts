@@ -51,8 +51,10 @@ function useResourceList(type: 'wordlists' | 'rulelists' | 'masklists') {
 
   return useQuery({
     queryKey: [type, selectedProjectId],
-    queryFn: () =>
-      api.get<{ resources: Resource[]; total: number }>(`/dashboard/resources/${type}`),
+    queryFn: async () => {
+      const data = await api.get<Record<string, Resource[]>>(`/dashboard/resources/${type}`);
+      return { resources: data[type] ?? [] };
+    },
     enabled: !!selectedProjectId,
   });
 }
@@ -89,8 +91,13 @@ export function useCreateResource(type: ResourceType) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { name: string }) =>
-      api.post<{ resource: Resource }>(`/dashboard/resources/${type}`, data),
+    mutationFn: async (data: { name: string }): Promise<{ item: Resource }> => {
+      const raw = await api.post<Record<string, Resource>>(`/dashboard/resources/${type}`, data);
+      // Hash lists return { hashList }, generic resources return { item }
+      const item = raw['item'] ?? raw['hashList'];
+      if (!item) throw new Error('Unexpected response shape from create resource');
+      return { item };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [type] });
     },
