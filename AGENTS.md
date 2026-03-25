@@ -278,6 +278,7 @@ Without this, auth middleware 401 responses get swallowed into 500s.
 - Drizzle mock chains must match production code — e.g. `insert().values()` returning `{ onConflictDoNothing: mock() }`
 - BullMQ worker test mocks: if worker does `db.select()`, mock must return chainable `{ from: mock(() => chain), where: mock(() => Promise.resolve([])) }`
 - **bun:test `mock.module()`**: Mock dependencies before `await import()` of module under test — used for service tests that need DB/queue mocks
+- **bun:test shared module cache gotcha**: `mock.module` in one test file can cache a module globally, making `mock.module` for the same module ineffective in other test files. For dynamic `await import()` calls in production code, use a `_deps` override pattern: export a mutable `_deps` object from the production module and override its functions in tests (see `campaigns.ts` `_deps` and `campaign-transition.test.ts`).
 - **Route-level contract tests**: When mocking for `import { app }`, mock ALL transitive service dependencies (e.g., `tasks.js` → `events.js` + `campaigns.js`). Mock `db.execute` with snake_case rows to validate the camelCase mapping, not the service function directly.
 - **Separate test files for conflicting mocks**: If a module is already imported at top level in one test file (e.g., `resolveGenerationStrategy` in `campaigns.test.ts`), tests needing full module mocks for the same source must go in a separate test file to avoid import-order conflicts.
 - Frontend tests use `happy-dom` with manual global injection (not `@happy-dom/global-registrator`)
