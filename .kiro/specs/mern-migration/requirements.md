@@ -275,6 +275,9 @@ HashHive enables three primary user roles — Admin, Contributor, and Viewer —
 11. THE HashHive System SHALL parse uploaded hash lists into individual Hash_Items with hash_value and metadata
 12. THE HashHive System SHALL support wordlist, rulelist, and masklist uploads with size and hashcat flag metadata
 13. THE HashHive System SHALL enforce project-scoped access control for all resource operations
+14. THE HashHive System SHALL support resource files in excess of 100 GB by using streaming uploads (never buffering entire files in memory) with S3 multipart upload to MinIO
+15. THE HashHive Frontend SHALL use chunked uploads for large resource files, providing progress feedback and supporting upload resumption on network interruption
+16. THE HashHive System SHALL stream large resource files directly from MinIO to agents via presigned URLs, avoiding backend memory buffering
 
 ### Requirement 15: Hash Type Detection
 
