@@ -493,8 +493,114 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
 - [x] 19. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [x] 20. Data migration tooling
-  - [x] 20.1 Create Rails export scripts
+- [ ] 20. Large file handling — schema and backend streaming infrastructure
+  - [ ] 20.1 Migrate resource schema columns to bigint
+    - Update `file_size` and `line_count` columns in word_lists, rule_lists, mask_lists from integer to bigint in `packages/shared/src/db/schema.ts`
+    - Add `uploadId` field to `file_ref` jsonb type documentation for tracking multipart uploads
+    - Add `status` field to word_lists, rule_lists, mask_lists (`'uploading' | 'ready' | 'error'`) if not already present
+    - Generate and apply Drizzle migration with `drizzle-kit generate` and `drizzle-kit migrate`
+    - Regenerate Zod schemas with drizzle-zod to reflect bigint types
+    - _Requirements: 14.14_
+
+  - [ ] 20.2 Implement streaming multipart upload in ResourceService
+    - Rewrite ResourceService upload path to use S3 `CreateMultipartUpload`, `UploadPart`, and `CompleteMultipartUpload`
+    - Implement `initiateUpload(projectId, metadata)` returning `{ uploadId, partSize, resourceId }`
+    - Implement `uploadPart(uploadId, partNumber, stream)` that streams the incoming chunk directly to MinIO as a multipart part (no full-file buffering)
+    - Implement `completeUpload(uploadId, parts)` that finalizes the multipart upload and updates resource status to `'ready'`
+    - Implement `abortUpload(uploadId)` that calls `AbortMultipartUpload` and cleans up the resource record
+    - Ensure backend memory usage for file data stays under ~128 MB regardless of file size
+    - Keep existing single-request upload path for files under 100 MB
+    - _Requirements: 14.14, 14.16_
+
+  - [ ] 20.3 Create chunked upload API endpoints
+    - Implement `POST /api/v1/dashboard/resources/upload/initiate` — accepts metadata and fileSize, calls `initiateUpload`, returns uploadId and partSize
+    - Implement `PUT /api/v1/dashboard/resources/upload/:uploadId/part/:partNumber` — streams request body to MinIO via `uploadPart`, returns ETag
+    - Implement `POST /api/v1/dashboard/resources/upload/:uploadId/complete` — accepts array of `{ partNumber, etag }`, calls `completeUpload`, returns resource
+    - Implement `DELETE /api/v1/dashboard/resources/upload/:uploadId` — calls `abortUpload` for cancelling incomplete uploads
+    - Add Zod validation schemas for all new endpoints
+    - Apply RBAC middleware (Admin and Contributor only)
+    - _Requirements: 14.14, 14.15_
+
+  - [ ] 20.4 Implement presigned URL generation for agent downloads
+    - Add `generatePresignedUrl(resourceId)` to ResourceService that creates a time-limited presigned URL for the resource's MinIO object
+    - Create `GET /api/v1/agent/resources/:id/download-url` endpoint returning a presigned URL
+    - Agents fetch files directly from MinIO using the presigned URL, bypassing backend memory entirely
+    - _Requirements: 14.16_
+
+  - [ ] 20.5 Update hash list parsing to stream from MinIO
+    - Refactor BullMQ hash list parsing worker to use `GetObject` with a readable stream from MinIO
+    - Parse hash list line-by-line using a streaming reader (no full file buffer)
+    - Bulk insert hash_items in batches of 1,000 rows
+    - Update hash_list statistics (total_hashes, unique_hashes) on completion
+    - Emit `hash_list_ready` event via EventService when parsing completes
+    - _Requirements: 14.14, 14.11_
+
+  - [ ]* 20.6 Write property test for streaming upload memory bound
+    - **Property 28: Streaming upload memory bound**
+    - Verify that for any simulated upload (varying chunk sizes and counts), the backend never buffers more than 128 MB of file data
+    - **Validates: Requirements 14.14, 14.16**
+
+  - [ ]* 20.7 Write property test for chunked upload resumability
+    - **Property 29: Chunked upload resumability**
+    - Verify that after interrupting a chunked upload at any part boundary, resuming from the last successful part and completing the upload produces a byte-identical file in MinIO
+    - **Validates: Requirements 14.15**
+
+- [ ] 21. Large file handling — frontend chunked uploads
+  - [ ] 21.1 Implement chunked upload client
+    - Create a `ChunkedUploadManager` utility in `packages/frontend/src/lib/` that splits files into 64 MB chunks
+    - Implement sequential chunk upload with calls to `PUT /resources/upload/:uploadId/part/:partNumber`
+    - Track uploaded parts (partNumber + ETag) in local state for resumption
+    - On completion, call `POST /resources/upload/:uploadId/complete` with all part ETags
+    - Support upload cancellation via `DELETE /resources/upload/:uploadId`
+    - _Requirements: 14.15_
+
+  - [ ] 21.2 Add upload progress and resumption UI
+    - Update resource upload modal to use `ChunkedUploadManager` for files over 100 MB
+    - Display upload progress as percentage with bytes transferred / total bytes
+    - Persist upload state (uploadId, completed parts) to localStorage for resumption on network interruption
+    - Show "Resume Upload" option when an incomplete upload is detected
+    - Keep existing single-request upload for files under 100 MB
+    - _Requirements: 14.5, 14.15_
+
+  - [ ] 21.3 Integrate chunked uploads into campaign wizard
+    - Update hash list upload in Campaign Wizard Step 1 to use chunked upload for large files
+    - Update resource selectors in Campaign Wizard Step 2 (wordlist, rulelist, masklist) to support inline chunked upload
+    - Show upload progress inline within the wizard step
+    - _Requirements: 14.15, 10.7_
+
+  - [ ]* 21.4 Write chunked upload UI tests
+    - Test ChunkedUploadManager with mock API responses using bun:test + Testing Library
+    - Test progress display and resumption flow
+    - Test cancellation behavior
+    - _Requirements: 14.15, 12.3_
+
+- [ ] 22. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 23. Role enforcement updates (Admin / Contributor / Viewer)
+  - [ ] 23.1 Update RBAC middleware for Viewer role restrictions
+    - Verify RBAC middleware in `packages/backend/src/middleware/rbac.ts` enforces that Viewer role is read-only (GET requests only for campaigns, resources, results)
+    - Ensure campaign lifecycle endpoints (start, pause, stop) reject Viewer role with 403
+    - Ensure resource creation/upload endpoints reject Viewer role with 403
+    - Ensure campaign creation endpoint rejects Viewer role with 403
+    - _Requirements: 3.1, 3.4, 3.5, 3.6_
+
+  - [ ] 23.2 Update frontend role-based UI controls
+    - Hide or disable "Create Campaign" button, campaign action buttons (Start, Pause, Stop), and resource "Upload" button for Viewer role
+    - Hide "Upload New" inline upload buttons in Campaign Wizard for Viewer role
+    - Show read-only state indicators where actions are restricted
+    - Ensure navigation menu items remain visible for Viewer (read access to all sections)
+    - _Requirements: 3.1, 3.5, 3.6_
+
+  - [ ]* 23.3 Write RBAC enforcement tests for Viewer role
+    - Test that Viewer cannot create campaigns via API
+    - Test that Viewer cannot start/pause/stop campaigns via API
+    - Test that Viewer cannot upload resources via API
+    - Test that Viewer can read campaigns, resources, and results via API
+    - _Requirements: 3.1, 3.4, 3.5, 3.6, 12.1_
+
+- [x] 24. Data migration tooling
+  - [x] 24.1 Create Rails export scripts
     - Write export script for users and projects
     - Create export script for agents and capabilities
     - Implement export for campaigns, attacks, tasks
@@ -502,125 +608,128 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
     - Export to NDJSON format for processing
     - _Requirements: 11.1_
 
-  - [x] 20.2 Implement transformation logic
+  - [x] 24.2 Implement transformation logic
     - Create user transformation with password hash mapping
     - Implement project and membership transformation
     - Add agent capability transformation
     - Transform campaign/attack relationships with ID mapping
     - _Requirements: 11.2, 11.5_
 
-  - [x] 20.3 Create PostgreSQL import scripts
+  - [x] 24.3 Create PostgreSQL import scripts
     - Implement idempotent import using Drizzle batch operations
     - Add ID mapping between Rails and PostgreSQL
     - Handle relationship references with foreign keys
     - Implement batch import for performance
     - _Requirements: 11.2, 11.3_
 
-  - [x] 20.4 Add migration validation
+  - [x] 24.4 Add migration validation
     - Implement count validation for all entities
     - Add relationship integrity checks using Drizzle queries
     - Validate DAG structures
     - Create migration report generation
     - _Requirements: 11.4, 11.5_
 
-  - [ ]* 20.5 Write migration tests
+  - [ ]* 24.5 Write migration tests
     - Test export scripts with sample data
     - Test transformation logic
     - Test import idempotency
     - _Requirements: 11.2, 11.3, 11.4, 12.1_
 
-- [x] 21. Testing infrastructure and E2E tests
-  - [x] 21.1 Set up backend test infrastructure
+- [x] 25. Testing infrastructure and E2E tests
+  - [x] 25.1 Set up backend test infrastructure
     - Configure bun:test for backend unit and integration tests
     - Set up Testcontainers for PostgreSQL, Redis, MinIO
     - Create test database seeding utilities
     - Implement test fixtures and factories
     - _Requirements: 1.8, 12.1, 12.2_
 
-  - [x] 21.2 Set up frontend test infrastructure
+  - [x] 25.2 Set up frontend test infrastructure
     - Configure bun:test with Testing Library for component tests
     - Set up Playwright for E2E tests
     - Create test utilities and custom matchers
     - Implement mock API server for component tests
     - _Requirements: 1.8, 12.3, 12.4_
 
-  - [x] 21.3 Implement API contract testing
+  - [x] 25.3 Implement API contract testing
     - Set up OpenAPI validation in tests
     - Create contract tests for Agent API
     - Add contract tests for Dashboard API
     - Validate request/response schemas against OpenAPI spec
     - _Requirements: 4.1, 12.5_
 
-  - [ ]* 21.4 Write E2E test suites
+  - [ ]* 25.4 Write E2E test suites
     - Create authentication E2E tests with Playwright
     - Implement campaign creation E2E tests
     - Add agent management E2E tests
     - Test real-time updates E2E
     - _Requirements: 12.4, 12.5_
 
-- [x] 22. Deployment and operations
-  - [x] 22.1 Create Docker images
+- [x] 26. Deployment and operations
+  - [x] 26.1 Create Docker images
     - Build optimized Bun backend image
     - Create Vite production build image for frontend
     - Add health check endpoints
     - Implement graceful shutdown handling
     - _Requirements: 13.1, 13.3_
 
-  - [x] 22.2 Create deployment configurations
+  - [x] 26.2 Create deployment configurations
     - Write production docker-compose.yml
     - Configure environment-specific settings
     - Implement secrets management
     - Add database migration scripts for deployment
     - _Requirements: 13.1, 13.2_
 
-  - [x] 22.3 Implement logging and monitoring
+  - [x] 26.3 Implement logging and monitoring
     - Configure structured logging with Pino
     - Add request/response logging middleware
     - Implement error tracking and alerting
     - Create performance metrics collection
     - _Requirements: 13.4_
 
-  - [x] 22.4 Add operational tooling
+  - [x] 26.4 Add operational tooling
     - Create database backup scripts
     - Implement health check monitoring
     - Add deployment scripts
     - Create troubleshooting documentation
     - _Requirements: 13.3, 13.5_
 
-  - [ ]* 22.5 Write deployment tests
+  - [ ]* 26.5 Write deployment tests
     - Test Docker image builds
     - Test health check endpoints
     - Validate environment configurations
     - _Requirements: 13.1, 13.3_
 
-- [x] 23. Integration and final validation
-  - [x] 23.1 Perform end-to-end integration testing
+- [x] 27. Integration and final validation
+  - [x] 27.1 Perform end-to-end integration testing
     - Test complete campaign workflow from creation to completion
     - Validate agent registration and task execution
     - Test real-time updates across all components
     - Verify resource management workflows
     - _Requirements: 11.5, 12.4, 12.5_
 
-  - [x] 23.2 Conduct performance testing
+  - [x] 27.2 Conduct performance testing
     - Load test API endpoints with concurrent requests
     - Test task distribution with multiple agents
     - Validate real-time event performance
     - Measure database query performance with Drizzle
     - _Requirements: 6.2, 8.4_
 
-  - [x] 23.3 Execute migration dry run
+  - [x] 27.3 Execute migration dry run
     - Run full migration with production-like data
     - Validate all data transformations
     - Test agent cutover procedure
     - Document migration issues and resolutions
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
 
-  - [x] 23.4 Create documentation
+  - [x] 27.4 Create documentation
     - Write API documentation from OpenAPI specs
     - Create operator user guide
     - Document deployment procedures
     - Add troubleshooting guide
     - _Requirements: 4.1, 13.5_
+
+- [ ] 28. Final checkpoint - Ensure all tests pass
+  - Ensure all tests pass including new large file handling and role enforcement tests, ask the user if questions arise.
 
 ## Notes
 
@@ -635,3 +744,7 @@ This implementation plan breaks down the migration from Rails-based CipherSwarm 
 - Use Playwright for E2E tests
 - Agent API uses batch operations with Drizzle batch inserts or raw Bun.SQL for performance
 - Dashboard API uses standard REST patterns for low-traffic usage (1-3 concurrent users)
+- Tasks 20-21 add large file handling (100 GB+) with S3 multipart uploads, chunked frontend transfers, presigned agent downloads, and streaming hash list parsing
+- Task 23 enforces the updated role model (Admin/Contributor/Viewer) with Viewer as read-only
+- Property tests 28 and 29 validate streaming upload memory bounds and chunked upload resumability
+- Previously completed tasks (1-19, 24-27) remain unchanged; new work builds on top of existing infrastructure
