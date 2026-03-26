@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { StatusBadge } from '../components/features/status-badge';
 import { Button } from '../components/ui/button';
@@ -15,18 +15,30 @@ type StatusFilter = 'all' | 'cracked' | 'uncracked';
 
 const PAGE_SIZE = 50;
 
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export function HashListDetailPage() {
   const { id } = useParams<{ id: string }>();
   const hashListId = Number(id);
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [offset, setOffset] = useState(0);
 
   const { data, isLoading, isError, error } = useHashListDetail(hashListId);
   const { data: itemsData, isLoading: itemsLoading } = useHashListItems(hashListId, {
     status: statusFilter,
-    ...(search ? { search } : {}),
+    ...(debouncedSearch ? { search: debouncedSearch } : {}),
     limit: PAGE_SIZE,
     offset,
   });

@@ -22,7 +22,7 @@ interface HashProgress {
 interface CampaignProgress {
   totalTasks?: number;
   completedTasks?: number;
-  keyspaceProgress?: number;
+  overallProgress?: number;
   hashProgress?: HashProgress;
 }
 

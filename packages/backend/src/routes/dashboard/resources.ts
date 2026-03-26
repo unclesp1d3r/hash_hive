@@ -97,8 +97,13 @@ resourceRoutes.get('/hash-lists/:id', requireProjectAccess(), async (c) => {
 });
 
 resourceRoutes.post('/hash-lists/:id/upload', requireRole('admin', 'contributor'), async (c) => {
+  const { projectId } = c.get('currentUser');
+  if (!projectId) {
+    return c.json({ error: { code: 'PROJECT_NOT_SELECTED', message: 'No project selected' } }, 400);
+  }
+
   const id = Number(c.req.param('id'));
-  const hashList = await getHashListById(id);
+  const hashList = await getHashListById(id, projectId);
 
   if (!hashList) {
     return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Hash list not found' } }, 404);
@@ -116,7 +121,19 @@ resourceRoutes.post('/hash-lists/:id/upload', requireRole('admin', 'contributor'
 });
 
 resourceRoutes.post('/hash-lists/:id/import', requireRole('admin', 'contributor'), async (c) => {
+  const { projectId } = c.get('currentUser');
+  if (!projectId) {
+    return c.json({ error: { code: 'PROJECT_NOT_SELECTED', message: 'No project selected' } }, 400);
+  }
+
   const id = Number(c.req.param('id'));
+
+  // Verify hash list belongs to project before importing
+  const hl = await getHashListById(id, projectId);
+  if (!hl) {
+    return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Hash list not found' } }, 404);
+  }
+
   const result = await importHashList(id);
 
   if (!result) {

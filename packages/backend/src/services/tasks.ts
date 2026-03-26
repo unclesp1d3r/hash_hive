@@ -1,5 +1,6 @@
 import { agents, attacks, campaigns, hashItems, tasks } from '@hashhive/shared';
 import { and, desc, eq, gt, isNotNull, type SQL, sql } from 'drizzle-orm';
+import { logger } from '../config/logger.js';
 import { db } from '../db/index.js';
 import { updateCampaignProgress } from './campaigns.js';
 import { emitCrackResult, emitTaskUpdate } from './events.js';
@@ -249,6 +250,13 @@ export async function updateTaskProgress(
   const [updated] = await db.update(tasks).set(updates).where(eq(tasks.id, taskId)).returning();
 
   // Insert cracked hash results if submitted
+  if (data.results && data.results.length > 0 && !taskRow.hashListId) {
+    logger.error(
+      { taskId, campaignId: taskRow.campaignId, resultCount: data.results.length },
+      'Cannot store crack results: campaign has no associated hash list'
+    );
+  }
+
   if (data.results && data.results.length > 0 && taskRow.hashListId) {
     await db
       .insert(hashItems)

@@ -67,6 +67,11 @@ const taskReportSchema = z.object({
 agentRoutes.post('/tasks/:id/report', zValidator('json', taskReportSchema), async (c) => {
   const { agentId } = c.get('agent');
   const taskId = Number(c.req.param('id'));
+
+  if (Number.isNaN(taskId) || taskId <= 0) {
+    return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid task ID' } }, 400);
+  }
+
   const data = c.req.valid('json');
 
   // Log any errors reported by the agent
@@ -88,6 +93,9 @@ agentRoutes.post('/tasks/:id/report', zValidator('json', taskReportSchema), asyn
       agentId,
       data.errors?.[0] ?? 'Unknown failure'
     );
+    if ('error' in failResult) {
+      return c.json({ error: { code: 'TASK_ERROR', message: failResult.error } }, 400);
+    }
     return c.json({ acknowledged: true, retried: failResult.retried ?? false });
   }
 
