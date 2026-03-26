@@ -90,6 +90,9 @@ const mockCamelCaseTask = {
   updatedAt: mockSnakeCaseTaskRow.updated_at,
 };
 
+// Mock tasks.js so the real module is never cached — the snake_case→camelCase
+// mapping is validated in tasks.test.ts; here we only test the route contract.
+// This also removes the need to mock campaigns.js (which tasks.js imported).
 mock.module('../../src/services/tasks.js', () => ({
   assignNextTask: mock(() => Promise.resolve(mockCamelCaseTask)),
   updateTaskProgress: mock(() => Promise.resolve({ acknowledged: true })),
