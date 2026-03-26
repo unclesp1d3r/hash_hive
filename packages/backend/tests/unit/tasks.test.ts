@@ -42,12 +42,13 @@ const { db } = await import('../../src/db/index.js');
 
 describe('assignNextTask', () => {
   beforeEach(() => {
-    // Reset all mocks
-    mockSelect.mockClear();
-    mockFrom.mockClear();
-    mockWhere.mockClear();
-    mockLimit.mockClear();
-    mockExecute.mockClear();
+    // Reset all mocks — mockReset clears call history AND queued mockResolvedValueOnce values.
+    // mockClear only clears history, which can leak resolved values across tests in CI.
+    mockSelect.mockReset().mockImplementation(() => ({ from: mockFrom }));
+    mockFrom.mockReset().mockImplementation(() => ({ where: mockWhere, innerJoin: mock() }));
+    mockWhere.mockReset().mockImplementation(() => ({ limit: mockLimit, innerJoin: mock() }));
+    mockLimit.mockReset().mockImplementation(() => Promise.resolve([]));
+    mockExecute.mockReset().mockImplementation(() => Promise.resolve([]));
   });
 
   test('returns null when agent does not exist', async () => {

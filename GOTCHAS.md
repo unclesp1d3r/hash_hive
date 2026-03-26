@@ -57,6 +57,7 @@ Referenced from [AGENTS.md](AGENTS.md) — read the relevant section before work
 
 **Mock Patterns:**
 
+- **Use `mockReset()` not `mockClear()` in `beforeEach`**: `mockClear()` only resets call history — queued `mockResolvedValueOnce` values can leak across tests, especially in CI where test execution order differs. Always follow `mockReset()` with `mockImplementation()` to restore the default return value.
 - **Drizzle mock chains** must match production code — e.g. `insert().values()` returning `{ onConflictDoNothing: mock() }`
 - **BullMQ worker test mocks**: if worker does `db.select()`, mock must return chainable `{ from: mock(() => chain), where: mock(() => Promise.resolve([])) }`
 - **Route-level contract tests**: When mocking for `import { app }`, mock ALL transitive service dependencies (e.g., `tasks.js`, `events.js`). **Avoid** mocking modules that other test files import un-mocked (e.g., don't mock `campaigns.js` in `agent-api-contract.test.ts` — it leaks `resolveGenerationStrategy: mock()` into `campaign-transition.test.ts`). Instead, mock the leaf dependency (`tasks.js`) to break the import chain.
