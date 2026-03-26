@@ -1,0 +1,30 @@
+<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- HashHive logo: hexagonal honeycomb cluster with lock -->
+  <!-- Colors: Catppuccin Macchiato palette -->
+
+  <!-- Outer hexagons (honeycomb ring) -->
+  <!-- Top -->
+  <path d="M20 1.5 L24.5 4.1 L24.5 9.3 L20 11.9 L15.5 9.3 L15.5 4.1 Z" stroke="#8aadf4" stroke-width="1.2" fill="none" opacity="0.8"/>
+  <!-- Top-right -->
+  <path d="M28.5 6.4 L33 9 L33 14.2 L28.5 16.8 L24 14.2 L24 9 Z" stroke="#b7bdf8" stroke-width="1.2" fill="none" opacity="0.7"/>
+  <!-- Bottom-right -->
+  <path d="M28.5 16.8 L33 19.4 L33 24.6 L28.5 27.2 L24 24.6 L24 19.4 Z" stroke="#c6a0f6" stroke-width="1.2" fill="none" opacity="0.7"/>
+  <!-- Bottom -->
+  <path d="M20 28.1 L24.5 30.7 L24.5 35.9 L20 38.5 L15.5 35.9 L15.5 30.7 Z" stroke="#f5bde6" stroke-width="1.2" fill="none" opacity="0.7"/>
+  <!-- Bottom-left -->
+  <path d="M11.5 16.8 L16 19.4 L16 24.6 L11.5 27.2 L7 24.6 L7 19.4 Z" stroke="#ee99a0" stroke-width="1.2" fill="none" opacity="0.7"/>
+  <!-- Top-left -->
+  <path d="M11.5 6.4 L16 9 L16 14.2 L11.5 16.8 L7 14.2 L7 9 Z" stroke="#91d7e3" stroke-width="1.2" fill="none" opacity="0.7"/>
+
+  <!-- Center hexagon (larger, filled) -->
+  <path d="M20 11.9 L25.2 14.9 L25.2 20.9 L20 23.9 L14.8 20.9 L14.8 14.9 Z" stroke="#f5a97f" stroke-width="1.4" fill="#f5a97f" fill-opacity="0.1"/>
+
+  <!-- Lock icon (center) -->
+  <!-- Lock body -->
+  <rect x="17.5" y="18" width="5" height="3.8" rx="0.5" fill="#f5a97f" opacity="0.9"/>
+  <!-- Lock shackle -->
+  <path d="M18.8 18 L18.8 16.2 C18.8 15.1 19.3 14.5 20 14.5 C20.7 14.5 21.2 15.1 21.2 16.2 L21.2 18" stroke="#f5a97f" stroke-width="1" fill="none" opacity="0.9"/>
+  <!-- Keyhole -->
+  <circle cx="20" cy="19.5" r="0.6" fill="#24273a"/>
+  <rect x="19.7" y="19.8" width="0.6" height="1" fill="#24273a"/>
+</svg>

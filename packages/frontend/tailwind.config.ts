@@ -12,6 +12,10 @@ const config: Config = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['Space Grotesk', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['Space Mono', 'JetBrains Mono', 'ui-monospace', 'monospace'],
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
@@ -46,6 +50,42 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        // Extended semantic colors
+        success: {
+          DEFAULT: 'hsl(var(--success))',
+          foreground: 'hsl(var(--success-foreground))',
+        },
+        warning: {
+          DEFAULT: 'hsl(var(--warning))',
+          foreground: 'hsl(var(--warning-foreground))',
+        },
+        info: {
+          DEFAULT: 'hsl(var(--info))',
+          foreground: 'hsl(var(--info-foreground))',
+        },
+        // Surface hierarchy
+        mantle: 'hsl(var(--surface-mantle))',
+        crust: 'hsl(var(--surface-crust))',
+        'surface-0': 'hsl(var(--surface-0))',
+        'surface-1': 'hsl(var(--surface-1))',
+        'surface-2': 'hsl(var(--surface-2))',
+        // Catppuccin accent palette (direct access)
+        ctp: {
+          lavender: 'hsl(var(--ctp-lavender))',
+          blue: 'hsl(var(--ctp-blue))',
+          sapphire: 'hsl(var(--ctp-sapphire))',
+          sky: 'hsl(var(--ctp-sky))',
+          teal: 'hsl(var(--ctp-teal))',
+          green: 'hsl(var(--ctp-green))',
+          yellow: 'hsl(var(--ctp-yellow))',
+          peach: 'hsl(var(--ctp-peach))',
+          maroon: 'hsl(var(--ctp-maroon))',
+          red: 'hsl(var(--ctp-red))',
+          mauve: 'hsl(var(--ctp-mauve))',
+          pink: 'hsl(var(--ctp-pink))',
+          flamingo: 'hsl(var(--ctp-flamingo))',
+          rosewater: 'hsl(var(--ctp-rosewater))',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -61,10 +101,15 @@ const config: Config = {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        'pulse-gentle': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.6' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'pulse-gentle': 'pulse-gentle 2s ease-in-out infinite',
       },
     },
   },
