@@ -2,6 +2,9 @@ import type { ChangeEvent } from 'react';
 import { useCallback, useRef, useState } from 'react';
 import { useChunkedUpload } from '../../hooks/use-chunked-upload';
 import { useCreateResource, useUploadResourceFile } from '../../hooks/use-resources';
+import { Button } from '../ui/button';
+import { ErrorBanner } from '../ui/error-banner';
+import { Input } from '../ui/input';
 
 type ResourceType = 'hash-lists' | 'wordlists' | 'rulelists' | 'masklists';
 
@@ -116,24 +119,19 @@ export function ResourceUploadModal({ type, open, onClose, onSuccess }: Resource
       <div className="w-full max-w-md rounded-lg border border-surface-0 bg-mantle p-6 shadow-2xl">
         <h3 className="mb-4 text-sm font-medium">Upload New {label}</h3>
 
-        {error && (
-          <div className="mb-4 rounded border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {error}
-          </div>
-        )}
+        {error && <ErrorBanner message={error} className="mb-4" />}
 
         <div className="space-y-4">
           <div>
             <label htmlFor="resource-name" className="text-xs font-medium text-muted-foreground">
               Name
             </label>
-            <input
+            <Input
               id="resource-name"
-              type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={isUploading}
-              className="mt-1.5 w-full rounded border border-surface-0 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary/40 disabled:opacity-50"
+              className="mt-1.5"
               placeholder={`Enter ${label.toLowerCase()} name`}
             />
           </div>
@@ -174,22 +172,12 @@ export function ResourceUploadModal({ type, open, onClose, onSuccess }: Resource
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={isSmallUpload}
-            className="rounded border border-surface-0 px-4 py-2 text-xs text-muted-foreground transition-colors hover:bg-surface-0/60 hover:text-foreground disabled:opacity-50"
-          >
+          <Button variant="secondary" onClick={handleClose} disabled={isSmallUpload}>
             Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleUpload}
-            disabled={!file || !name.trim() || isUploading}
-            className="rounded bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-          >
+          </Button>
+          <Button onClick={handleUpload} disabled={!file || !name.trim() || isUploading}>
             {isUploading ? 'Uploading\u2026' : 'Upload'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

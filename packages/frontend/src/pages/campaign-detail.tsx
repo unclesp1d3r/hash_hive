@@ -1,7 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import { PermissionGuard } from '../components/features/permission-guard';
 import { StatusBadge } from '../components/features/status-badge';
+import { BackLink } from '../components/ui/back-link';
+import { Button } from '../components/ui/button';
+import { EmptyState } from '../components/ui/empty-state';
+import { PageHeader } from '../components/ui/page-header';
+import { Table, TableBody, TableHead, TableRow, Td, Th } from '../components/ui/table';
 import { useCampaignLifecycle } from '../hooks/use-campaigns';
 import { api } from '../lib/api';
 import { Permission } from '../lib/permissions';
@@ -39,9 +44,12 @@ function useCampaignDetail(campaignId: number) {
   });
 }
 
+type LifecycleAction = 'start' | 'pause' | 'stop' | 'cancel';
+type ButtonVariant = 'primary' | 'secondary' | 'destructive';
+
 const LIFECYCLE_ACTIONS: Record<
   string,
-  Array<{ action: 'start' | 'pause' | 'stop' | 'cancel'; label: string; variant: string }>
+  Array<{ action: LifecycleAction; label: string; variant: ButtonVariant }>
 > = {
   draft: [{ action: 'start', label: 'Start', variant: 'primary' }],
   running: [
@@ -56,16 +64,6 @@ const LIFECYCLE_ACTIONS: Record<
   ],
 };
 
-function actionButtonClass(variant: string): string {
-  if (variant === 'primary') {
-    return 'rounded bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50';
-  }
-  if (variant === 'destructive') {
-    return 'rounded border border-destructive/30 px-3 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50';
-  }
-  return 'rounded border border-surface-0 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-surface-0/60 hover:text-foreground disabled:opacity-50';
-}
-
 export function CampaignDetailPage() {
   const { id } = useParams<{ id: string }>();
   const campaignId = Number(id);
@@ -73,16 +71,14 @@ export function CampaignDetailPage() {
   const lifecycle = useCampaignLifecycle(campaignId);
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading campaign\u2026</p>;
+    return <EmptyState message="Loading campaign\u2026" />;
   }
 
   if (!data) {
     return (
       <div className="space-y-4">
-        <Link to="/campaigns" className="text-xs font-medium text-primary hover:text-primary/80">
-          \u2190 Back to campaigns
-        </Link>
-        <p className="text-sm text-muted-foreground">Campaign not found.</p>
+        <BackLink to="/campaigns">\u2190 Back to campaigns</BackLink>
+        <EmptyState message="Campaign not found." />
       </div>
     );
   }
@@ -92,27 +88,25 @@ export function CampaignDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/campaigns" className="text-xs font-medium text-primary hover:text-primary/80">
-        \u2190 Back to campaigns
-      </Link>
+      <BackLink to="/campaigns">\u2190 Back to campaigns</BackLink>
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold tracking-tight">{campaign.name}</h2>
+          <PageHeader>{campaign.name}</PageHeader>
           <StatusBadge status={campaign.status} />
         </div>
         <PermissionGuard permission={Permission.CAMPAIGN_EDIT}>
           <div className="flex gap-2">
             {actions.map(({ action, label, variant }) => (
-              <button
+              <Button
                 key={action}
-                type="button"
+                variant={variant}
+                size="sm"
                 onClick={() => lifecycle.mutate(action)}
                 disabled={lifecycle.isPending}
-                className={actionButtonClass(variant)}
               >
                 {label}
-              </button>
+              </Button>
             ))}
           </div>
         </PermissionGuard>
@@ -146,48 +140,36 @@ export function CampaignDetailPage() {
       <div className="space-y-3">
         <h3 className="text-sm font-medium">Attacks</h3>
         {attacks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No attacks configured.</p>
+          <EmptyState message="No attacks configured." />
         ) : (
-          <div className="overflow-x-auto rounded-md border border-surface-0">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-surface-0 bg-surface-0/30">
-                <tr>
-                  <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    ID
-                  </th>
-                  <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Mode
-                  </th>
-                  <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Status
-                  </th>
-                  <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Wordlist
-                  </th>
-                  <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Dependencies
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-0/50">
-                {attacks.map((attack) => (
-                  <tr key={attack.id} className="transition-colors hover:bg-surface-0/20">
-                    <td className="px-4 py-2.5 font-mono text-xs">{attack.id}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs font-medium">{attack.mode}</td>
-                    <td className="px-4 py-2.5">
-                      <StatusBadge status={attack.status} />
-                    </td>
-                    <td className="px-4 py-2.5 text-xs text-muted-foreground">
-                      {attack.wordlistId ? `#${attack.wordlistId}` : '\u2014'}
-                    </td>
-                    <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
-                      {attack.dependencies?.length ? attack.dependencies.join(', ') : 'None'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHead>
+              <tr>
+                <Th>ID</Th>
+                <Th>Mode</Th>
+                <Th>Status</Th>
+                <Th>Wordlist</Th>
+                <Th>Dependencies</Th>
+              </tr>
+            </TableHead>
+            <TableBody>
+              {attacks.map((attack) => (
+                <TableRow key={attack.id}>
+                  <Td className="font-mono text-xs">{attack.id}</Td>
+                  <Td className="font-mono text-xs font-medium">{attack.mode}</Td>
+                  <Td>
+                    <StatusBadge status={attack.status} />
+                  </Td>
+                  <Td className="text-xs text-muted-foreground">
+                    {attack.wordlistId ? `#${attack.wordlistId}` : '\u2014'}
+                  </Td>
+                  <Td className="font-mono text-xs text-muted-foreground">
+                    {attack.dependencies?.length ? attack.dependencies.join(', ') : 'None'}
+                  </Td>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </div>
 

@@ -2,6 +2,11 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { PermissionGuard } from '../components/features/permission-guard';
 import { StatusBadge } from '../components/features/status-badge';
+import { BackLink } from '../components/ui/back-link';
+import { EmptyState } from '../components/ui/empty-state';
+import { PageHeader } from '../components/ui/page-header';
+import { Select } from '../components/ui/select';
+import { Table, TableBody, TableHead, TableRow, Td, Th } from '../components/ui/table';
 import { useCampaigns } from '../hooks/use-dashboard';
 import { Permission } from '../lib/permissions';
 import { useUiStore } from '../stores/ui';
@@ -14,19 +19,19 @@ export function CampaignsPage() {
   if (!selectedProjectId) {
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">Campaigns</h2>
-        <p className="text-sm text-muted-foreground">Select a project to view campaigns.</p>
+        <PageHeader>Campaigns</PageHeader>
+        <EmptyState message="Select a project to view campaigns." />
       </div>
     );
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold tracking-tight">Campaigns</h2>
+        <PageHeader>Campaigns</PageHeader>
         <div className="flex gap-2">
-          <select
-            className="rounded border border-surface-0 bg-background px-3 py-1.5 text-xs text-foreground"
+          <Select
+            className="w-auto px-3 py-1.5 text-xs"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -36,11 +41,11 @@ export function CampaignsPage() {
             <option value="paused">Paused</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
-          </select>
+          </Select>
           <PermissionGuard permission={Permission.CAMPAIGN_CREATE}>
             <Link
               to="/campaigns/new"
-              className="rounded bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              className="inline-flex items-center justify-center rounded bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
               New Campaign
             </Link>
@@ -49,59 +54,38 @@ export function CampaignsPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading campaigns\u2026</p>
+        <EmptyState message="Loading campaigns\u2026" />
       ) : !data?.campaigns.length ? (
-        <p className="text-sm text-muted-foreground">No campaigns found.</p>
+        <EmptyState message="No campaigns found." />
       ) : (
-        <div className="overflow-x-auto rounded-md border border-surface-0">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-surface-0 bg-surface-0/30">
-              <tr>
-                <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Name
-                </th>
-                <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Status
-                </th>
-                <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Priority
-                </th>
-                <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Created
-                </th>
-                <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-0/50">
-              {data.campaigns.map((campaign) => (
-                <tr key={campaign.id} className="transition-colors hover:bg-surface-0/20">
-                  <td className="px-4 py-2.5 text-sm font-medium text-foreground">
-                    {campaign.name}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <StatusBadge status={campaign.status} />
-                  </td>
-                  <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
-                    {campaign.priority}
-                  </td>
-                  <td className="px-4 py-2.5 text-xs text-muted-foreground">
-                    {new Date(campaign.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <Link
-                      to={`/campaigns/${campaign.id}`}
-                      className="text-xs font-medium text-primary hover:text-primary/80"
-                    >
-                      Details
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <TableHead>
+            <tr>
+              <Th>Name</Th>
+              <Th>Status</Th>
+              <Th>Priority</Th>
+              <Th>Created</Th>
+              <Th>Actions</Th>
+            </tr>
+          </TableHead>
+          <TableBody>
+            {data.campaigns.map((campaign) => (
+              <TableRow key={campaign.id}>
+                <Td className="text-sm font-medium text-foreground">{campaign.name}</Td>
+                <Td>
+                  <StatusBadge status={campaign.status} />
+                </Td>
+                <Td className="font-mono text-xs text-muted-foreground">{campaign.priority}</Td>
+                <Td className="text-xs text-muted-foreground">
+                  {new Date(campaign.createdAt).toLocaleDateString()}
+                </Td>
+                <Td>
+                  <BackLink to={`/campaigns/${campaign.id}`}>Details</BackLink>
+                </Td>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
     </div>
   );

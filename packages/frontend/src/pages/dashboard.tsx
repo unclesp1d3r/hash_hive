@@ -1,5 +1,7 @@
 import { ConnectionIndicator } from '../components/features/connection-indicator';
 import { StatCard } from '../components/features/stat-card';
+import { EmptyState } from '../components/ui/empty-state';
+import { PageHeader } from '../components/ui/page-header';
 import { useDashboardStats } from '../hooks/use-dashboard';
 import { useEvents } from '../hooks/use-events';
 import { useUiStore } from '../stores/ui';
@@ -14,8 +16,8 @@ export function DashboardPage() {
   if (!selectedProjectId) {
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">Dashboard</h2>
-        <p className="text-sm text-muted-foreground">Select a project to view its dashboard.</p>
+        <PageHeader>Dashboard</PageHeader>
+        <EmptyState message="Select a project to view its dashboard." />
       </div>
     );
   }
@@ -23,7 +25,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold tracking-tight">Dashboard</h2>
+        <PageHeader>Dashboard</PageHeader>
         <ConnectionIndicator connected={connected} />
       </div>
 

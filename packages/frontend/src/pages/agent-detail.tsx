@@ -1,5 +1,8 @@
-import { Link, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import { StatusBadge } from '../components/features/status-badge';
+import { BackLink } from '../components/ui/back-link';
+import { EmptyState } from '../components/ui/empty-state';
+import { PageHeader } from '../components/ui/page-header';
 import { useAgent, useAgentErrors } from '../hooks/use-dashboard';
 
 export function AgentDetailPage() {
@@ -9,29 +12,25 @@ export function AgentDetailPage() {
   const { data: errorsData } = useAgentErrors(agentId);
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading agent\u2026</p>;
+    return <EmptyState message="Loading agent\u2026" />;
   }
 
   const agent = agentData?.agent;
   if (!agent) {
     return (
       <div className="space-y-4">
-        <Link to="/agents" className="text-xs font-medium text-primary hover:text-primary/80">
-          \u2190 Back to agents
-        </Link>
-        <p className="text-sm text-muted-foreground">Agent not found.</p>
+        <BackLink to="/agents">\u2190 Back to agents</BackLink>
+        <EmptyState message="Agent not found." />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <Link to="/agents" className="text-xs font-medium text-primary hover:text-primary/80">
-        \u2190 Back to agents
-      </Link>
+      <BackLink to="/agents">\u2190 Back to agents</BackLink>
 
       <div className="flex items-center gap-3">
-        <h2 className="text-xl font-semibold tracking-tight">{agent.name}</h2>
+        <PageHeader>{agent.name}</PageHeader>
         <StatusBadge status={agent.status} />
       </div>
 

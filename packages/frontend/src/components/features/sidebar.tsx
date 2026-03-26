@@ -4,6 +4,7 @@ import { useEvents } from '../../hooks/use-events';
 import { cn } from '../../lib/utils';
 import { useAuthStore } from '../../stores/auth';
 import { useUiStore } from '../../stores/ui';
+import { Select } from '../ui/select';
 import { ConnectionIndicator } from './connection-indicator';
 
 const navItems = [
@@ -132,10 +133,10 @@ export function Sidebar() {
       {/* Project selector */}
       {user && user.projects.length > 0 && (
         <div className="px-3 pb-3">
-          <select
+          <Select
             id="project-select"
             aria-label="Select project"
-            className="w-full rounded border-surface-0 bg-background px-2.5 py-1.5 text-xs text-foreground transition-colors focus:border-primary focus:ring-1 focus:ring-primary/40"
+            className="px-2.5 py-1.5 text-xs"
             value={selectedProjectId ?? ''}
             onChange={(e) => handleProjectChange(e.target.value)}
           >
@@ -145,7 +146,7 @@ export function Sidebar() {
                 {p.projectName}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 

@@ -5,6 +5,9 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Navigate, useNavigate } from 'react-router';
 import logoSvg from '../assets/logo.svg';
+import { Button } from '../components/ui/button';
+import { ErrorBanner } from '../components/ui/error-banner';
+import { Input } from '../components/ui/input';
 import { ApiError } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { useUiStore } from '../stores/ui';
@@ -59,21 +62,17 @@ export function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {error && (
-            <div className="rounded border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {error}
-            </div>
-          )}
+          {error && <ErrorBanner message={error} />}
 
           <div>
             <label htmlFor="email" className="text-xs font-medium text-muted-foreground">
               Email
             </label>
-            <input
+            <Input
               id="email"
               type="email"
               autoComplete="email"
-              className="mt-1.5 w-full rounded border border-surface-0 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary/40"
+              className="mt-1.5"
               placeholder="operator@lab.local"
               {...register('email')}
             />
@@ -86,11 +85,11 @@ export function LoginPage() {
             <label htmlFor="password" className="text-xs font-medium text-muted-foreground">
               Password
             </label>
-            <input
+            <Input
               id="password"
               type="password"
               autoComplete="current-password"
-              className="mt-1.5 w-full rounded border border-surface-0 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary/40"
+              className="mt-1.5"
               {...register('password')}
             />
             {errors.password && (
@@ -98,13 +97,9 @@ export function LoginPage() {
             )}
           </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-          >
+          <Button type="submit" disabled={isSubmitting} className="w-full">
             {isSubmitting ? 'Authenticating\u2026' : 'Sign In'}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

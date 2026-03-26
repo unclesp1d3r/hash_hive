@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router';
 import logoSvg from '../assets/logo.svg';
+import { EmptyState } from '../components/ui/empty-state';
+import { ErrorBanner } from '../components/ui/error-banner';
 import { useAuthStore } from '../stores/auth';
 import { useUiStore } from '../stores/ui';
 
@@ -13,7 +15,7 @@ export function SelectProjectPage() {
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-crust">
-        <p className="text-sm text-muted-foreground">Loading\u2026</p>
+        <EmptyState message="Loading\u2026" />
       </div>
     );
   }
@@ -52,16 +54,13 @@ export function SelectProjectPage() {
           </div>
         </div>
 
-        {error && (
-          <div className="rounded border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {error}
-          </div>
-        )}
+        {error && <ErrorBanner message={error} />}
 
         {projects.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground">
-            No projects available. Contact an administrator.
-          </p>
+          <EmptyState
+            message="No projects available. Contact an administrator."
+            className="text-center"
+          />
         ) : (
           <div className="space-y-2">
             {projects.map((project) => (

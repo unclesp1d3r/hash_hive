@@ -15,6 +15,12 @@ import 'reactflow/dist/style.css';
 import { z } from 'zod';
 import { ResourceUploadModal } from '../components/features/resource-upload-modal';
 import { StatusBadge } from '../components/features/status-badge';
+import { Button } from '../components/ui/button';
+import { EmptyState } from '../components/ui/empty-state';
+import { ErrorBanner } from '../components/ui/error-banner';
+import { Input } from '../components/ui/input';
+import { PageHeader } from '../components/ui/page-header';
+import { Select } from '../components/ui/select';
 import { useCreateCampaign } from '../hooks/use-campaigns';
 import { usePermissions } from '../hooks/use-permissions';
 import { useHashLists, useMasklists, useRulelists, useWordlists } from '../hooks/use-resources';
@@ -57,6 +63,9 @@ interface AttackForm {
 
 type UploadModalType = 'hash-lists' | 'wordlists' | 'rulelists' | 'masklists';
 
+/** Catppuccin red — matches --ctp-red / --destructive token */
+const CYCLE_EDGE_COLOR = 'hsl(351, 74%, 73%)';
+
 function buildNodes(attacks: readonly { mode: number }[]): FlowNode[] {
   return attacks.map((attack, i) => ({
     id: String(i),
@@ -76,12 +85,6 @@ function buildEdges(attacks: readonly { dependencies: number[] }[]): Edge[] {
     }))
   );
 }
-
-const inputClass =
-  'mt-1.5 w-full rounded border border-surface-0 bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:ring-1 focus:ring-primary/40';
-
-const selectClass =
-  'w-full rounded border border-surface-0 bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:ring-1 focus:ring-primary/40';
 
 export function CampaignCreatePage() {
   const { can } = usePermissions();
@@ -166,7 +169,7 @@ export function CampaignCreatePage() {
   }
 
   if (!selectedProjectId) {
-    return <p className="text-sm text-muted-foreground">Select a project first.</p>;
+    return <EmptyState message="Select a project first." />;
   }
 
   const onBasicInfoSubmit = basicInfoForm.handleSubmit((data) => {
@@ -231,7 +234,7 @@ export function CampaignCreatePage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold tracking-tight">Create Campaign</h2>
+      <PageHeader>Create Campaign</PageHeader>
 
       {/* Step indicator */}
       <div className="flex gap-1.5">
@@ -256,11 +259,7 @@ export function CampaignCreatePage() {
         ))}
       </div>
 
-      {error && (
-        <div className="rounded border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
-        </div>
-      )}
+      {error && <ErrorBanner message={error} />}
 
       {/* Step 0: Basic Info */}
       {wizard.step === 0 && (
@@ -269,7 +268,7 @@ export function CampaignCreatePage() {
             <label htmlFor="name" className="text-xs font-medium text-muted-foreground">
               Campaign Name
             </label>
-            <input id="name" className={inputClass} {...basicInfoForm.register('name')} />
+            <Input id="name" className="mt-1.5" {...basicInfoForm.register('name')} />
             {basicInfoForm.formState.errors.name && (
               <p className="mt-1 text-xs text-destructive">
                 {basicInfoForm.formState.errors.name.message}
@@ -284,7 +283,7 @@ export function CampaignCreatePage() {
             <textarea
               id="description"
               rows={3}
-              className={inputClass}
+              className="mt-1.5 w-full rounded border border-surface-0 bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:ring-1 focus:ring-primary/40"
               {...basicInfoForm.register('description')}
             />
           </div>
@@ -294,12 +293,12 @@ export function CampaignCreatePage() {
               <label htmlFor="priority" className="text-xs font-medium text-muted-foreground">
                 Priority (1\u201310)
               </label>
-              <input
+              <Input
                 id="priority"
                 type="number"
                 min={1}
                 max={10}
-                className={inputClass}
+                className="mt-1.5"
                 {...basicInfoForm.register('priority')}
               />
             </div>
@@ -308,25 +307,22 @@ export function CampaignCreatePage() {
                 Hash List
               </label>
               <div className="mt-1.5 flex gap-2">
-                <select
-                  id="hashListId"
-                  className={selectClass}
-                  {...basicInfoForm.register('hashListId')}
-                >
+                <Select id="hashListId" {...basicInfoForm.register('hashListId')}>
                   <option value="">Select a hash list\u2026</option>
                   {hashLists.map((hl) => (
                     <option key={hl.id} value={hl.id}>
                       {hl.name} ({hl.hashCount} hashes)
                     </option>
                   ))}
-                </select>
-                <button
-                  type="button"
+                </Select>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="shrink-0"
                   onClick={() => setUploadModal({ open: true, type: 'hash-lists' })}
-                  className="shrink-0 rounded border border-surface-0 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-surface-0/60 hover:text-foreground"
                 >
                   Upload
-                </button>
+                </Button>
               </div>
               {basicInfoForm.formState.errors.hashListId && (
                 <p className="mt-1 text-xs text-destructive">
@@ -336,12 +332,7 @@ export function CampaignCreatePage() {
             </div>
           </div>
 
-          <button
-            type="submit"
-            className="rounded bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Next: Configure Attacks
-          </button>
+          <Button type="submit">Next: Configure Attacks</Button>
         </form>
       )}
 
@@ -358,10 +349,10 @@ export function CampaignCreatePage() {
                     <label htmlFor="mode" className="text-[11px] font-medium text-muted-foreground">
                       Hashcat Mode
                     </label>
-                    <input
+                    <Input
                       id="mode"
                       type="number"
-                      className={inputClass}
+                      className="mt-1.5"
                       {...attackForm.register('mode')}
                     />
                   </div>
@@ -393,9 +384,8 @@ export function CampaignCreatePage() {
                         {field.label}
                       </label>
                       <div className="mt-1.5 flex gap-2">
-                        <select
+                        <Select
                           id={field.id}
-                          className={selectClass}
                           {...attackForm.register(field.id as keyof AttackForm)}
                         >
                           <option value="">None</option>
@@ -404,24 +394,22 @@ export function CampaignCreatePage() {
                               {item.name}
                             </option>
                           ))}
-                        </select>
-                        <button
-                          type="button"
+                        </Select>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="shrink-0"
                           onClick={() => setUploadModal({ open: true, type: field.modalType })}
-                          className="shrink-0 rounded border border-surface-0 px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-surface-0/60"
                         >
                           Upload
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ))}
                 </div>
-                <button
-                  type="submit"
-                  className="rounded border border-surface-0 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-surface-0/60 hover:text-foreground"
-                >
+                <Button variant="secondary" size="sm" type="submit">
                   Add Attack
-                </button>
+                </Button>
               </form>
 
               {/* Attack list */}
@@ -435,7 +423,7 @@ export function CampaignCreatePage() {
                       className="flex items-center justify-between rounded-md border border-surface-0 bg-surface-0/30 p-3"
                     >
                       <div className="text-xs">
-                        <span className="font-medium font-mono">
+                        <span className="font-mono font-medium">
                           #{i} Mode {attack.mode}
                         </span>
                         {attack.wordlistId && (
@@ -475,9 +463,10 @@ export function CampaignCreatePage() {
                 depends on A.
               </p>
               {!dagValidation.valid && (
-                <div className="rounded border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                  Circular dependency detected between attacks: [{dagValidation.cycle?.join(', ')}]
-                </div>
+                <ErrorBanner
+                  message={`Circular dependency detected between attacks: [${dagValidation.cycle?.join(', ')}]`}
+                  className="text-xs"
+                />
               )}
               <div className="h-[400px] rounded-md border border-surface-0 bg-crust">
                 {wizard.attacks.length > 0 ? (
@@ -493,7 +482,7 @@ export function CampaignCreatePage() {
                               dagValidation.cycle?.includes(sourceIdx) &&
                               dagValidation.cycle?.includes(targetIdx);
                             return inCycle
-                              ? { ...e, style: { stroke: '#ed8796', strokeWidth: 2 } }
+                              ? { ...e, style: { stroke: CYCLE_EDGE_COLOR, strokeWidth: 2 } }
                               : e;
                           })
                     }
@@ -517,21 +506,15 @@ export function CampaignCreatePage() {
           </div>
 
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => wizard.setStep(0)}
-              className="rounded border border-surface-0 px-4 py-2 text-xs text-muted-foreground transition-colors hover:bg-surface-0/60 hover:text-foreground"
-            >
+            <Button variant="secondary" onClick={() => wizard.setStep(0)}>
               Back
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
               onClick={() => wizard.setStep(2)}
               disabled={wizard.attacks.length === 0 || !dagValidation.valid}
-              className="rounded bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
             >
               Next: Review
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -593,21 +576,12 @@ export function CampaignCreatePage() {
           )}
 
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => wizard.setStep(1)}
-              className="rounded border border-surface-0 px-4 py-2 text-xs text-muted-foreground transition-colors hover:bg-surface-0/60 hover:text-foreground"
-            >
+            <Button variant="secondary" onClick={() => wizard.setStep(1)}>
               Back
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="rounded bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-            >
+            </Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
               {submitting ? 'Creating\u2026' : 'Create Campaign'}
-            </button>
+            </Button>
           </div>
         </div>
       )}

@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { PermissionGuard } from '../components/features/permission-guard';
 import { ResourceUploadModal } from '../components/features/resource-upload-modal';
+import { Button } from '../components/ui/button';
+import { EmptyState } from '../components/ui/empty-state';
+import { Input } from '../components/ui/input';
+import { PageHeader } from '../components/ui/page-header';
+import { Table, TableBody, TableHead, TableRow, Td, Th } from '../components/ui/table';
 import {
   useGuessHashType,
   useHashLists,
@@ -23,8 +28,8 @@ export function ResourcesPage() {
   if (!selectedProjectId) {
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">Resources</h2>
-        <p className="text-sm text-muted-foreground">Select a project to view resources.</p>
+        <PageHeader>Resources</PageHeader>
+        <EmptyState message="Select a project to view resources." />
       </div>
     );
   }
@@ -38,8 +43,8 @@ export function ResourcesPage() {
   ];
 
   return (
-    <div className="space-y-5">
-      <h2 className="text-xl font-semibold tracking-tight">Resources</h2>
+    <div className="space-y-6">
+      <PageHeader>Resources</PageHeader>
 
       <div className="flex gap-1 border-b border-surface-0/50">
         {tabs.map((tab) => (
@@ -80,13 +85,9 @@ function UploadButton({ type }: { type: UploadableTab }) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="rounded bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-      >
+      <Button size="sm" onClick={() => setOpen(true)}>
         Upload {labels[type]}
-      </button>
+      </Button>
       <ResourceUploadModal
         type={type}
         open={open}
@@ -100,7 +101,7 @@ function UploadButton({ type }: { type: UploadableTab }) {
 function HashListsTab() {
   const { data, isLoading } = useHashLists();
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Loading\u2026</p>;
+  if (isLoading) return <EmptyState message="Loading\u2026" />;
 
   const hashLists = data?.hashLists ?? [];
 
@@ -113,42 +114,30 @@ function HashListsTab() {
       </PermissionGuard>
 
       {hashLists.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No hash lists found.</p>
+        <EmptyState message="No hash lists found." />
       ) : (
-        <div className="overflow-x-auto rounded-md border border-surface-0">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-surface-0 bg-surface-0/30">
-              <tr>
-                <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Name
-                </th>
-                <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Hashes
-                </th>
-                <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Cracked
-                </th>
-                <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Created
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-0/50">
-              {hashLists.map((hl) => (
-                <tr key={hl.id} className="transition-colors hover:bg-surface-0/20">
-                  <td className="px-4 py-2.5 text-sm font-medium text-foreground">{hl.name}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs tabular-nums">{hl.hashCount}</td>
-                  <td className="px-4 py-2.5 font-mono text-xs tabular-nums text-success">
-                    {hl.crackedCount}
-                  </td>
-                  <td className="px-4 py-2.5 text-xs text-muted-foreground">
-                    {new Date(hl.createdAt).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <TableHead>
+            <tr>
+              <Th>Name</Th>
+              <Th>Hashes</Th>
+              <Th>Cracked</Th>
+              <Th>Created</Th>
+            </tr>
+          </TableHead>
+          <TableBody>
+            {hashLists.map((hl) => (
+              <TableRow key={hl.id}>
+                <Td className="text-sm font-medium text-foreground">{hl.name}</Td>
+                <Td className="font-mono text-xs tabular-nums">{hl.hashCount}</Td>
+                <Td className="font-mono text-xs tabular-nums text-success">{hl.crackedCount}</Td>
+                <Td className="text-xs text-muted-foreground">
+                  {new Date(hl.createdAt).toLocaleDateString()}
+                </Td>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
     </div>
   );
@@ -162,7 +151,7 @@ function ResourceListTab({ type }: { type: 'wordlists' | 'rulelists' | 'masklist
   const hookMap = { wordlists, rulelists, masklists };
   const { data, isLoading } = hookMap[type];
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Loading\u2026</p>;
+  if (isLoading) return <EmptyState message="Loading\u2026" />;
 
   const resources = data?.resources ?? [];
 
@@ -175,32 +164,26 @@ function ResourceListTab({ type }: { type: 'wordlists' | 'rulelists' | 'masklist
       </PermissionGuard>
 
       {resources.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No {type} found.</p>
+        <EmptyState message={`No ${type} found.`} />
       ) : (
-        <div className="overflow-x-auto rounded-md border border-surface-0">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-surface-0 bg-surface-0/30">
-              <tr>
-                <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Name
-                </th>
-                <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Created
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-0/50">
-              {resources.map((r) => (
-                <tr key={r.id} className="transition-colors hover:bg-surface-0/20">
-                  <td className="px-4 py-2.5 text-sm font-medium text-foreground">{r.name}</td>
-                  <td className="px-4 py-2.5 text-xs text-muted-foreground">
-                    {new Date(r.createdAt).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <TableHead>
+            <tr>
+              <Th>Name</Th>
+              <Th>Created</Th>
+            </tr>
+          </TableHead>
+          <TableBody>
+            {resources.map((r) => (
+              <TableRow key={r.id}>
+                <Td className="text-sm font-medium text-foreground">{r.name}</Td>
+                <Td className="text-xs text-muted-foreground">
+                  {new Date(r.createdAt).toLocaleDateString()}
+                </Td>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
     </div>
   );
@@ -219,24 +202,22 @@ function HashDetectTab() {
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
-        <input
-          type="text"
+        <Input
           placeholder="Paste a hash value\u2026"
-          className="flex-1 rounded border border-surface-0 bg-background px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary/40"
+          className="font-mono text-xs"
           value={hashInput}
           onChange={(e) => setHashInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleDetect();
           }}
         />
-        <button
-          type="button"
+        <Button
           onClick={handleDetect}
           disabled={guessType.isPending || !hashInput.trim()}
-          className="rounded bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          className="shrink-0"
         >
           {guessType.isPending ? 'Detecting\u2026' : 'Detect Type'}
-        </button>
+        </Button>
       </div>
 
       {guessType.data && (
@@ -248,50 +229,40 @@ function HashDetectTab() {
             </span>
           </h3>
           {guessType.data.candidates.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No matching hash types found.</p>
+            <EmptyState message="No matching hash types found." />
           ) : (
-            <div className="overflow-x-auto rounded-md border border-surface-0">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-surface-0 bg-surface-0/30">
-                  <tr>
-                    <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Type
-                    </th>
-                    <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Mode
-                    </th>
-                    <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Category
-                    </th>
-                    <th className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Confidence
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-0/50">
-                  {guessType.data.candidates.map((c) => (
-                    <tr key={c.hashcatMode} className="transition-colors hover:bg-surface-0/20">
-                      <td className="px-4 py-2.5 text-sm font-medium text-foreground">{c.name}</td>
-                      <td className="px-4 py-2.5 font-mono text-xs">{c.hashcatMode}</td>
-                      <td className="px-4 py-2.5 text-xs text-muted-foreground">{c.category}</td>
-                      <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-20 rounded-full bg-surface-1">
-                            <div
-                              className="h-full rounded-full bg-primary transition-all"
-                              style={{ width: `${Math.round(c.confidence * 100)}%` }}
-                            />
-                          </div>
-                          <span className="font-mono text-[11px] text-muted-foreground">
-                            {Math.round(c.confidence * 100)}%
-                          </span>
+            <Table>
+              <TableHead>
+                <tr>
+                  <Th>Type</Th>
+                  <Th>Mode</Th>
+                  <Th>Category</Th>
+                  <Th>Confidence</Th>
+                </tr>
+              </TableHead>
+              <TableBody>
+                {guessType.data.candidates.map((c) => (
+                  <TableRow key={c.hashcatMode}>
+                    <Td className="text-sm font-medium text-foreground">{c.name}</Td>
+                    <Td className="font-mono text-xs">{c.hashcatMode}</Td>
+                    <Td className="text-xs text-muted-foreground">{c.category}</Td>
+                    <Td>
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-20 rounded-full bg-surface-1">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all"
+                            style={{ width: `${Math.round(c.confidence * 100)}%` }}
+                          />
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        <span className="font-mono text-[11px] text-muted-foreground">
+                          {Math.round(c.confidence * 100)}%
+                        </span>
+                      </div>
+                    </Td>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </div>
       )}
