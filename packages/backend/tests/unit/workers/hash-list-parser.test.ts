@@ -17,18 +17,25 @@ const mockInsertValues = mock(() => ({ onConflictDoNothing: mockInsertOnConflict
 const mockUpdateSetWhere = mock(() => Promise.resolve());
 mock.module('../../../src/db/index.js', () => ({
   db: {
-    select: () => ({
+    select: (fields?: Record<string, unknown>) => ({
       from: () => ({
-        where: () => ({
-          limit: () =>
-            Promise.resolve([
-              {
-                id: 1,
-                fileRef: { bucket: 'hashhive', key: 'hash-lists/1/test.txt' },
-                projectId: 1,
-              },
-            ]),
-        }),
+        where: () => {
+          // If selecting count(), return a count result
+          if (fields && 'value' in fields) {
+            return Promise.resolve([{ value: 3 }]);
+          }
+          // Otherwise return hash list record (with limit chain)
+          return {
+            limit: () =>
+              Promise.resolve([
+                {
+                  id: 1,
+                  fileRef: { bucket: 'hashhive', key: 'hash-lists/1/test.txt' },
+                  projectId: 1,
+                },
+              ]),
+          };
+        },
       }),
     }),
     insert: () => ({
@@ -42,17 +49,29 @@ mock.module('../../../src/db/index.js', () => ({
   },
 }));
 
+/**
+ * Helper: create a ReadableStream from a string (simulates S3 GetObject body).
+ */
+function stringToReadableStream(text: string): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(encoder.encode(text));
+      controller.close();
+    },
+  });
+}
+
+const testFileContent = [
+  '5f4dcc3b5aa765d61d8327deb882cf99',
+  'e99a18c428cb38d5f260853678922e03',
+  '098f6bcd4621d373cade4e832627b4f6:test',
+].join('\n');
+
 const mockDownloadFile = mock(() =>
   Promise.resolve({
     Body: {
-      transformToString: () =>
-        Promise.resolve(
-          [
-            '5f4dcc3b5aa765d61d8327deb882cf99',
-            'e99a18c428cb38d5f260853678922e03',
-            '098f6bcd4621d373cade4e832627b4f6:test',
-          ].join('\n')
-        ),
+      transformToWebStream: () => stringToReadableStream(testFileContent),
     },
   })
 );
@@ -61,10 +80,10 @@ mock.module('../../../src/config/storage.js', () => ({
 }));
 
 // Mock BullMQ Worker
-let capturedProcessor: ((job: any) => Promise<any>) | null = null;
+let capturedProcessor: ((job: unknown) => Promise<unknown>) | null = null;
 mock.module('bullmq', () => ({
   Worker: class MockWorker {
-    constructor(_name: string, processor: any) {
+    constructor(_name: string, processor: (job: unknown) => Promise<unknown>) {
       capturedProcessor = processor;
     }
     on() {
@@ -97,7 +116,7 @@ mock.module('bullmq', () => ({
 }));
 
 describe('Hash list parser worker', () => {
-  test('processor downloads file and processes lines', async () => {
+  test('processor streams file and processes lines', async () => {
     const { createHashListParserWorker } = await import(
       '../../../src/queue/workers/hash-list-parser.js'
     );
@@ -115,9 +134,13 @@ describe('Hash list parser worker', () => {
       attemptsMade: 1,
     };
 
-    const result = await capturedProcessor!(fakeJob);
+    const result = (await capturedProcessor!(fakeJob)) as {
+      inserted: number;
+      skippedLines: number;
+    };
 
     expect(mockDownloadFile).toHaveBeenCalledWith('hash-lists/1/test.txt', 'hashhive');
     expect(result.inserted).toBe(3);
+    expect(result.skippedLines).toBe(0);
   });
 });

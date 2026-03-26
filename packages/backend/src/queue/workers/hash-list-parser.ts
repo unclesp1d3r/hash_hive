@@ -1,6 +1,6 @@
 import { hashItems, hashLists } from '@hashhive/shared';
 import { type ConnectionOptions, Worker } from 'bullmq';
-import { eq } from 'drizzle-orm';
+import { count, eq } from 'drizzle-orm';
 import type Redis from 'ioredis';
 import { logger } from '../../config/logger.js';
 import { QUEUE_NAMES } from '../../config/queue.js';
@@ -9,13 +9,43 @@ import { db } from '../../db/index.js';
 import type { HashListParseJob } from '../types.js';
 
 const BATCH_SIZE = 1_000;
+const MAX_LINE_LENGTH = 10_000; // 10 KB — skip malformed/binary lines
+
+/**
+ * Parse a single hash line into an insert value.
+ * Handles "hash:plaintext" (pre-cracked) and plain "hash" formats.
+ */
+function parseHashLine(line: string, hashListId: number) {
+  const colonIdx = line.indexOf(':');
+  if (colonIdx > 0) {
+    return {
+      hashListId,
+      hashValue: line.substring(0, colonIdx),
+      plaintext: line.substring(colonIdx + 1),
+      crackedAt: new Date(),
+    };
+  }
+  return { hashListId, hashValue: line };
+}
+
+/**
+ * Flush a batch of parsed hash items to the database.
+ * Uses onConflictDoNothing for idempotency on (hashListId, hashValue).
+ */
+async function flushBatch(batch: ReadonlyArray<ReturnType<typeof parseHashLine>>): Promise<void> {
+  if (batch.length === 0) return;
+  await db
+    .insert(hashItems)
+    .values([...batch])
+    .onConflictDoNothing();
+}
 
 export function createHashListParserWorker(connection: Redis): Worker<HashListParseJob> {
   const worker = new Worker<HashListParseJob>(
     QUEUE_NAMES.HASH_LIST_PARSING,
     async (job) => {
       const { hashListId } = job.data;
-      logger.info({ jobId: job.id, hashListId }, 'Parsing hash list');
+      logger.info({ jobId: job.id, hashListId }, 'Parsing hash list (streaming)');
 
       const [hl] = await db.select().from(hashLists).where(eq(hashLists.id, hashListId)).limit(1);
 
@@ -28,53 +58,87 @@ export function createHashListParserWorker(connection: Redis): Worker<HashListPa
         throw new Error(`Hash list ${hashListId} has no file reference`);
       }
 
-      // Download file from S3
+      // Stream file from S3 — never buffer the entire file in memory
       const response = await downloadFile(fileRef.key, fileRef.bucket);
       const body = response.Body;
       if (!body) {
         throw new Error(`Empty file body for hash list ${hashListId}`);
       }
 
-      const text = await body.transformToString('utf-8');
-      const lines = text.split('\n').filter((line) => line.trim().length > 0);
+      // Use the AWS SDK's built-in transformToWebStream for ReadableStream access
+      const stream = body.transformToWebStream();
+      const reader = stream.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let batch: ReturnType<typeof parseHashLine>[] = [];
+      let linesProcessed = 0;
+      let skippedLines = 0;
 
-      // Batch insert hash items
-      let inserted = 0;
-      for (let i = 0; i < lines.length; i += BATCH_SIZE) {
-        const batch = lines.slice(i, i + BATCH_SIZE);
-        const values = batch.map((line) => {
-          const trimmed = line.trim();
-          // Hash files may be in format "hash:plain" or just "hash"
-          const colonIdx = trimmed.indexOf(':');
-          if (colonIdx > 0) {
-            return {
-              hashListId,
-              hashValue: trimmed.substring(0, colonIdx),
-              plaintext: trimmed.substring(colonIdx + 1),
-              crackedAt: new Date(),
-            };
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        for (
+          let newlineIdx = buffer.indexOf('\n');
+          newlineIdx !== -1;
+          newlineIdx = buffer.indexOf('\n')
+        ) {
+          const line = buffer.slice(0, newlineIdx).trim();
+          buffer = buffer.slice(newlineIdx + 1);
+
+          if (line.length === 0) continue;
+          if (line.length > MAX_LINE_LENGTH) {
+            skippedLines++;
+            continue;
           }
-          return {
-            hashListId,
-            hashValue: trimmed,
-            isCracked: false,
-          };
-        });
 
-        await db.insert(hashItems).values(values).onConflictDoNothing();
-        inserted += values.length;
+          batch.push(parseHashLine(line, hashListId));
 
-        await job.updateProgress(Math.round((inserted / lines.length) * 100));
+          if (batch.length >= BATCH_SIZE) {
+            await flushBatch(batch);
+            linesProcessed += batch.length;
+            batch = [];
+            await job.updateProgress(linesProcessed);
+          }
+        }
       }
 
-      // Mark hash list as ready
+      // Flush final partial line left in buffer (file may not end with newline)
+      const finalLine = buffer.trim();
+      if (finalLine.length > 0 && finalLine.length <= MAX_LINE_LENGTH) {
+        batch.push(parseHashLine(finalLine, hashListId));
+      }
+
+      // Flush remaining batch
+      if (batch.length > 0) {
+        await flushBatch(batch);
+        linesProcessed += batch.length;
+      }
+
+      // Recompute statistics from actual data (crash-safe, not accumulated)
+      const [totalResult] = await db
+        .select({ value: count() })
+        .from(hashItems)
+        .where(eq(hashItems.hashListId, hashListId));
+      const totalHashes = totalResult?.value ?? 0;
+
+      // Mark hash list as ready with computed statistics
       await db
         .update(hashLists)
-        .set({ status: 'ready', updatedAt: new Date() })
+        .set({
+          status: 'ready',
+          statistics: { totalHashes, skippedLines },
+          updatedAt: new Date(),
+        })
         .where(eq(hashLists.id, hashListId));
 
-      logger.info({ hashListId, inserted }, 'Hash list parsing complete');
-      return { inserted };
+      logger.info(
+        { hashListId, linesProcessed, skippedLines, totalHashes },
+        'Hash list parsing complete (streamed)'
+      );
+      return { inserted: linesProcessed, skippedLines };
     },
     // Cast needed: our ioredis version may differ from BullMQ's bundled ioredis types
     { connection: connection as unknown as ConnectionOptions }
