@@ -87,7 +87,7 @@ describe('ResultsPage', () => {
     selectProject();
     renderWithProviders(<ResultsPage />);
 
-    const searchInput = screen.getByPlaceholderText('Search hashes or plaintexts...');
+    const searchInput = screen.getByPlaceholderText('Search hashes or plaintexts\\u2026');
     expect(searchInput).toBeDefined();
   });
 
@@ -105,7 +105,7 @@ describe('ResultsPage', () => {
     });
 
     const searchInput = screen.getByPlaceholderText(
-      'Search hashes or plaintexts...'
+      'Search hashes or plaintexts\\u2026'
     ) as HTMLInputElement;
     fireEvent.change(searchInput, { target: { value: 'password' } });
 
@@ -154,7 +154,7 @@ describe('ResultsPage', () => {
     renderWithProviders(<ResultsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Showing 1/)).toBeDefined();
+      expect(screen.getByText(/1.*of.*100/)).toBeDefined();
     });
 
     expect(screen.getByText('Next')).toBeDefined();
@@ -216,7 +216,7 @@ describe('ResultsPage', () => {
 
     // After clicking Next, the showing text should update
     await waitFor(() => {
-      expect(screen.getByText(/Showing 51/)).toBeDefined();
+      expect(screen.getByText(/51.*of.*100/)).toBeDefined();
     });
 
     // Verify fetch was invoked with offset=50

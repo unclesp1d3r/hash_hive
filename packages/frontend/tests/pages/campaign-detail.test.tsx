@@ -31,7 +31,7 @@ describe('CampaignDetailPage', () => {
       initialRoute: '/campaigns/1',
     });
 
-    expect(screen.getByText('Loading campaign...')).toBeDefined();
+    expect(screen.getByText('Loading campaign\\u2026')).toBeDefined();
   });
 
   it('shows not found when API returns no campaign', async () => {
@@ -191,7 +191,7 @@ describe('CampaignDetailPage', () => {
       expect(screen.getByText('NTLM Campaign')).toBeDefined();
     });
 
-    const backLink = screen.getByText('Back to campaigns');
+    const backLink = screen.getByText('\\u2190 Back to campaigns');
     expect(backLink.closest('a')?.getAttribute('href')).toBe('/campaigns');
   });
 
@@ -219,6 +219,6 @@ describe('CampaignDetailPage', () => {
     expect(screen.getByText('running')).toBeDefined();
     expect(screen.getByText('#5')).toBeDefined();
     expect(screen.getByText('2, 3')).toBeDefined();
-    expect(screen.getByText('--')).toBeDefined();
+    expect(screen.getByText('\u2014')).toBeDefined();
   });
 });
