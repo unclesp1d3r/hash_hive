@@ -24,7 +24,7 @@
     "@hashhive/shared": "workspace:*",
     "@hono/zod-validator": "^0.5.0",
     "bullmq": "^5.64.1",
-    "drizzle-orm": "^0.44.0",
+    "drizzle-orm": "^0.45.1",
     "hono": "^4.7.0",
     "ioredis": "^5.8.2",
     "jose": "^6.1.3",
