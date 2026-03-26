@@ -17,7 +17,7 @@
     "test:e2e": "turbo run test:e2e"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.8",
+    "@biomejs/biome": "^2.4.9",
     "turbo": "^2.8.20",
     "typescript": "^6.0.2"
   },
