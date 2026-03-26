@@ -60,6 +60,7 @@ export function useChunkedUpload(options: UseChunkedUploadOptions = {}) {
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
+      uploadIdRef.current = `${resourceType}-${name}-${file.size}`;
 
       dispatch({ type: 'START' });
 
@@ -86,6 +87,7 @@ export function useChunkedUpload(options: UseChunkedUploadOptions = {}) {
 
         const message = err instanceof Error ? err.message : 'Upload failed';
         dispatch({ type: 'ERROR', error: message });
+        uploadIdRef.current = null;
         options.onError?.(message);
       }
     },

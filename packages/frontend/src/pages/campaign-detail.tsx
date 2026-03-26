@@ -4,6 +4,7 @@ import { PermissionGuard } from '../components/features/permission-guard';
 import { StatusBadge } from '../components/features/status-badge';
 import { Button } from '../components/ui/button';
 import { EmptyState } from '../components/ui/empty-state';
+import { ErrorBanner } from '../components/ui/error-banner';
 import { PageHeader } from '../components/ui/page-header';
 import { Table, TableBody, TableHead, TableRow, Td, Th } from '../components/ui/table';
 import { TextLink } from '../components/ui/text-link';
@@ -67,11 +68,20 @@ const LIFECYCLE_ACTIONS: Record<
 export function CampaignDetailPage() {
   const { id } = useParams<{ id: string }>();
   const campaignId = Number(id);
-  const { data, isLoading } = useCampaignDetail(campaignId);
+  const { data, isLoading, isError, error } = useCampaignDetail(campaignId);
   const lifecycle = useCampaignLifecycle(campaignId);
 
   if (isLoading) {
     return <EmptyState message="Loading campaign\u2026" />;
+  }
+
+  if (isError) {
+    return (
+      <div className="space-y-4">
+        <TextLink to="/campaigns">&larr; Back to campaigns</TextLink>
+        <ErrorBanner message={error instanceof Error ? error.message : 'Failed to load campaign'} />
+      </div>
+    );
   }
 
   if (!data) {

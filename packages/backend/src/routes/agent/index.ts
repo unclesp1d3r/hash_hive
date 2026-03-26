@@ -111,6 +111,7 @@ agentRoutes.post('/errors', zValidator('json', agentErrorSchema), async (c) => {
 // ─── GET /resources/:type/:id/download-url — presigned download ─────
 
 agentRoutes.get('/resources/:type/:id/download-url', async (c) => {
+  const { projectId } = c.get('agent');
   const resourceType = c.req.param('type');
   const resourceId = Number(c.req.param('id'));
 
@@ -121,7 +122,7 @@ agentRoutes.get('/resources/:type/:id/download-url', async (c) => {
     );
   }
 
-  const result = await getAgentDownloadUrl(resourceType, resourceId);
+  const result = await getAgentDownloadUrl(resourceType, resourceId, projectId);
 
   if (!result) {
     return c.json(

@@ -116,8 +116,15 @@ export function ResourceUploadModal({ type, open, onClose, onSuccess }: Resource
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-crust/80">
-      <div className="w-full max-w-md rounded-lg border border-surface-0 bg-mantle p-6 shadow-2xl">
-        <h3 className="mb-4 text-sm font-medium">Upload New {label}</h3>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="resource-upload-title"
+        className="w-full max-w-md rounded-lg border border-surface-0 bg-mantle p-6 shadow-2xl"
+      >
+        <h3 id="resource-upload-title" className="mb-4 text-sm font-medium">
+          Upload New {label}
+        </h3>
 
         {error && <ErrorBanner message={error} className="mb-4" />}
 

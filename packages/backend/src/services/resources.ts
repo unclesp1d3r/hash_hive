@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
 import { hashItems, hashLists, hashTypes, maskLists, ruleLists, wordLists } from '@hashhive/shared';
-import { desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import {
@@ -239,7 +239,8 @@ export async function getResourcePresignedUrl(fileRef: {
  */
 export async function getAgentDownloadUrl(
   resourceType: string,
-  resourceId: number
+  resourceId: number,
+  projectId: number
 ): Promise<{ url: string; expiresIn: number } | null> {
   const tableMap: Record<string, ResourceTable | typeof hashLists> = {
     'hash-lists': hashLists,
@@ -251,7 +252,11 @@ export async function getAgentDownloadUrl(
   const table = tableMap[resourceType];
   if (!table) return null;
 
-  const [row] = await db.select().from(table).where(eq(table.id, resourceId)).limit(1);
+  const [row] = await db
+    .select()
+    .from(table)
+    .where(and(eq(table.id, resourceId), eq(table.projectId, projectId)))
+    .limit(1);
   if (!row) return null;
 
   const fileRef = row.fileRef as { bucket?: string; key?: string; name?: string } | null;

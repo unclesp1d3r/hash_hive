@@ -48,7 +48,7 @@ describe('CampaignDetailPage', () => {
     expect(screen.getByText('Loading campaign\\u2026')).toBeDefined();
   });
 
-  it('shows not found when API returns no campaign', async () => {
+  it('shows error when API returns 404', async () => {
     fetchMock = mockFetch({
       '/dashboard/campaigns/99': { status: 404, body: { error: { message: 'Not found' } } },
     });
@@ -59,7 +59,7 @@ describe('CampaignDetailPage', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Campaign not found.')).toBeDefined();
+      expect(screen.getByRole('alert')).toBeDefined();
     });
   });
 

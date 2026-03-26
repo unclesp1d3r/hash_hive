@@ -83,7 +83,7 @@
       }
     },
     {
-      "includes": ["**/migrations/**"],
+      "includes": ["**/migrations/**/*.sql"],
       "formatter": {
         "enabled": false
       },

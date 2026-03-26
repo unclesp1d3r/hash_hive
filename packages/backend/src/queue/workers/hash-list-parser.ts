@@ -76,7 +76,10 @@ export function createHashListParserWorker(connection: Redis): Worker<HashListPa
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          buffer += decoder.decode(); // flush buffered multi-byte bytes
+          break;
+        }
 
         buffer += decoder.decode(value, { stream: true });
 
@@ -107,8 +110,12 @@ export function createHashListParserWorker(connection: Redis): Worker<HashListPa
 
       // Flush final partial line left in buffer (file may not end with newline)
       const finalLine = buffer.trim();
-      if (finalLine.length > 0 && finalLine.length <= MAX_LINE_LENGTH) {
-        batch.push(parseHashLine(finalLine, hashListId));
+      if (finalLine.length > 0) {
+        if (finalLine.length > MAX_LINE_LENGTH) {
+          skippedLines++;
+        } else {
+          batch.push(parseHashLine(finalLine, hashListId));
+        }
       }
 
       // Flush remaining batch
