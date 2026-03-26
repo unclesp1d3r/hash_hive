@@ -1,5 +1,6 @@
 import type { ChangeEvent } from 'react';
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useChunkedUpload } from '../../hooks/use-chunked-upload';
 import { useCreateResource, useUploadResourceFile } from '../../hooks/use-resources';
 
 type ResourceType = 'hash-lists' | 'wordlists' | 'rulelists' | 'masklists';
@@ -10,6 +11,8 @@ const TYPE_LABELS: Record<ResourceType, string> = {
   rulelists: 'Rulelist',
   masklists: 'Masklist',
 };
+
+const CHUNKED_UPLOAD_THRESHOLD = 100 * 1024 * 1024; // 100 MB
 
 interface ResourceUploadModalProps {
   type: ResourceType;
@@ -27,8 +30,33 @@ export function ResourceUploadModal({ type, open, onClose, onSuccess }: Resource
   const createResource = useCreateResource(type);
   const uploadFile = useUploadResourceFile(type);
 
-  const isUploading = createResource.isPending || uploadFile.isPending;
+  const handleChunkedComplete = useCallback(
+    (resourceId: number) => {
+      onSuccess(resourceId);
+      setName('');
+      setFile(null);
+      setError(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      onClose();
+    },
+    [onSuccess, onClose]
+  );
+
+  const handleChunkedError = useCallback((errorMessage: string) => {
+    setError(errorMessage);
+  }, []);
+
+  const chunkedUpload = useChunkedUpload({
+    onComplete: handleChunkedComplete,
+    onError: handleChunkedError,
+  });
+
+  const isSmallUpload = createResource.isPending || uploadFile.isPending;
+  const isUploading = isSmallUpload || chunkedUpload.isUploading;
   const label = TYPE_LABELS[type];
+  const useChunkedPath = file !== null && file.size > CHUNKED_UPLOAD_THRESHOLD;
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] ?? null;
@@ -42,6 +70,12 @@ export function ResourceUploadModal({ type, open, onClose, onSuccess }: Resource
     if (!file || !name.trim()) return;
 
     setError(null);
+
+    if (useChunkedPath) {
+      await chunkedUpload.start(file, type, name.trim());
+      return;
+    }
+
     try {
       const result = await createResource.mutateAsync({ name: name.trim() });
       const resourceId = result.item.id;
@@ -55,17 +89,27 @@ export function ResourceUploadModal({ type, open, onClose, onSuccess }: Resource
     }
   };
 
-  const handleClose = () => {
+  const handleReset = () => {
     setName('');
     setFile(null);
     setError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const handleClose = () => {
+    if (chunkedUpload.isUploading) {
+      chunkedUpload.cancel();
+    }
+    handleReset();
     onClose();
   };
 
   if (!open) return null;
+
+  const chunkedProgress = chunkedUpload.state.progress;
+  const displayProgress = chunkedProgress ? chunkedProgress.percentage : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-crust/80">
@@ -88,7 +132,8 @@ export function ResourceUploadModal({ type, open, onClose, onSuccess }: Resource
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1.5 w-full rounded border border-surface-0 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary/40"
+              disabled={isUploading}
+              className="mt-1.5 w-full rounded border border-surface-0 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary/40 disabled:opacity-50"
               placeholder={`Enter ${label.toLowerCase()} name`}
             />
           </div>
@@ -102,16 +147,37 @@ export function ResourceUploadModal({ type, open, onClose, onSuccess }: Resource
               ref={fileInputRef}
               type="file"
               onChange={handleFileChange}
-              className="mt-1.5 w-full text-xs text-muted-foreground file:mr-3 file:rounded file:border-0 file:bg-surface-0 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-foreground"
+              disabled={isUploading}
+              className="mt-1.5 w-full text-xs text-muted-foreground file:mr-3 file:rounded file:border-0 file:bg-surface-0 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-foreground disabled:opacity-50"
             />
           </div>
+
+          {displayProgress !== null && (
+            <div className="space-y-1">
+              <div className="h-1.5 w-full rounded-full bg-surface-1">
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${displayProgress}%` }}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {displayProgress}%
+                {chunkedProgress && (
+                  <span>
+                    {' '}
+                    — Part {chunkedProgress.currentPart} of {chunkedProgress.totalParts}
+                  </span>
+                )}
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
           <button
             type="button"
             onClick={handleClose}
-            disabled={isUploading}
+            disabled={isSmallUpload}
             className="rounded border border-surface-0 px-4 py-2 text-xs text-muted-foreground transition-colors hover:bg-surface-0/60 hover:text-foreground disabled:opacity-50"
           >
             Cancel
