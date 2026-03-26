@@ -13,7 +13,7 @@ HashHive is a 2026 TypeScript reimplementation of [CipherSwarm](https://github.c
 - Real-time dashboards for agents, campaigns, and crack results
 - Project-scoped multi-tenancy and role-based access control
 
-**Production context:** This system runs in an **air-gapped private lab** (no Internet access). The production deployment (Docker containers) MUST operate without any external network connectivity — all images, dependencies, and resources must be fully self-contained. Development and testing occur on Internet-connected systems, but no runtime functionality may depend on external access.
+**Production context:** This system runs in an **air-gapped private lab** (no Internet access). The only supported deployment method is **Docker Compose** — all services (backend, frontend, PostgreSQL, Redis, MinIO) run as containers that MUST operate without any external network connectivity. All images, dependencies, and resources must be fully self-contained. Development and testing occur on Internet-connected systems, but no runtime functionality may depend on external access.
 
 **Production scale:** Minimum 10 cracking nodes with ~25x RTX 4090 GPU capacity. Individual attack resources (wordlists, masklists, rulelists) can exceed **100 GB** — all upload, storage, download, and streaming pipelines must handle files at this scale without full-file buffering. The agent API handles periodic bursts when rigs submit cracked hashes, request work units, and send heartbeats. The web dashboard serves 1-3 concurrent human users. Optimize for correctness, clarity, and developer experience — not premature scale.
 
