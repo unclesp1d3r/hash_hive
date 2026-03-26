@@ -4,7 +4,7 @@ This file provides guidance to AI coding assistants (including WARP) when workin
 
 ## Project overview
 
-HashHive is a 2026 TypeScript reimplementation of [CipherSwarm](https://github.com/unclesp1d3r/CipherSwarm), a distributed hash cracking management system originally built on Ruby on Rails with PostgreSQL. It orchestrates hashcat across multiple agents in a private lab environment (7 cracking rigs), providing:
+HashHive is a 2026 TypeScript reimplementation of [CipherSwarm](https://github.com/unclesp1d3r/CipherSwarm), a distributed hash cracking management system originally built on Ruby on Rails with PostgreSQL. It orchestrates hashcat across multiple agents in a private lab environment, providing:
 
 - Agent management and monitoring
 - Campaign and attack orchestration with DAG-based dependencies
@@ -13,7 +13,9 @@ HashHive is a 2026 TypeScript reimplementation of [CipherSwarm](https://github.c
 - Real-time dashboards for agents, campaigns, and crack results
 - Project-scoped multi-tenancy and role-based access control
 
-**Production context:** This system runs in a private lab, not publicly exposed. The agent API handles periodic bursts when rigs submit cracked hashes, request work units, and send heartbeats. The web dashboard serves 1-3 concurrent human users. Optimize for correctness, clarity, and developer experience — not premature scale.
+**Production context:** This system runs in an **air-gapped private lab** (no Internet access). The production deployment (Docker containers) MUST operate without any external network connectivity — all images, dependencies, and resources must be fully self-contained. Development and testing occur on Internet-connected systems, but no runtime functionality may depend on external access.
+
+**Production scale:** Minimum 10 cracking nodes with ~25x RTX 4090 GPU capacity. Individual attack resources (wordlists, masklists, rulelists) can exceed **100 GB** — all upload, storage, download, and streaming pipelines must handle files at this scale without full-file buffering. The agent API handles periodic bursts when rigs submit cracked hashes, request work units, and send heartbeats. The web dashboard serves 1-3 concurrent human users. Optimize for correctness, clarity, and developer experience — not premature scale.
 
 ## Repository layout
 
