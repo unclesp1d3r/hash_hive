@@ -1,6 +1,10 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
 import { StatusBadge } from '../components/features/status-badge';
+import { EmptyState } from '../components/ui/empty-state';
+import { PageHeader } from '../components/ui/page-header';
+import { Select } from '../components/ui/select';
+import { Table, TableBody, TableHead, TableRow, Td, Th } from '../components/ui/table';
+import { TextLink } from '../components/ui/text-link';
 import { useAgents } from '../hooks/use-dashboard';
 import { useUiStore } from '../stores/ui';
 
@@ -11,9 +15,9 @@ export function AgentsPage() {
 
   if (!selectedProjectId) {
     return (
-      <div className="space-y-6">
-        <h2 className="text-2xl font-bold">Agents</h2>
-        <p className="text-muted-foreground">Select a project to view agents.</p>
+      <div className="space-y-4">
+        <PageHeader>Agents</PageHeader>
+        <EmptyState message="Select a project to view agents." />
       </div>
     );
   }
@@ -21,9 +25,9 @@ export function AgentsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Agents</h2>
-        <select
-          className="rounded-md border bg-background px-3 py-1.5 text-sm"
+        <PageHeader>Agents</PageHeader>
+        <Select
+          className="w-auto px-3 py-1.5 text-xs"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
@@ -32,47 +36,40 @@ export function AgentsPage() {
           <option value="offline">Offline</option>
           <option value="busy">Busy</option>
           <option value="error">Error</option>
-        </select>
+        </Select>
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground">Loading agents...</p>
+        <EmptyState message="Loading agents\u2026" />
       ) : !data?.agents.length ? (
-        <p className="text-muted-foreground">No agents found.</p>
+        <EmptyState message="No agents found." />
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b bg-muted/50">
-              <tr>
-                <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Last Seen</th>
-                <th className="px-4 py-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.agents.map((agent) => (
-                <tr key={agent.id} className="border-b last:border-b-0">
-                  <td className="px-4 py-3 font-medium">{agent.name}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={agent.status} />
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {agent.lastSeenAt ? new Date(agent.lastSeenAt).toLocaleString() : 'Never'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link
-                      to={`/agents/${agent.id}`}
-                      className="text-primary underline-offset-4 hover:underline"
-                    >
-                      Details
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <TableHead>
+            <tr>
+              <Th>Name</Th>
+              <Th>Status</Th>
+              <Th>Last Seen</Th>
+              <Th>Actions</Th>
+            </tr>
+          </TableHead>
+          <TableBody>
+            {data.agents.map((agent) => (
+              <TableRow key={agent.id}>
+                <Td className="text-sm font-medium text-foreground">{agent.name}</Td>
+                <Td>
+                  <StatusBadge status={agent.status} />
+                </Td>
+                <Td className="text-xs text-muted-foreground">
+                  {agent.lastSeenAt ? new Date(agent.lastSeenAt).toLocaleString() : 'Never'}
+                </Td>
+                <Td>
+                  <TextLink to={`/agents/${agent.id}`}>Details</TextLink>
+                </Td>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
     </div>
   );

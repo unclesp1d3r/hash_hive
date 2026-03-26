@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
+import { PermissionGuard } from '../components/features/permission-guard';
 import { StatusBadge } from '../components/features/status-badge';
+import { buttonVariants } from '../components/ui/button';
+import { EmptyState } from '../components/ui/empty-state';
+import { PageHeader } from '../components/ui/page-header';
+import { Select } from '../components/ui/select';
+import { Table, TableBody, TableHead, TableRow, Td, Th } from '../components/ui/table';
+import { TextLink } from '../components/ui/text-link';
 import { useCampaigns } from '../hooks/use-dashboard';
+import { Permission } from '../lib/permissions';
 import { useUiStore } from '../stores/ui';
 
 export function CampaignsPage() {
@@ -11,9 +19,9 @@ export function CampaignsPage() {
 
   if (!selectedProjectId) {
     return (
-      <div className="space-y-6">
-        <h2 className="text-2xl font-bold">Campaigns</h2>
-        <p className="text-muted-foreground">Select a project to view campaigns.</p>
+      <div className="space-y-4">
+        <PageHeader>Campaigns</PageHeader>
+        <EmptyState message="Select a project to view campaigns." />
       </div>
     );
   }
@@ -21,10 +29,10 @@ export function CampaignsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Campaigns</h2>
+        <PageHeader>Campaigns</PageHeader>
         <div className="flex gap-2">
-          <select
-            className="rounded-md border bg-background px-3 py-1.5 text-sm"
+          <Select
+            className="w-auto px-3 py-1.5 text-xs"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -34,56 +42,48 @@ export function CampaignsPage() {
             <option value="paused">Paused</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
-          </select>
-          <Link
-            to="/campaigns/new"
-            className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            New Campaign
-          </Link>
+          </Select>
+          <PermissionGuard permission={Permission.CAMPAIGN_CREATE}>
+            <Link to="/campaigns/new" className={buttonVariants('primary', 'sm')}>
+              New Campaign
+            </Link>
+          </PermissionGuard>
         </div>
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground">Loading campaigns...</p>
+        <EmptyState message="Loading campaigns\u2026" />
       ) : !data?.campaigns.length ? (
-        <p className="text-muted-foreground">No campaigns found.</p>
+        <EmptyState message="No campaigns found." />
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b bg-muted/50">
-              <tr>
-                <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Priority</th>
-                <th className="px-4 py-3 font-medium">Created</th>
-                <th className="px-4 py-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.campaigns.map((campaign) => (
-                <tr key={campaign.id} className="border-b last:border-b-0">
-                  <td className="px-4 py-3 font-medium">{campaign.name}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={campaign.status} />
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{campaign.priority}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {new Date(campaign.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link
-                      to={`/campaigns/${campaign.id}`}
-                      className="text-primary underline-offset-4 hover:underline"
-                    >
-                      Details
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <TableHead>
+            <tr>
+              <Th>Name</Th>
+              <Th>Status</Th>
+              <Th>Priority</Th>
+              <Th>Created</Th>
+              <Th>Actions</Th>
+            </tr>
+          </TableHead>
+          <TableBody>
+            {data.campaigns.map((campaign) => (
+              <TableRow key={campaign.id}>
+                <Td className="text-sm font-medium text-foreground">{campaign.name}</Td>
+                <Td>
+                  <StatusBadge status={campaign.status} />
+                </Td>
+                <Td className="font-mono text-xs text-muted-foreground">{campaign.priority}</Td>
+                <Td className="text-xs text-muted-foreground">
+                  {new Date(campaign.createdAt).toLocaleDateString()}
+                </Td>
+                <Td>
+                  <TextLink to={`/campaigns/${campaign.id}`}>Details</TextLink>
+                </Td>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
     </div>
   );

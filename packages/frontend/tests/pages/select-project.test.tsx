@@ -76,7 +76,7 @@ describe('SelectProjectPage', () => {
     expect(screen.getByText('Project 1')).toBeDefined();
     expect(screen.getByText('Project 2')).toBeDefined();
     // Roles should be displayed
-    const roleTexts = screen.getAllByText('Roles: admin');
+    const roleTexts = screen.getAllByText('admin');
     expect(roleTexts.length).toBe(2);
   });
 

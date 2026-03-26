@@ -76,7 +76,8 @@ This document defines the core user flows for HashHive, covering the complete jo
 3. User enters description (optional)
 4. User sets priority (1-10 slider or number input)
 5. User selects hash list from dropdown OR clicks "Upload New" to upload inline
-  - If uploading inline: file picker opens, user selects file, upload progress shown, hash list added to dropdown
+   - If uploading inline: file picker opens, user selects file, upload progress shown, hash list added to dropdown
+
 6. User clicks "Next: Configure Attacks"
 7. System validates form and advances to Step 2
 
@@ -155,8 +156,10 @@ sequenceDiagram
 3. User can sort by any column
 4. Each row shows quick action buttons: Start (if draft/paused), Pause (if running), Stop (if running)
 5. User clicks a quick action button:
-  - **Start**: opens a confirmation modal
-  - **Pause / Stop**: applies immediately
+
+- **Start**: opens a confirmation modal
+- **Pause / Stop**: applies immediately
+
 6. IF Start: user confirms, then the system starts the campaign
 7. System updates status and shows confirmation toast
 8. User clicks campaign name to view detail
@@ -174,15 +177,19 @@ sequenceDiagram
 
 1. User sees campaign header with name, status badge, and action buttons (Start/Pause/Stop)
 2. User sees three primary sections:
-  - **Progress Panel** (top): Completion percentage, ETA, hash rate, cracked count
-  - **DAG Visualization** (middle): Visual graph showing attack dependencies with status colors
-  - **Agent & Task Distribution** (bottom): Table showing which agents are working on which tasks
+
+- **Progress Panel** (top): Completion percentage, ETA, hash rate, cracked count
+- **DAG Visualization** (middle): Visual graph showing attack dependencies with status colors
+- **Agent & Task Distribution** (bottom): Table showing which agents are working on which tasks
+
 3. User can click on attack node in DAG to see attack details
 4. User can click "View Results" button to see cracked passwords for this campaign
 5. User clicks Start/Pause/Stop button:
-  - **Start** (one-click from detail): starts the campaign
-  - **Pause**: pauses execution
-  - **Stop**: cancels current tasks and returns the campaign to Draft (can be restarted)
+
+- **Start** (one-click from detail): starts the campaign
+- **Pause**: pauses execution
+- **Stop**: cancels current tasks and returns the campaign to Draft (can be restarted)
+
 6. System updates campaign status and redistributes/cancels tasks as needed
 
 **UI Feedback:**

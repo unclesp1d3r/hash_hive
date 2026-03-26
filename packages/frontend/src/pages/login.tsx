@@ -4,6 +4,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Navigate, useNavigate } from 'react-router';
+import logoSvg from '../assets/logo.svg';
+import { Button } from '../components/ui/button';
+import { ErrorBanner } from '../components/ui/error-banner';
+import { Input } from '../components/ui/input';
 import { ApiError } from '../lib/api';
 import { useAuthStore } from '../stores/auth';
 import { useUiStore } from '../stores/ui';
@@ -31,10 +35,8 @@ export function LoginPage() {
     try {
       const result = await login(data.email, data.password);
       if (result.selectedProjectId) {
-        // Auto-selected single project — set and go to dashboard
         setSelectedProject(result.selectedProjectId);
       } else {
-        // Multiple projects — redirect to project selection
         navigate('/select-project');
       }
     } catch (err) {
@@ -47,26 +49,31 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="w-full max-w-sm space-y-6 rounded-lg border bg-card p-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">HashHive</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Sign in to your account</p>
+    <div className="flex min-h-screen items-center justify-center bg-crust">
+      <div className="w-full max-w-sm space-y-6 rounded-lg border border-surface-0/50 bg-mantle p-8">
+        <div className="flex flex-col items-center gap-3">
+          <img src={logoSvg} alt="" className="h-12 w-12" />
+          <div className="text-center">
+            <h1 className="text-xl font-semibold tracking-tight">HashHive</h1>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Distributed hash cracking management
+            </p>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
-          )}
+          {error && <ErrorBanner message={error} />}
 
           <div>
-            <label htmlFor="email" className="text-sm font-medium">
+            <label htmlFor="email" className="text-xs font-medium text-muted-foreground">
               Email
             </label>
-            <input
+            <Input
               id="email"
               type="email"
-              className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+              autoComplete="email"
+              className="mt-1.5"
+              placeholder="operator@lab.local"
               {...register('email')}
             />
             {errors.email && (
@@ -75,13 +82,14 @@ export function LoginPage() {
           </div>
 
           <div>
-            <label htmlFor="password" className="text-sm font-medium">
+            <label htmlFor="password" className="text-xs font-medium text-muted-foreground">
               Password
             </label>
-            <input
+            <Input
               id="password"
               type="password"
-              className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+              autoComplete="current-password"
+              className="mt-1.5"
               {...register('password')}
             />
             {errors.password && (
@@ -89,13 +97,9 @@ export function LoginPage() {
             )}
           </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-          >
-            {isSubmitting ? 'Signing in...' : 'Sign In'}
-          </button>
+          <Button type="submit" disabled={isSubmitting} className="w-full">
+            {isSubmitting ? 'Authenticating\u2026' : 'Sign In'}
+          </Button>
         </form>
       </div>
     </div>

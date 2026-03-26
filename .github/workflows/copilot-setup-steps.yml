@@ -1,32 +1,19 @@
 name: Copilot Setup
-'on':
+"on":
   workflow_dispatch:
 jobs:
   setup:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-
-      - uses: oven-sh/setup-bun@v2
+      - name: Checkout code
+        uses: actions/checkout@v6.0.2
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
         with:
-          bun-version-file: '.bun-version'
+          install: true
+          cache: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: '.node-version'
-
-      - name: Install just
-        uses: extractions/setup-just@v1
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Build shared package
-        run: bun run --filter '@hashhive/shared' build
-
-      - name: Run type checking
-        run: bun run --filter '*' type-check
-
+      - run: just install
       - name: Validate setup
         run: just ci-check
 

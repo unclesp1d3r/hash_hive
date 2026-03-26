@@ -8,7 +8,7 @@ afterEach(cleanup);
 // Mock the resource hooks
 const mockCreateMutateAsync = mock(() =>
   Promise.resolve({
-    resource: { id: 42, name: 'test', projectId: 1, fileRef: null, createdAt: '' },
+    item: { id: 42, name: 'test', projectId: 1, fileRef: null, createdAt: '' },
   })
 );
 const mockUploadMutateAsync = mock(() => Promise.resolve({}));

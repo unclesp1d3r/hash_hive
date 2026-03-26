@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { type Resolver, useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router';
+import { Navigate, useNavigate } from 'react-router';
 import ReactFlow, {
   Background,
   Controls,
@@ -15,10 +15,19 @@ import 'reactflow/dist/style.css';
 import { z } from 'zod';
 import { ResourceUploadModal } from '../components/features/resource-upload-modal';
 import { StatusBadge } from '../components/features/status-badge';
+import { Button } from '../components/ui/button';
+import { EmptyState } from '../components/ui/empty-state';
+import { ErrorBanner } from '../components/ui/error-banner';
+import { Input } from '../components/ui/input';
+import { PageHeader } from '../components/ui/page-header';
+import { Select } from '../components/ui/select';
 import { useCreateCampaign } from '../hooks/use-campaigns';
+import { usePermissions } from '../hooks/use-permissions';
 import { useHashLists, useMasklists, useRulelists, useWordlists } from '../hooks/use-resources';
 import { ApiError, api } from '../lib/api';
 import { validateDAG } from '../lib/dag-validation';
+import { Permission } from '../lib/permissions';
+import { cn } from '../lib/utils';
 import { useCampaignWizard } from '../stores/campaign-wizard';
 import { useUiStore } from '../stores/ui';
 
@@ -54,6 +63,9 @@ interface AttackForm {
 
 type UploadModalType = 'hash-lists' | 'wordlists' | 'rulelists' | 'masklists';
 
+/** Catppuccin red — matches --ctp-red / --destructive token */
+const CYCLE_EDGE_COLOR = 'hsl(351, 74%, 73%)';
+
 function buildNodes(attacks: readonly { mode: number }[]): FlowNode[] {
   return attacks.map((attack, i) => ({
     id: String(i),
@@ -74,7 +86,14 @@ function buildEdges(attacks: readonly { dependencies: number[] }[]): Edge[] {
   );
 }
 
+function stepIndicatorStyle(index: number, currentStep: number): string {
+  if (index === currentStep) return 'bg-primary text-primary-foreground';
+  if (index < currentStep) return 'bg-surface-0 text-foreground';
+  return 'bg-surface-0/40 text-muted-foreground';
+}
+
 export function CampaignCreatePage() {
+  const { can } = usePermissions();
   const { selectedProjectId } = useUiStore();
   const wizard = useCampaignWizard();
   const navigate = useNavigate();
@@ -111,7 +130,8 @@ export function CampaignCreatePage() {
   }, []);
 
   const basicInfoForm = useForm<BasicInfoForm>({
-    resolver: zodResolver(basicInfoSchema),
+    // z.coerce widens input type; cast is safe since output matches BasicInfoForm
+    resolver: zodResolver(basicInfoSchema) as unknown as Resolver<BasicInfoForm>,
     defaultValues: {
       name: wizard.name,
       priority: wizard.priority,
@@ -150,17 +170,21 @@ export function CampaignCreatePage() {
     [wizard]
   );
 
+  if (!can(Permission.CAMPAIGN_CREATE)) {
+    return <Navigate to="/campaigns" replace />;
+  }
+
   if (!selectedProjectId) {
-    return <p className="text-muted-foreground">Select a project first.</p>;
+    return <EmptyState message="Select a project first." />;
   }
 
   const onBasicInfoSubmit = basicInfoForm.handleSubmit((data) => {
     wizard.setBasicInfo({
-      name: data.name,
-      description: data.description ?? '',
-      priority: data.priority,
+      name: data['name'],
+      description: data['description'] ?? '',
+      priority: data['priority'],
     });
-    wizard.setHashListId(data.hashListId);
+    wizard.setHashListId(data['hashListId']);
     wizard.setStep(1);
   });
 
@@ -216,10 +240,10 @@ export function CampaignCreatePage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Create Campaign</h2>
+      <PageHeader>Create Campaign</PageHeader>
 
       {/* Step indicator */}
-      <div className="flex gap-2">
+      <div className="flex gap-1.5">
         {STEPS.map((label, i) => (
           <button
             key={label}
@@ -227,35 +251,26 @@ export function CampaignCreatePage() {
             onClick={() => {
               if (i < wizard.step) wizard.setStep(i);
             }}
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
-              i === wizard.step
-                ? 'bg-primary text-primary-foreground'
-                : i < wizard.step
-                  ? 'bg-accent text-accent-foreground'
-                  : 'bg-muted text-muted-foreground'
-            }`}
+            className={cn(
+              'rounded-full px-3 py-1 text-[11px] font-medium transition-colors',
+              stepIndicatorStyle(i, wizard.step)
+            )}
           >
             {i + 1}. {label}
           </button>
         ))}
       </div>
 
-      {error && (
-        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
-      )}
+      {error && <ErrorBanner message={error} />}
 
       {/* Step 0: Basic Info */}
       {wizard.step === 0 && (
         <form onSubmit={onBasicInfoSubmit} className="space-y-4">
           <div>
-            <label htmlFor="name" className="text-sm font-medium">
+            <label htmlFor="name" className="text-xs font-medium text-muted-foreground">
               Campaign Name
             </label>
-            <input
-              id="name"
-              className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
-              {...basicInfoForm.register('name')}
-            />
+            <Input id="name" className="mt-1.5" {...basicInfoForm.register('name')} />
             {basicInfoForm.formState.errors.name && (
               <p className="mt-1 text-xs text-destructive">
                 {basicInfoForm.formState.errors.name.message}
@@ -264,55 +279,52 @@ export function CampaignCreatePage() {
           </div>
 
           <div>
-            <label htmlFor="description" className="text-sm font-medium">
+            <label htmlFor="description" className="text-xs font-medium text-muted-foreground">
               Description
             </label>
             <textarea
               id="description"
               rows={3}
-              className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+              className="mt-1.5 w-full rounded border border-surface-0 bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:ring-1 focus:ring-primary/40"
               {...basicInfoForm.register('description')}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="priority" className="text-sm font-medium">
-                Priority (1-10)
+              <label htmlFor="priority" className="text-xs font-medium text-muted-foreground">
+                Priority (1\u201310)
               </label>
-              <input
+              <Input
                 id="priority"
                 type="number"
                 min={1}
                 max={10}
-                className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                className="mt-1.5"
                 {...basicInfoForm.register('priority')}
               />
             </div>
             <div>
-              <label htmlFor="hashListId" className="text-sm font-medium">
+              <label htmlFor="hashListId" className="text-xs font-medium text-muted-foreground">
                 Hash List
               </label>
-              <div className="mt-1 flex gap-2">
-                <select
-                  id="hashListId"
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                  {...basicInfoForm.register('hashListId')}
-                >
-                  <option value="">Select a hash list...</option>
+              <div className="mt-1.5 flex gap-2">
+                <Select id="hashListId" {...basicInfoForm.register('hashListId')}>
+                  <option value="">Select a hash list\u2026</option>
                   {hashLists.map((hl) => (
                     <option key={hl.id} value={hl.id}>
                       {hl.name} ({hl.hashCount} hashes)
                     </option>
                   ))}
-                </select>
-                <button
-                  type="button"
+                </Select>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="shrink-0"
                   onClick={() => setUploadModal({ open: true, type: 'hash-lists' })}
-                  className="shrink-0 rounded-md border px-3 py-2 text-sm hover:bg-accent"
                 >
-                  Upload New
-                </button>
+                  Upload
+                </Button>
               </div>
               {basicInfoForm.formState.errors.hashListId && (
                 <p className="mt-1 text-xs text-destructive">
@@ -322,12 +334,7 @@ export function CampaignCreatePage() {
             </div>
           </div>
 
-          <button
-            type="submit"
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            Next: Configure Attacks
-          </button>
+          <Button type="submit">Next: Configure Attacks</Button>
         </form>
       )}
 
@@ -338,118 +345,87 @@ export function CampaignCreatePage() {
             {/* Left column: Attack configuration form */}
             <div className="w-2/5 space-y-4">
               <form onSubmit={attackForm.handleSubmit(handleAddAttack)} className="space-y-3">
-                <h3 className="font-medium">Add Attack</h3>
+                <h3 className="text-sm font-medium">Add Attack</h3>
                 <div className="space-y-3">
                   <div>
-                    <label htmlFor="mode" className="text-xs font-medium">
+                    <label htmlFor="mode" className="text-[11px] font-medium text-muted-foreground">
                       Hashcat Mode
                     </label>
-                    <input
+                    <Input
                       id="mode"
                       type="number"
-                      className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                      className="mt-1.5"
                       {...attackForm.register('mode')}
                     />
                   </div>
-                  <div>
-                    <label htmlFor="wordlistId" className="text-xs font-medium">
-                      Wordlist
-                    </label>
-                    <div className="mt-1 flex gap-2">
-                      <select
-                        id="wordlistId"
-                        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                        {...attackForm.register('wordlistId')}
+                  {[
+                    {
+                      id: 'wordlistId',
+                      label: 'Wordlist',
+                      items: wordlists,
+                      modalType: 'wordlists' as UploadModalType,
+                    },
+                    {
+                      id: 'rulelistId',
+                      label: 'Rulelist',
+                      items: rulelists,
+                      modalType: 'rulelists' as UploadModalType,
+                    },
+                    {
+                      id: 'masklistId',
+                      label: 'Masklist',
+                      items: masklists,
+                      modalType: 'masklists' as UploadModalType,
+                    },
+                  ].map((field) => (
+                    <div key={field.id}>
+                      <label
+                        htmlFor={field.id}
+                        className="text-[11px] font-medium text-muted-foreground"
                       >
-                        <option value="">None</option>
-                        {wordlists.map((w) => (
-                          <option key={w.id} value={w.id}>
-                            {w.name}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => setUploadModal({ open: true, type: 'wordlists' })}
-                        className="shrink-0 rounded-md border px-2 py-1 text-xs hover:bg-accent"
-                      >
-                        Upload
-                      </button>
+                        {field.label}
+                      </label>
+                      <div className="mt-1.5 flex gap-2">
+                        <Select
+                          id={field.id}
+                          {...attackForm.register(field.id as keyof AttackForm)}
+                        >
+                          <option value="">None</option>
+                          {field.items.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.name}
+                            </option>
+                          ))}
+                        </Select>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="shrink-0"
+                          onClick={() => setUploadModal({ open: true, type: field.modalType })}
+                        >
+                          Upload
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <label htmlFor="rulelistId" className="text-xs font-medium">
-                      Rulelist
-                    </label>
-                    <div className="mt-1 flex gap-2">
-                      <select
-                        id="rulelistId"
-                        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                        {...attackForm.register('rulelistId')}
-                      >
-                        <option value="">None</option>
-                        {rulelists.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.name}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => setUploadModal({ open: true, type: 'rulelists' })}
-                        className="shrink-0 rounded-md border px-2 py-1 text-xs hover:bg-accent"
-                      >
-                        Upload
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor="masklistId" className="text-xs font-medium">
-                      Masklist
-                    </label>
-                    <div className="mt-1 flex gap-2">
-                      <select
-                        id="masklistId"
-                        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                        {...attackForm.register('masklistId')}
-                      >
-                        <option value="">None</option>
-                        {masklists.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => setUploadModal({ open: true, type: 'masklists' })}
-                        className="shrink-0 rounded-md border px-2 py-1 text-xs hover:bg-accent"
-                      >
-                        Upload
-                      </button>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-                <button
-                  type="submit"
-                  className="rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
-                >
+                <Button variant="secondary" size="sm" type="submit">
                   Add Attack
-                </button>
+                </Button>
               </form>
 
               {/* Attack list */}
               {wizard.attacks.length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="font-medium">Configured Attacks</h3>
+                  <h3 className="text-sm font-medium">Configured Attacks</h3>
                   {wizard.attacks.map((attack, i) => (
                     <div
                       // biome-ignore lint/suspicious/noArrayIndexKey: attacks have no stable ID before creation
                       key={i}
-                      className="flex items-center justify-between rounded-md border p-3"
+                      className="flex items-center justify-between rounded-md border border-surface-0 bg-surface-0/30 p-3"
                     >
-                      <div className="text-sm">
-                        <span className="font-medium">
+                      <div className="text-xs">
+                        <span className="font-mono font-medium">
                           #{i} Mode {attack.mode}
                         </span>
                         {attack.wordlistId && (
@@ -471,7 +447,7 @@ export function CampaignCreatePage() {
                       <button
                         type="button"
                         onClick={() => wizard.removeAttack(i)}
-                        className="text-xs text-destructive hover:underline"
+                        className="text-[11px] text-destructive hover:text-destructive/80"
                       >
                         Remove
                       </button>
@@ -483,17 +459,18 @@ export function CampaignCreatePage() {
 
             {/* Right column: React Flow DAG editor */}
             <div className="w-3/5 space-y-2">
-              <h3 className="font-medium">Dependency Graph</h3>
-              <p className="text-xs text-muted-foreground">
-                Drag edges between attacks to set dependencies. Arrow from A → B means B depends on
-                A.
+              <h3 className="text-sm font-medium">Dependency Graph</h3>
+              <p className="text-[11px] text-muted-foreground">
+                Drag edges between attacks to set dependencies. Arrow from A \u2192 B means B
+                depends on A.
               </p>
               {!dagValidation.valid && (
-                <div className="rounded-md bg-destructive/10 p-2 text-sm text-destructive">
-                  Circular dependency detected between attacks: [{dagValidation.cycle?.join(', ')}]
-                </div>
+                <ErrorBanner
+                  message={`Circular dependency detected between attacks: [${dagValidation.cycle?.join(', ')}]`}
+                  className="text-xs"
+                />
               )}
-              <div className="h-[400px] rounded-md border">
+              <div className="h-[400px] rounded-md border border-surface-0 bg-crust">
                 {wizard.attacks.length > 0 ? (
                   <ReactFlow
                     nodes={nodes}
@@ -507,7 +484,7 @@ export function CampaignCreatePage() {
                               dagValidation.cycle?.includes(sourceIdx) &&
                               dagValidation.cycle?.includes(targetIdx);
                             return inCycle
-                              ? { ...e, style: { stroke: '#ef4444', strokeWidth: 2 } }
+                              ? { ...e, style: { stroke: CYCLE_EDGE_COLOR, strokeWidth: 2 } }
                               : e;
                           })
                     }
@@ -522,7 +499,7 @@ export function CampaignCreatePage() {
                     <Controls />
                   </ReactFlow>
                 ) : (
-                  <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
                     Add attacks to see the dependency graph
                   </div>
                 )}
@@ -531,21 +508,15 @@ export function CampaignCreatePage() {
           </div>
 
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => wizard.setStep(0)}
-              className="rounded-md border px-4 py-2 text-sm hover:bg-accent"
-            >
+            <Button variant="secondary" onClick={() => wizard.setStep(0)}>
               Back
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
               onClick={() => wizard.setStep(2)}
               disabled={wizard.attacks.length === 0 || !dagValidation.valid}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
               Next: Review
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -553,12 +524,14 @@ export function CampaignCreatePage() {
       {/* Step 2: Review & Submit */}
       {wizard.step === 2 && (
         <div className="space-y-4">
-          <div className="rounded-lg border bg-card p-4">
-            <h3 className="mb-3 font-medium">Campaign Summary</h3>
+          <div className="rounded-md border border-surface-0 bg-surface-0/40 p-4">
+            <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Campaign Summary
+            </h3>
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Name</dt>
-                <dd>{wizard.name}</dd>
+                <dd className="font-medium">{wizard.name}</dd>
               </div>
               {wizard.description && (
                 <div className="flex justify-between">
@@ -568,11 +541,11 @@ export function CampaignCreatePage() {
               )}
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Priority</dt>
-                <dd>{wizard.priority}</dd>
+                <dd className="font-mono">{wizard.priority}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Hash List</dt>
-                <dd>#{wizard.hashListId}</dd>
+                <dd className="font-mono">#{wizard.hashListId}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Attacks</dt>
@@ -585,9 +558,11 @@ export function CampaignCreatePage() {
 
           {/* DAG Preview — read-only visualization */}
           {wizard.attacks.length > 0 && (
-            <div className="rounded-lg border bg-card p-4">
-              <h3 className="mb-3 font-medium">DAG Preview</h3>
-              <div className="h-[300px]">
+            <div className="rounded-md border border-surface-0 bg-surface-0/40 p-4">
+              <h3 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                DAG Preview
+              </h3>
+              <div className="h-[300px] rounded bg-crust">
                 <ReactFlow
                   nodes={buildNodes(wizard.attacks)}
                   edges={buildEdges(wizard.attacks)}
@@ -603,21 +578,12 @@ export function CampaignCreatePage() {
           )}
 
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => wizard.setStep(1)}
-              className="rounded-md border px-4 py-2 text-sm hover:bg-accent"
-            >
+            <Button variant="secondary" onClick={() => wizard.setStep(1)}>
               Back
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-            >
-              {submitting ? 'Creating...' : 'Create Campaign'}
-            </button>
+            </Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting ? 'Creating\u2026' : 'Create Campaign'}
+            </Button>
           </div>
         </div>
       )}

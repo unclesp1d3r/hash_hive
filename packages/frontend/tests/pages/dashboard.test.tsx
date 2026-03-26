@@ -88,8 +88,8 @@ describe('DashboardPage', () => {
     setAuthenticatedWithProject(1);
     renderWithProviders(<DashboardPage />);
 
-    // All stat cards should show '--' placeholder
-    const placeholders = screen.getAllByText('--');
+    // All stat cards should show em dash placeholder
+    const placeholders = screen.getAllByText('\u2014');
     expect(placeholders.length).toBe(4);
   });
 

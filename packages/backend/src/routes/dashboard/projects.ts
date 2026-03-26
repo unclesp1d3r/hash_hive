@@ -31,22 +31,22 @@ const createProjectSchema = z.object({
     .min(1)
     .max(255)
     .regex(/^[a-z0-9-]+$/),
-  settings: z.record(z.unknown()).optional(),
+  settings: z.record(z.string(), z.unknown()).optional(),
 });
 
 const updateProjectSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   description: z.string().optional(),
-  settings: z.record(z.unknown()).optional(),
+  settings: z.record(z.string(), z.unknown()).optional(),
 });
 
 const addMemberSchema = z.object({
   userId: z.number().int().positive(),
-  roles: z.array(z.enum(['admin', 'operator', 'analyst', 'agent_owner'])).min(1),
+  roles: z.array(z.enum(['admin', 'contributor', 'viewer'])).min(1),
 });
 
 const updateRolesSchema = z.object({
-  roles: z.array(z.enum(['admin', 'operator', 'analyst', 'agent_owner'])).min(1),
+  roles: z.array(z.enum(['admin', 'contributor', 'viewer'])).min(1),
 });
 
 // GET /projects — list projects for current user

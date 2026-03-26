@@ -4,7 +4,7 @@ This file provides guidance to AI coding assistants (including WARP) when workin
 
 ## Project overview
 
-HashHive is a 2026 TypeScript reimplementation of [CipherSwarm](https://github.com/unclesp1d3r/CipherSwarm), a distributed hash cracking management system originally built on Ruby on Rails with PostgreSQL. It orchestrates hashcat across multiple agents in a private lab environment (7 cracking rigs), providing:
+HashHive is a 2026 TypeScript reimplementation of [CipherSwarm](https://github.com/unclesp1d3r/CipherSwarm), a distributed hash cracking management system originally built on Ruby on Rails with PostgreSQL. It orchestrates hashcat across multiple agents in a private lab environment, providing:
 
 - Agent management and monitoring
 - Campaign and attack orchestration with DAG-based dependencies
@@ -13,7 +13,9 @@ HashHive is a 2026 TypeScript reimplementation of [CipherSwarm](https://github.c
 - Real-time dashboards for agents, campaigns, and crack results
 - Project-scoped multi-tenancy and role-based access control
 
-**Production context:** This system runs in a private lab, not publicly exposed. The agent API handles periodic bursts when rigs submit cracked hashes, request work units, and send heartbeats. The web dashboard serves 1-3 concurrent human users. Optimize for correctness, clarity, and developer experience — not premature scale.
+**Production context:** This system runs in an **air-gapped private lab** (no Internet access). The only supported deployment method is **Docker Compose** — all services (backend, frontend, PostgreSQL, Redis, MinIO) run as containers that MUST operate without any external network connectivity. All images, dependencies, and resources must be fully self-contained. Development and testing occur on Internet-connected systems, but no runtime functionality may depend on external access.
+
+**Production scale:** Minimum 10 cracking nodes with ~25x RTX 4090 GPU capacity. Individual attack resources (wordlists, masklists, rulelists) can exceed **100 GB** — all upload, storage, download, and streaming pipelines must handle files at this scale without full-file buffering. The agent API handles periodic bursts when rigs submit cracked hashes, request work units, and send heartbeats. The web dashboard serves 1-3 concurrent human users. Optimize for correctness, clarity, and developer experience — not premature scale.
 
 ## Repository layout
 
@@ -127,16 +129,18 @@ The backend is a Bun + Hono + TypeScript service:
 - **Database (`src/db/`)** — Drizzle client setup and connection config
 - **Middleware (`src/middleware/`)** — auth, validation, error handling
 
-### Drizzle ORM raw SQL patterns
-
-- `db.execute(sql`...`)` with postgres-js returns array-like result — access rows as `result[0]`, not `result.rows[0]`
-- Drizzle doesn't support `FOR UPDATE SKIP LOCKED` natively — use raw `db.execute(sql`...`)` with a CTE for atomic claim patterns
-
 ### RBAC middleware
 
+**Roles:** `admin`, `contributor`, `viewer` (renamed from operator/analyst/agent_owner in March 2026). Frontend uses `Permission` constants from `packages/frontend/src/lib/permissions.ts` — components reference capabilities (`Permission.CAMPAIGN_CREATE`), never role strings.
+
 Two RBAC middleware variants in `src/middleware/rbac.ts`:
+
 - `requireProjectAccess()` / `requireRole()` — reads projectId from JWT context (`currentUser.projectId`); used by most dashboard routes
 - `requireParamProjectAccess()` / `requireParamProjectRole()` — reads projectId from URL param (`c.req.param('projectId')`); used by project management routes like `GET /projects/:projectId`
+
+### Chunked upload protocol
+
+Large file uploads (>100MB) use S3 multipart via 5 endpoints under `/api/v1/dashboard/resources/upload/`. Frontend `ChunkedUploadManager` in `packages/frontend/src/lib/chunked-upload/` splits files into 64MB chunks, uploads sequentially with retry, persists state to localStorage for resumption. Backend streams each chunk to S3 without full-file buffering (128MB memory bound). Files <=100MB use existing single-request upload path.
 
 ### API surfaces
 
@@ -204,6 +208,7 @@ bun type-check                   # TypeScript type checking
 bun --filter backend db:generate # Generate Drizzle migrations
 bun --filter backend db:migrate  # Run migrations
 bun --filter backend db:studio   # Open Drizzle Studio
+bun --filter backend db:seed    # Seed admin user (admin@hashhive.local / changeme123)
 ```
 
 ### Local CI check
@@ -249,52 +254,18 @@ Test the hot paths first: hash submission ingestion, work unit distribution, age
 
 - `docs/v2_rewrite_implementation_plan/*` — historical context from CipherSwarm migration
 
-## TypeScript strict mode gotchas
+## Gotchas
 
-The tsconfig.base.json enables maximum strictness. Key patterns:
+See [GOTCHAS.md](GOTCHAS.md) for hard-won lessons organized by domain: TypeScript strict mode, Hono, Drizzle ORM, service layer patterns, and testing infrastructure (bun:test mock patterns, frontend test utilities, etc.).
 
-- **`exactOptionalPropertyTypes`**: Use `...(val ? { key: val } : {})` spread, never `key: val ?? undefined`
-- **`noUncheckedIndexedAccess`**: All `arr[i]` returns `T | undefined` — guard with null check before use
-- **`noPropertyAccessFromIndexSignature`**: Use `obj['key']` bracket notation for index signatures
-- **Biome `useLiteralKeys: "off"`**: MUST stay off — conflicts with the TS setting above
-- **`z.preprocess` + React Hook Form**: `z.preprocess` widens input type to `unknown`, breaking `zodResolver` under strict mode. Define the form type as an explicit interface (not `z.infer`) and cast: `zodResolver(schema) as unknown as Resolver<FormType>`
+## Frontend design direction
 
-## Hono error handling
+See [`.impeccable.md`](.impeccable.md) for the full design context. Key points:
 
-The `app.onError()` handler must check `instanceof HTTPException` before returning a generic 500:
-
-```typescript
-app.onError((err, c) => {
-  if (err instanceof HTTPException) return err.getResponse();
-  // ... generic error handling
-});
-```
-
-Without this, auth middleware 401 responses get swallowed into 500s.
-
-## Testing infrastructure
-
-- Backend contract tests validate auth (401), validation (400), and camelCase response shapes (200) without a running DB
-- Drizzle mock chains must match production code — e.g. `insert().values()` returning `{ onConflictDoNothing: mock() }`
-- BullMQ worker test mocks: if worker does `db.select()`, mock must return chainable `{ from: mock(() => chain), where: mock(() => Promise.resolve([])) }`
-- **bun:test `mock.module()`**: Mock dependencies before `await import()` of module under test — used for service tests that need DB/queue mocks
-- **Route-level contract tests**: When mocking for `import { app }`, mock ALL transitive service dependencies (e.g., `tasks.js` → `events.js` + `campaigns.js`). Mock `db.execute` with snake_case rows to validate the camelCase mapping, not the service function directly.
-- **Separate test files for conflicting mocks**: If a module is already imported at top level in one test file (e.g., `resolveGenerationStrategy` in `campaigns.test.ts`), tests needing full module mocks for the same source must go in a separate test file to avoid import-order conflicts.
-- Frontend tests use `happy-dom` with manual global injection (not `@happy-dom/global-registrator`)
-- Always call `afterEach(cleanup)` in Testing Library tests — DOM persists in happy-dom
-- Test fixtures: `packages/backend/tests/fixtures.ts` — factory functions + token helpers
-- Biome overrides: `**/scripts/**` disables `noConsole` and `noExplicitAny` for CLI tools
-
-### Frontend test utilities
-
-- `tests/mocks/fetch.ts` — `mockFetch()` replaces global fetch with route-to-response mapping; call `restoreFetch()` in afterEach
-- `tests/mocks/websocket.ts` — `installMockWebSocket()` replaces global WebSocket; provides `simulateOpen/Close/Message`
-- `tests/fixtures/api-responses.ts` — factory functions: `mockLoginResponse`, `mockMeResponse`, `mockDashboardStats`
-- `tests/utils/store-reset.ts` — `resetAllStores()` resets all Zustand stores; call in afterEach
-- `tests/test-utils.tsx` — `renderWithProviders()` (single component), `renderWithRouter()` (navigation tests), `cleanupAll()` (DOM + stores)
-- **401 gotcha**: `api.ts` globally intercepts all 401 responses as "Session expired" — login tests must use 400 for invalid credentials
-- `@testing-library/user-event` is NOT installed — use `fireEvent` from `@testing-library/react`
-- **Run tests per-package**: Use `bun --filter @hashhive/frontend test` / `bun --filter @hashhive/backend test` — root `bun test` skips per-package `bunfig.toml` (happy-dom), causing `document is not defined`
+- **Dark only** — Catppuccin Macchiato palette (`#24273a` base, `#1e2030` surface, `#f5a97f` peach accent)
+- **Personality**: Precise, Powerful, Dark — purpose-built security tool, not a generic admin panel
+- **References**: Linear/Vercel (polish), Grafana/Datadog (data density), Hack The Box (security identity)
+- **Principles**: Data-forward, precision over decoration, dark-native, status at a glance, crafted not themed
 
 ## AI agent notes
 
@@ -302,3 +273,10 @@ Without this, auth middleware 401 responses get swallowed into 500s.
 - `.kiro/steering/tech.md` contains explicit constraints on what NOT to introduce. Respect these constraints.
 - Prefer mermaid diagrams for architectural or sequence diagrams in documentation.
 - Agents are the primary API consumer. Never break the agent API to improve the dashboard experience.
+
+## Issue tracking
+
+- GitHub Issues on `EvilBit-Labs/hash_hive` — 25 open issues (#93-#116 gap analysis + #38 Control API)
+- Labels: `priority:critical/high/medium/low`, `SP:N` (fibonacci), feature area labels, `gap-analysis`
+- Every issue body ends with a `## Dependencies` section listing blockers and blocked issues
+- Sprint execution order: see dependency graph in `docs/hash_hive_gap_analysis.md`

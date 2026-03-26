@@ -6,7 +6,7 @@
 
 - [AGENTS](AGENTS.md): AI assistant guidance for working with this codebase
 - [CONTRIBUTING](CONTRIBUTING.md): Contribution guidelines and development workflow
-- [MERN Guidance](MERN_GUIDANCE.md): Detailed technical guidance for TypeScript stack with Bun, Hono, PostgreSQL, React 19, and Turborepo
+- [GOTCHAS](GOTCHAS.md): Hard-won lessons, edge cases, and pitfalls organized by domain
 - [README](README.md): Main project documentation and getting started guide
 - [SECURITY](SECURITY.md): Security policies, vulnerability reporting, and deployment best practices
 
@@ -14,14 +14,12 @@
 
 - [Product Overview](.kiro/steering/product.md): Core capabilities, target users, and operational context
 - [Project Structure](.kiro/steering/structure.md): Repository layout, backend architecture, and naming conventions
-- [Technical Stack](.kiro/steering/tech.md): Bun + PostgreSQL + Hono architecture, libraries, and commands
+- [Technical Stack](.kiro/steering/tech.md): Bun + Hono + PostgreSQL architecture, libraries, and commands
 
 ## Implementation Plans
 
-- [System Design](.kiro/specs/mern-migration/design.md): Architecture, data models, and API designs
-- [Migration Requirements](.kiro/specs/mern-migration/requirements.md): TypeScript stack migration requirements from CipherSwarm
-- [Task 1 Summary](.kiro/specs/mern-migration/TASK_1_SUMMARY.md): Project foundation and infrastructure setup completion
-- [Task 2.2 Summary](.kiro/specs/mern-migration/TASK_2.2_SUMMARY.md): Database connection and base models implementation completion
+- [Migration Requirements](.kiro/specs/mern-migration/requirements.md): Functional requirements with UI specs, RBAC, campaign wizard, and real-time monitoring
+- [System Design](.kiro/specs/mern-migration/design.md): Architecture, service modules, API endpoints, data models, and correctness properties
 - [Task Breakdown](.kiro/specs/mern-migration/tasks.md): Implementation task list with progress tracking
 
 ## Implementation Guides

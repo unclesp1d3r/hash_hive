@@ -1,4 +1,9 @@
 import { useState } from 'react';
+import { Button, buttonVariants } from '../components/ui/button';
+import { EmptyState } from '../components/ui/empty-state';
+import { Input } from '../components/ui/input';
+import { PageHeader } from '../components/ui/page-header';
+import { Table, TableBody, TableHead, TableRow, Td, Th } from '../components/ui/table';
 import { useResults, useResultsExportUrl } from '../hooks/use-results';
 import { useUiStore } from '../stores/ui';
 
@@ -19,9 +24,9 @@ export function ResultsPage() {
 
   if (!selectedProjectId) {
     return (
-      <div className="space-y-6">
-        <h2 className="text-2xl font-bold">Cracked Results</h2>
-        <p className="text-muted-foreground">Select a project to view results.</p>
+      <div className="space-y-4">
+        <PageHeader>Cracked Results</PageHeader>
+        <EmptyState message="Select a project to view results." />
       </div>
     );
   }
@@ -33,12 +38,11 @@ export function ResultsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Cracked Results</h2>
+        <PageHeader>Cracked Results</PageHeader>
         <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Search hashes or plaintexts..."
-            className="rounded-md border bg-background px-3 py-1.5 text-sm"
+          <Input
+            placeholder="Search hashes or plaintexts\u2026"
+            className="w-auto px-3 py-1.5 text-xs"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -46,11 +50,7 @@ export function ResultsPage() {
             }}
           />
           {exportUrl && (
-            <a
-              href={exportUrl}
-              download
-              className="rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
-            >
+            <a href={exportUrl} download className={buttonVariants('secondary', 'sm')}>
               Export CSV
             </a>
           )}
@@ -58,63 +58,61 @@ export function ResultsPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground">Loading results...</p>
+        <EmptyState message="Loading results\u2026" />
       ) : !data?.results.length ? (
-        <p className="text-muted-foreground">No cracked results found.</p>
+        <EmptyState message="No cracked results found." />
       ) : (
         <>
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b bg-muted/50">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Hash</th>
-                  <th className="px-4 py-3 font-medium">Plaintext</th>
-                  <th className="px-4 py-3 font-medium">Campaign</th>
-                  <th className="px-4 py-3 font-medium">Hash List</th>
-                  <th className="px-4 py-3 font-medium">Cracked At</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.results.map((r) => (
-                  <tr key={r.id} className="border-b last:border-b-0">
-                    <td className="max-w-[200px] truncate px-4 py-3 font-mono text-xs">
-                      {r.hashValue}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs font-medium">
-                      {r.plaintext ?? '--'}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.campaignName}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{r.hashListName}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {r.crackedAt ? new Date(r.crackedAt).toLocaleString() : '--'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHead>
+              <tr>
+                <Th>Hash</Th>
+                <Th>Plaintext</Th>
+                <Th>Campaign</Th>
+                <Th>Hash List</Th>
+                <Th>Cracked At</Th>
+              </tr>
+            </TableHead>
+            <TableBody>
+              {data.results.map((r) => (
+                <TableRow key={r.id}>
+                  <Td className="max-w-[200px] truncate font-mono text-[11px] text-muted-foreground">
+                    {r.hashValue}
+                  </Td>
+                  <Td className="font-mono text-[11px] font-medium text-success">
+                    {r.plaintext ?? '\u2014'}
+                  </Td>
+                  <Td className="text-xs text-muted-foreground">{r.campaignName}</Td>
+                  <Td className="text-xs text-muted-foreground">{r.hashListName}</Td>
+                  <Td className="text-xs text-muted-foreground">
+                    {r.crackedAt ? new Date(r.crackedAt).toLocaleString() : '\u2014'}
+                  </Td>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
 
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">
-              Showing {offset + 1}–{Math.min(offset + limit, total)} of {total}
+              {offset + 1}\u2013{Math.min(offset + limit, total)} of {total}
             </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
+            <div className="flex gap-1.5">
+              <Button
+                variant="secondary"
+                size="sm"
                 disabled={!hasPrev}
                 onClick={() => setOffset(Math.max(0, offset - limit))}
-                className="rounded-md border px-3 py-1 text-sm hover:bg-accent disabled:opacity-50"
               >
                 Previous
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 disabled={!hasNext}
                 onClick={() => setOffset(offset + limit)}
-                className="rounded-md border px-3 py-1 text-sm hover:bg-accent disabled:opacity-50"
               >
                 Next
-              </button>
+              </Button>
             </div>
           </div>
         </>

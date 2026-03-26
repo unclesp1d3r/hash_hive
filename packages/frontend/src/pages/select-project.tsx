@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router';
+import logoSvg from '../assets/logo.svg';
+import { EmptyState } from '../components/ui/empty-state';
+import { ErrorBanner } from '../components/ui/error-banner';
 import { useAuthStore } from '../stores/auth';
 import { useUiStore } from '../stores/ui';
 
@@ -11,8 +14,8 @@ export function SelectProjectPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+      <div className="flex h-screen items-center justify-center bg-crust">
+        <EmptyState message="Loading\u2026" />
       </div>
     );
   }
@@ -41,21 +44,23 @@ export function SelectProjectPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="w-full max-w-md space-y-6 rounded-lg border bg-card p-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Select Project</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Choose a project to continue</p>
+    <div className="flex min-h-screen items-center justify-center bg-crust">
+      <div className="w-full max-w-md space-y-6 rounded-lg border border-surface-0/50 bg-mantle p-8">
+        <div className="flex flex-col items-center gap-3">
+          <img src={logoSvg} alt="" className="h-10 w-10" />
+          <div className="text-center">
+            <h1 className="text-xl font-semibold tracking-tight">Select Project</h1>
+            <p className="mt-1 text-xs text-muted-foreground">Choose a project to continue</p>
+          </div>
         </div>
 
-        {error && (
-          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
-        )}
+        {error && <ErrorBanner message={error} />}
 
         {projects.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground">
-            No projects available. Contact an administrator.
-          </p>
+          <EmptyState
+            message="No projects available. Contact an administrator."
+            className="text-center"
+          />
         ) : (
           <div className="space-y-2">
             {projects.map((project) => (
@@ -64,11 +69,11 @@ export function SelectProjectPage() {
                 type="button"
                 disabled={selecting}
                 onClick={() => handleSelect(project.projectId)}
-                className="w-full rounded-md border bg-background px-4 py-3 text-left transition-colors hover:bg-accent disabled:opacity-50"
+                className="w-full rounded-md border border-surface-0 bg-background px-4 py-3 text-left transition-all hover:border-primary/30 hover:bg-surface-0/40 disabled:opacity-50"
               >
-                <div className="font-medium">{project.projectName}</div>
-                <div className="text-xs text-muted-foreground">
-                  Roles: {project.roles.join(', ')}
+                <div className="text-sm font-medium text-foreground">{project.projectName}</div>
+                <div className="mt-0.5 text-[11px] text-muted-foreground">
+                  {project.roles.join(', ')}
                 </div>
               </button>
             ))}

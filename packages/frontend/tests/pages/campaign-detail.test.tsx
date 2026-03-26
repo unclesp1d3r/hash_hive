@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'bun:test';
 import { CampaignDetailPage } from '../../src/pages/campaign-detail';
+import { useAuthStore } from '../../src/stores/auth';
 import { useUiStore } from '../../src/stores/ui';
 import { mockCampaignDetailResponse } from '../fixtures/api-responses';
 import { mockFetch, restoreFetch } from '../mocks/fetch';
@@ -14,6 +15,19 @@ afterEach(() => {
 
 function selectProject(projectId = 1) {
   useUiStore.setState({ selectedProjectId: projectId });
+}
+
+function setAuthUser(roles: string[] = ['admin'], projectId = 1) {
+  useAuthStore.setState({
+    user: {
+      id: 1,
+      email: 'test@test.com',
+      name: 'Test User',
+      projects: [{ projectId, projectName: 'Test Project', roles }],
+    },
+    isAuthenticated: true,
+    isLoading: false,
+  });
 }
 
 describe('CampaignDetailPage', () => {
@@ -31,10 +45,10 @@ describe('CampaignDetailPage', () => {
       initialRoute: '/campaigns/1',
     });
 
-    expect(screen.getByText('Loading campaign...')).toBeDefined();
+    expect(screen.getByText('Loading campaign\\u2026')).toBeDefined();
   });
 
-  it('shows not found when API returns no campaign', async () => {
+  it('shows error when API returns 404', async () => {
     fetchMock = mockFetch({
       '/dashboard/campaigns/99': { status: 404, body: { error: { message: 'Not found' } } },
     });
@@ -45,7 +59,7 @@ describe('CampaignDetailPage', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Campaign not found.')).toBeDefined();
+      expect(screen.getByRole('alert')).toBeDefined();
     });
   });
 
@@ -84,6 +98,7 @@ describe('CampaignDetailPage', () => {
     });
 
     selectProject();
+    setAuthUser();
     renderWithRouter([{ path: '/campaigns/:id', element: <CampaignDetailPage /> }], {
       initialRoute: '/campaigns/1',
     });
@@ -103,6 +118,7 @@ describe('CampaignDetailPage', () => {
     });
 
     selectProject();
+    setAuthUser();
     renderWithRouter([{ path: '/campaigns/:id', element: <CampaignDetailPage /> }], {
       initialRoute: '/campaigns/1',
     });
@@ -125,6 +141,7 @@ describe('CampaignDetailPage', () => {
     });
 
     selectProject();
+    setAuthUser();
     renderWithRouter([{ path: '/campaigns/:id', element: <CampaignDetailPage /> }], {
       initialRoute: '/campaigns/1',
     });
@@ -150,6 +167,7 @@ describe('CampaignDetailPage', () => {
     });
 
     selectProject();
+    setAuthUser();
     renderWithRouter([{ path: '/campaigns/:id', element: <CampaignDetailPage /> }], {
       initialRoute: '/campaigns/1',
     });
@@ -191,7 +209,7 @@ describe('CampaignDetailPage', () => {
       expect(screen.getByText('NTLM Campaign')).toBeDefined();
     });
 
-    const backLink = screen.getByText('Back to campaigns');
+    const backLink = screen.getByText('\\u2190 Back to campaigns');
     expect(backLink.closest('a')?.getAttribute('href')).toBe('/campaigns');
   });
 
@@ -219,6 +237,6 @@ describe('CampaignDetailPage', () => {
     expect(screen.getByText('running')).toBeDefined();
     expect(screen.getByText('#5')).toBeDefined();
     expect(screen.getByText('2, 3')).toBeDefined();
-    expect(screen.getByText('--')).toBeDefined();
+    expect(screen.getByText('\u2014')).toBeDefined();
   });
 });

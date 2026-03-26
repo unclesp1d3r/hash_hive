@@ -29,17 +29,21 @@ function setupResourceMocks(overrides: Record<string, { status?: number; body?: 
     },
     '/dashboard/resources/wordlists': {
       status: 200,
-      body: mockResourcesResponse({ resources: [{ name: 'rockyou.txt' }] }),
+      body: {
+        wordlists: mockResourcesResponse({ resources: [{ name: 'rockyou.txt' }] }).resources,
+      },
       ...overrides['/dashboard/resources/wordlists'],
     },
     '/dashboard/resources/rulelists': {
       status: 200,
-      body: mockResourcesResponse({ resources: [{ name: 'best64.rule' }] }),
+      body: {
+        rulelists: mockResourcesResponse({ resources: [{ name: 'best64.rule' }] }).resources,
+      },
       ...overrides['/dashboard/resources/rulelists'],
     },
     '/dashboard/resources/masklists': {
       status: 200,
-      body: mockResourcesResponse({ resources: [{ name: '?d?d?d?d' }] }),
+      body: { masklists: mockResourcesResponse({ resources: [{ name: '?d?d?d?d' }] }).resources },
       ...overrides['/dashboard/resources/masklists'],
     },
     ...overrides,
@@ -134,7 +138,7 @@ describe('ResourcesPage', () => {
     fireEvent.click(hashDetectTab);
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Enter a hash value...')).toBeDefined();
+      expect(screen.getByPlaceholderText('Paste a hash value\\u2026')).toBeDefined();
     });
 
     expect(screen.getByText('Detect Type')).toBeDefined();
@@ -163,10 +167,10 @@ describe('ResourcesPage', () => {
     fireEvent.click(hashDetectTab);
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Enter a hash value...')).toBeDefined();
+      expect(screen.getByPlaceholderText('Paste a hash value\\u2026')).toBeDefined();
     });
 
-    const input = screen.getByPlaceholderText('Enter a hash value...') as HTMLInputElement;
+    const input = screen.getByPlaceholderText('Paste a hash value\\u2026') as HTMLInputElement;
     fireEvent.change(input, { target: { value: '5f4dcc3b5aa765d61d8327deb882cf99' } });
 
     const detectButton = screen.getByText('Detect Type');

@@ -10,16 +10,16 @@ describe('ConnectionIndicator', () => {
 
     expect(screen.getByText('Live')).toBeDefined();
     // Check for green dot
-    const dot = document.querySelector('.bg-green-500');
+    const dot = document.querySelector('.bg-success');
     expect(dot).not.toBeNull();
   });
 
-  it('shows "Polling..." when disconnected', () => {
+  it('shows "Reconnecting…" when disconnected', () => {
     renderWithProviders(<ConnectionIndicator connected={false} />);
 
-    expect(screen.getByText('Polling...')).toBeDefined();
+    expect(screen.getByText('Reconnecting\u2026')).toBeDefined();
     // Check for red dot
-    const dot = document.querySelector('.bg-red-500');
+    const dot = document.querySelector('.bg-destructive');
     expect(dot).not.toBeNull();
   });
 });
