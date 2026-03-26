@@ -271,3 +271,10 @@ See [`.impeccable.md`](.impeccable.md) for the full design context. Key points:
 - `.kiro/steering/tech.md` contains explicit constraints on what NOT to introduce. Respect these constraints.
 - Prefer mermaid diagrams for architectural or sequence diagrams in documentation.
 - Agents are the primary API consumer. Never break the agent API to improve the dashboard experience.
+
+## Issue tracking
+
+- GitHub Issues on `EvilBit-Labs/hash_hive` — 25 open issues (#93-#116 gap analysis + #38 Control API)
+- Labels: `priority:critical/high/medium/low`, `SP:N` (fibonacci), feature area labels, `gap-analysis`
+- Every issue body ends with a `## Dependencies` section listing blockers and blocked issues
+- Sprint execution order: see dependency graph in `docs/hash_hive_gap_analysis.md`
