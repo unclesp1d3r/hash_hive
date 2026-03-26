@@ -2,21 +2,27 @@ import { maskLists, ruleLists, wordLists } from '@hashhive/shared';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { logger } from '../../config/logger.js';
 import { requireSession } from '../../middleware/auth.js';
 import { requireProjectAccess, requireRole } from '../../middleware/rbac.js';
 import { guessHashType } from '../../services/hash-analysis.js';
 import {
+  abortChunkedUpload,
+  completeChunkedUpload,
   createHashList,
   createResource,
+  getChunkedUploadStatus,
   getHashItems,
   getHashListById,
   getResourceById,
   getResourcePresignedUrl,
   importHashList,
+  initiateChunkedUpload,
   listHashLists,
   listHashTypes,
   listResources,
   type ResourceTable,
+  uploadChunkPart,
   uploadHashListFile,
   uploadResourceFile,
 } from '../../services/resources.js';
@@ -281,5 +287,166 @@ function createResourceRoutes(prefix: string, table: ResourceTable) {
 createResourceRoutes('wordlists', wordLists);
 createResourceRoutes('rulelists', ruleLists);
 createResourceRoutes('masklists', maskLists);
+
+// ─── Chunked Upload (S3 Multipart) ──────────────────────────────────
+// These endpoints do NOT use zValidator for the body on PUT because
+// the request body is raw binary data (not JSON). Body-parsing
+// middleware would consume the stream before we can forward it to S3.
+
+const initiateUploadSchema = z.object({
+  resourceType: z.enum(['hash-lists', 'wordlists', 'rulelists', 'masklists']),
+  name: z.string().min(1).max(255),
+  fileSize: z.number().int().positive().max(500_000_000_000),
+  contentType: z.string().optional(),
+});
+
+resourceRoutes.post(
+  '/upload/initiate',
+  requireRole('admin', 'contributor'),
+  zValidator('json', initiateUploadSchema),
+  async (c) => {
+    const data = c.req.valid('json');
+    const { projectId } = c.get('currentUser');
+    if (!projectId) {
+      return c.json(
+        { error: { code: 'PROJECT_NOT_SELECTED', message: 'No project selected' } },
+        400
+      );
+    }
+
+    try {
+      const result = await initiateChunkedUpload({ ...data, projectId });
+      return c.json(result, 201);
+    } catch (err) {
+      logger.error({ err }, 'Failed to initiate chunked upload');
+      return c.json(
+        { error: { code: 'UPLOAD_INIT_FAILED', message: 'Failed to initiate upload' } },
+        500
+      );
+    }
+  }
+);
+
+resourceRoutes.put(
+  '/upload/:uploadId/part/:partNumber',
+  requireRole('admin', 'contributor'),
+  async (c) => {
+    const uploadId = c.req.param('uploadId');
+    const partNumber = Number(c.req.param('partNumber'));
+    const resourceId = Number(c.req.query('resourceId'));
+    const resourceType = c.req.query('resourceType');
+
+    if (!uploadId || !partNumber || !resourceId || !resourceType) {
+      return c.json(
+        {
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'uploadId, partNumber, resourceId, and resourceType are required',
+          },
+        },
+        400
+      );
+    }
+
+    // Read the raw body as a Uint8Array — do NOT use c.req.json() or c.req.parseBody()
+    const body = await c.req.arrayBuffer();
+    const chunk = new Uint8Array(body);
+
+    if (chunk.byteLength === 0) {
+      return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Request body is empty' } }, 400);
+    }
+
+    try {
+      const result = await uploadChunkPart(uploadId, partNumber, chunk, resourceId, resourceType);
+      return c.json(result);
+    } catch (err) {
+      logger.error({ err, uploadId, partNumber }, 'Failed to upload part');
+      return c.json(
+        { error: { code: 'UPLOAD_PART_FAILED', message: 'Failed to upload part' } },
+        500
+      );
+    }
+  }
+);
+
+const completeUploadSchema = z.object({
+  parts: z
+    .array(
+      z.object({
+        partNumber: z.number().int().positive(),
+        etag: z.string().min(1),
+      })
+    )
+    .min(1),
+  resourceId: z.number().int().positive(),
+  resourceType: z.enum(['hash-lists', 'wordlists', 'rulelists', 'masklists']),
+});
+
+resourceRoutes.post(
+  '/upload/:uploadId/complete',
+  requireRole('admin', 'contributor'),
+  zValidator('json', completeUploadSchema),
+  async (c) => {
+    const uploadId = c.req.param('uploadId');
+    const { parts, resourceId, resourceType } = c.req.valid('json');
+
+    try {
+      const result = await completeChunkedUpload(uploadId, parts, resourceId, resourceType);
+      return c.json(result);
+    } catch (err) {
+      logger.error({ err, uploadId }, 'Failed to complete chunked upload');
+      return c.json(
+        { error: { code: 'UPLOAD_COMPLETE_FAILED', message: 'Failed to complete upload' } },
+        500
+      );
+    }
+  }
+);
+
+resourceRoutes.delete('/upload/:uploadId', requireRole('admin', 'contributor'), async (c) => {
+  const uploadId = c.req.param('uploadId');
+  const resourceId = Number(c.req.query('resourceId'));
+  const resourceType = c.req.query('resourceType');
+
+  if (!uploadId || !resourceId || !resourceType) {
+    return c.json(
+      {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'uploadId, resourceId, and resourceType are required',
+        },
+      },
+      400
+    );
+  }
+
+  await abortChunkedUpload(uploadId, resourceId, resourceType);
+  return c.json({ acknowledged: true });
+});
+
+resourceRoutes.get('/upload/:uploadId/status', requireRole('admin', 'contributor'), async (c) => {
+  const uploadId = c.req.param('uploadId');
+  const resourceId = Number(c.req.query('resourceId'));
+  const resourceType = c.req.query('resourceType');
+
+  if (!uploadId || !resourceId || !resourceType) {
+    return c.json(
+      {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'uploadId, resourceId, and resourceType are required',
+        },
+      },
+      400
+    );
+  }
+
+  const result = await getChunkedUploadStatus(uploadId, resourceId, resourceType);
+  if (!result) {
+    return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Upload not found' } }, 404);
+  }
+
+  return c.json({ uploadId, ...result });
+});
 
 export { resourceRoutes };

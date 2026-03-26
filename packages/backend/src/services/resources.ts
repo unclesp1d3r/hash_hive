@@ -1,16 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
-import {
-  hashItems,
-  hashLists,
-  hashTypes,
-  type maskLists,
-  type ruleLists,
-  type wordLists,
-} from '@hashhive/shared';
+import { hashItems, hashLists, hashTypes, maskLists, ruleLists, wordLists } from '@hashhive/shared';
 import { desc, eq, sql } from 'drizzle-orm';
 import { env } from '../config/env.js';
-import { getPresignedUrl, uploadFile } from '../config/storage.js';
+import { logger } from '../config/logger.js';
+import {
+  abortMultipartUpload,
+  completeMultipartUpload,
+  createMultipartUpload,
+  getPresignedUrl,
+  listParts,
+  uploadFile,
+  uploadPart,
+} from '../config/storage.js';
 import { db } from '../db/index.js';
 
 // ─── Hash Types ──────────────────────────────────────────────────────
@@ -229,4 +231,237 @@ export async function getResourcePresignedUrl(fileRef: {
     bucket: fileRef.bucket,
     ...(fileRef.name ? { filename: fileRef.name } : {}),
   });
+}
+
+/**
+ * Generate a presigned download URL with extended expiry for large files.
+ * Used by agents to download resources directly from S3.
+ */
+export async function getAgentDownloadUrl(
+  resourceType: string,
+  resourceId: number
+): Promise<{ url: string; expiresIn: number } | null> {
+  const tableMap: Record<string, ResourceTable | typeof hashLists> = {
+    'hash-lists': hashLists,
+    wordlists: wordLists,
+    rulelists: ruleLists,
+    masklists: maskLists,
+  };
+
+  const table = tableMap[resourceType];
+  if (!table) return null;
+
+  const [row] = await db.select().from(table).where(eq(table.id, resourceId)).limit(1);
+  if (!row) return null;
+
+  const fileRef = row.fileRef as { bucket?: string; key?: string; name?: string } | null;
+  if (!fileRef?.bucket || !fileRef?.key) return null;
+
+  const expiresIn = 6 * 3600; // 6 hours for large files
+  const url = await getPresignedUrl(fileRef.key, expiresIn, {
+    bucket: fileRef.bucket,
+    ...(fileRef.name ? { filename: fileRef.name } : {}),
+  });
+
+  return { url, expiresIn };
+}
+
+// ─── Chunked Upload (S3 Multipart) ─────────────────────────────────
+
+const RESOURCE_TYPE_TABLE: Record<string, ResourceTable> = {
+  wordlists: wordLists,
+  rulelists: ruleLists,
+  masklists: maskLists,
+};
+
+const DEFAULT_PART_SIZE = 64 * 1024 * 1024; // 64 MB
+
+export async function initiateChunkedUpload(data: {
+  resourceType: string;
+  name: string;
+  fileSize: number;
+  projectId: number;
+  contentType?: string | undefined;
+}): Promise<{
+  uploadId: string;
+  resourceId: number;
+  partSize: number;
+  key: string;
+}> {
+  const { resourceType, name, fileSize, projectId, contentType } = data;
+
+  // Hash lists use the hashLists table with different create logic
+  const isHashList = resourceType === 'hash-lists';
+  const table: ResourceTable | typeof hashLists | undefined = isHashList
+    ? hashLists
+    : RESOURCE_TYPE_TABLE[resourceType];
+
+  if (!table) {
+    throw new Error(`Unknown resource type: ${resourceType}`);
+  }
+
+  // Create DB record
+  let resourceId: number;
+  if (isHashList) {
+    const hl = await createHashList({ projectId, name, source: 'upload' });
+    if (!hl) throw new Error('Failed to create hash list');
+    resourceId = hl.id;
+  } else {
+    const row = await createResource(table as ResourceTable, { projectId, name });
+    if (!row) throw new Error(`Failed to create ${resourceType}`);
+    resourceId = row.id;
+  }
+
+  // Generate S3 key
+  const prefix = isHashList ? 'hash-lists' : resourceType;
+  const key = `${projectId}/${prefix}/${randomUUID()}`;
+  const ct = contentType ?? 'application/octet-stream';
+
+  // Initiate S3 multipart upload
+  const s3UploadId = await createMultipartUpload(key, ct);
+  await db
+    .update(table)
+    .set({
+      status: 'uploading',
+      fileRef: {
+        bucket: env.S3_BUCKET,
+        key,
+        contentType: ct,
+        name,
+        s3UploadId,
+        fileSize,
+      },
+      updatedAt: new Date(),
+    })
+    .where(eq(table.id, resourceId));
+
+  logger.info({ resourceId, resourceType, s3UploadId, fileSize }, 'Chunked upload initiated');
+
+  return { uploadId: s3UploadId, resourceId, partSize: DEFAULT_PART_SIZE, key };
+}
+
+export async function uploadChunkPart(
+  s3UploadId: string,
+  partNumber: number,
+  body: Uint8Array,
+  resourceId: number,
+  resourceType: string
+): Promise<{ etag: string }> {
+  // Look up the S3 key from the resource's fileRef
+  const isHashList = resourceType === 'hash-lists';
+  const table = isHashList ? hashLists : RESOURCE_TYPE_TABLE[resourceType];
+  if (!table) throw new Error(`Unknown resource type: ${resourceType}`);
+
+  const [row] = await db.select().from(table).where(eq(table.id, resourceId)).limit(1);
+  if (!row) throw new Error(`Resource ${resourceId} not found`);
+
+  const fileRef = row.fileRef as { key?: string } | null;
+  if (!fileRef?.key) throw new Error('Resource has no file reference');
+
+  const etag = await uploadPart(fileRef.key, s3UploadId, partNumber, body);
+
+  // Update timestamp
+  await db.update(table).set({ updatedAt: new Date() }).where(eq(table.id, resourceId));
+
+  return { etag };
+}
+
+export async function completeChunkedUpload(
+  s3UploadId: string,
+  parts: ReadonlyArray<{ partNumber: number; etag: string }>,
+  resourceId: number,
+  resourceType: string
+): Promise<{ resourceId: number }> {
+  const isHashList = resourceType === 'hash-lists';
+  const table = isHashList ? hashLists : RESOURCE_TYPE_TABLE[resourceType];
+  if (!table) throw new Error(`Unknown resource type: ${resourceType}`);
+
+  const [row] = await db.select().from(table).where(eq(table.id, resourceId)).limit(1);
+  if (!row) throw new Error(`Resource ${resourceId} not found`);
+
+  const fileRef = row.fileRef as {
+    key?: string;
+    bucket?: string;
+    contentType?: string;
+    name?: string;
+    fileSize?: number;
+  } | null;
+  if (!fileRef?.key) throw new Error('Resource has no file reference');
+
+  // Complete S3 multipart upload
+  await completeMultipartUpload(fileRef.key, s3UploadId, parts);
+
+  // Update resource status to ready
+  const updatedFileRef = {
+    bucket: fileRef.bucket ?? env.S3_BUCKET,
+    key: fileRef.key,
+    contentType: fileRef.contentType ?? 'application/octet-stream',
+    size: fileRef.fileSize,
+    name: fileRef.name,
+    uploadedAt: new Date().toISOString(),
+  };
+
+  await db
+    .update(table)
+    .set({
+      status: isHashList ? 'uploaded' : 'ready',
+      fileRef: updatedFileRef,
+      ...(isHashList ? {} : { fileSize: fileRef.fileSize }),
+      updatedAt: new Date(),
+    })
+    .where(eq(table.id, resourceId));
+
+  logger.info({ resourceId, resourceType }, 'Chunked upload completed');
+
+  return { resourceId };
+}
+
+export async function abortChunkedUpload(
+  s3UploadId: string,
+  resourceId: number,
+  resourceType: string
+): Promise<void> {
+  const isHashList = resourceType === 'hash-lists';
+  const table = isHashList ? hashLists : RESOURCE_TYPE_TABLE[resourceType];
+  if (!table) throw new Error(`Unknown resource type: ${resourceType}`);
+
+  const [row] = await db.select().from(table).where(eq(table.id, resourceId)).limit(1);
+  if (!row) return;
+
+  const fileRef = row.fileRef as { key?: string } | null;
+  if (fileRef?.key) {
+    await abortMultipartUpload(fileRef.key, s3UploadId).catch((err) => {
+      logger.warn({ err, s3UploadId }, 'Failed to abort S3 multipart upload');
+    });
+  }
+
+  await db
+    .update(table)
+    .set({ status: 'error', updatedAt: new Date() })
+    .where(eq(table.id, resourceId));
+
+  logger.info({ resourceId, resourceType, s3UploadId }, 'Chunked upload aborted');
+}
+
+export async function getChunkedUploadStatus(
+  s3UploadId: string,
+  resourceId: number,
+  resourceType: string
+): Promise<{
+  status: string;
+  completedParts: Array<{ partNumber: number; etag: string; size: number }>;
+} | null> {
+  const isHashList = resourceType === 'hash-lists';
+  const table = isHashList ? hashLists : RESOURCE_TYPE_TABLE[resourceType];
+  if (!table) return null;
+
+  const [row] = await db.select().from(table).where(eq(table.id, resourceId)).limit(1);
+  if (!row) return null;
+
+  const fileRef = row.fileRef as { key?: string } | null;
+  if (!fileRef?.key) return null;
+
+  const completedParts = await listParts(fileRef.key, s3UploadId);
+
+  return { status: row.status, completedParts };
 }

@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { requireAgentToken } from '../../middleware/auth.js';
 import { logAgentError, processHeartbeat } from '../../services/agents.js';
+import { getAgentDownloadUrl } from '../../services/resources.js';
 import { assignNextTask, handleTaskFailure, updateTaskProgress } from '../../services/tasks.js';
 import type { AppEnv } from '../../types.js';
 
@@ -14,6 +15,7 @@ const agentRoutes = new Hono<AppEnv>();
 agentRoutes.use('/heartbeat', requireAgentToken);
 agentRoutes.use('/tasks/*', requireAgentToken);
 agentRoutes.use('/errors', requireAgentToken);
+agentRoutes.use('/resources/*', requireAgentToken);
 
 // ─── POST /heartbeat — agent heartbeat ──────────────────────────────
 
@@ -104,6 +106,31 @@ agentRoutes.post('/errors', zValidator('json', agentErrorSchema), async (c) => {
   const data = c.req.valid('json');
   await logAgentError({ ...data, agentId });
   return c.json({ acknowledged: true });
+});
+
+// ─── GET /resources/:type/:id/download-url — presigned download ─────
+
+agentRoutes.get('/resources/:type/:id/download-url', async (c) => {
+  const resourceType = c.req.param('type');
+  const resourceId = Number(c.req.param('id'));
+
+  if (!resourceType || !resourceId || Number.isNaN(resourceId)) {
+    return c.json(
+      { error: { code: 'VALIDATION_ERROR', message: 'Resource type and ID are required' } },
+      400
+    );
+  }
+
+  const result = await getAgentDownloadUrl(resourceType, resourceId);
+
+  if (!result) {
+    return c.json(
+      { error: { code: 'RESOURCE_NOT_FOUND', message: 'Resource not found or has no file' } },
+      404
+    );
+  }
+
+  return c.json(result);
 });
 
 export { agentRoutes };
