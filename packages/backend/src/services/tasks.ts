@@ -341,6 +341,7 @@ export async function handleTaskFailure(taskId: number, agentId: number, reason:
         resultStats: { ...resultStats, retryCount: retryCount + 1, lastFailure: reason },
         updatedAt: new Date(),
       })
+      .where(and(eq(tasks.id, taskId), eq(tasks.agentId, agentId)))
       .returning();
 
     if (updated && campaign) {

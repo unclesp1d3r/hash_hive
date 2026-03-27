@@ -230,8 +230,12 @@ export async function listResources(table: ResourceTable, projectId: number) {
     .orderBy(desc(table.createdAt));
 }
 
-export async function getResourceById(table: ResourceTable, id: number) {
-  const [row] = await db.select().from(table).where(eq(table.id, id)).limit(1);
+export async function getResourceById(table: ResourceTable, id: number, projectId: number) {
+  const [row] = await db
+    .select()
+    .from(table)
+    .where(and(eq(table.id, id), eq(table.projectId, projectId)))
+    .limit(1);
   return row ?? null;
 }
 
@@ -246,10 +250,11 @@ export async function createResource(
 export async function uploadResourceFile(
   table: ResourceTable,
   resourceId: number,
+  projectId: number,
   prefix: string,
   file: File
 ) {
-  const resource = await getResourceById(table, resourceId);
+  const resource = await getResourceById(table, resourceId, projectId);
   if (!resource) {
     throw new Error(`Resource ${resourceId} not found in ${prefix}`);
   }

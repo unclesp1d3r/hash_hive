@@ -267,8 +267,15 @@ function createResourceRoutes(prefix: string, table: ResourceTable) {
   );
 
   resourceRoutes.get(`/${prefix}/:id`, requireProjectAccess(), async (c) => {
+    const { projectId } = c.get('currentUser');
+    if (!projectId) {
+      return c.json(
+        { error: { code: 'PROJECT_NOT_SELECTED', message: 'No project selected' } },
+        400
+      );
+    }
     const id = Number(c.req.param('id'));
-    const item = await getResourceById(table, id);
+    const item = await getResourceById(table, id, projectId);
 
     if (!item) {
       return c.json(
@@ -281,8 +288,15 @@ function createResourceRoutes(prefix: string, table: ResourceTable) {
   });
 
   resourceRoutes.post(`/${prefix}/:id/upload`, requireRole('admin', 'contributor'), async (c) => {
+    const { projectId } = c.get('currentUser');
+    if (!projectId) {
+      return c.json(
+        { error: { code: 'PROJECT_NOT_SELECTED', message: 'No project selected' } },
+        400
+      );
+    }
     const id = Number(c.req.param('id'));
-    const item = await getResourceById(table, id);
+    const item = await getResourceById(table, id, projectId);
 
     if (!item) {
       return c.json(
@@ -301,13 +315,20 @@ function createResourceRoutes(prefix: string, table: ResourceTable) {
       );
     }
 
-    const result = await uploadResourceFile(table, id, prefix, file);
+    const result = await uploadResourceFile(table, id, projectId, prefix, file);
     return c.json(result);
   });
 
   resourceRoutes.get(`/${prefix}/:id/download`, requireProjectAccess(), async (c) => {
+    const { projectId } = c.get('currentUser');
+    if (!projectId) {
+      return c.json(
+        { error: { code: 'PROJECT_NOT_SELECTED', message: 'No project selected' } },
+        400
+      );
+    }
     const id = Number(c.req.param('id'));
-    const item = await getResourceById(table, id);
+    const item = await getResourceById(table, id, projectId);
 
     if (!item) {
       return c.json(
