@@ -112,8 +112,7 @@ agentRoutes.post('/tasks/:id/report', zValidator('json', taskReportSchema), asyn
 // ─── GET /tasks/:id/zaps — cracked hashes for a task ────────────────
 
 const zapQuerySchema = z.object({
-  since: z
-    .string()
+  since: z.iso
     .datetime()
     .optional()
     .transform((v) => (v ? new Date(v) : undefined)),

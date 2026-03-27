@@ -246,8 +246,16 @@ export async function updateTaskProgress(
     updates['completedAt'] = new Date();
   }
 
-  // Update task status
-  const [updated] = await db.update(tasks).set(updates).where(eq(tasks.id, taskId)).returning();
+  // Update task status — re-verify ownership in the write path (TOCTOU defense)
+  const [updated] = await db
+    .update(tasks)
+    .set(updates)
+    .where(and(eq(tasks.id, taskId), eq(tasks.agentId, agentId)))
+    .returning();
+
+  if (!updated) {
+    return { error: 'Task was reassigned during update' };
+  }
 
   // Insert cracked hash results if submitted
   if (data.results && data.results.length > 0 && !taskRow.hashListId) {

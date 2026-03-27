@@ -116,7 +116,7 @@ resourceRoutes.post('/hash-lists/:id/upload', requireRole('admin', 'contributor'
     return c.json({ error: { code: 'VALIDATION_ERROR', message: 'file field is required' } }, 400);
   }
 
-  const result = await uploadHashListFile(id, file);
+  const result = await uploadHashListFile(id, projectId, file);
   return c.json(result);
 });
 
@@ -134,7 +134,7 @@ resourceRoutes.post('/hash-lists/:id/import', requireRole('admin', 'contributor'
     return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Hash list not found' } }, 404);
   }
 
-  const result = await importHashList(id);
+  const result = await importHashList(id, projectId);
 
   if (!result) {
     return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Hash list not found' } }, 404);

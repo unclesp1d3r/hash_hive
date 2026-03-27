@@ -36,15 +36,11 @@ export async function listHashLists(projectId: number) {
     .orderBy(desc(hashLists.createdAt));
 }
 
-export async function getHashListById(id: number, projectId?: number) {
-  const conditions = [eq(hashLists.id, id)];
-  if (projectId !== undefined) {
-    conditions.push(eq(hashLists.projectId, projectId));
-  }
+export async function getHashListById(id: number, projectId: number) {
   const [hl] = await db
     .select()
     .from(hashLists)
-    .where(and(...conditions))
+    .where(and(eq(hashLists.id, id), eq(hashLists.projectId, projectId)))
     .limit(1);
   return hl ?? null;
 }
@@ -71,9 +67,10 @@ export async function createHashList(data: {
 
 export async function uploadHashListFile(
   hashListId: number,
+  projectId: number,
   file: File
 ): Promise<{ key: string; size: number }> {
-  const hl = await getHashListById(hashListId);
+  const hl = await getHashListById(hashListId, projectId);
   if (!hl) {
     throw new Error(`Hash list ${hashListId} not found`);
   }
@@ -102,8 +99,8 @@ export async function uploadHashListFile(
   return { key, size: file.size };
 }
 
-export async function importHashList(hashListId: number) {
-  const hl = await getHashListById(hashListId);
+export async function importHashList(hashListId: number, projectId: number) {
+  const hl = await getHashListById(hashListId, projectId);
   if (!hl) {
     return null;
   }
