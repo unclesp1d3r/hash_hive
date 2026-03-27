@@ -191,4 +191,8 @@ db-studio:
 
 # Run the full CI check locally.
 # Backend tests use bun:test with mocked services — no docker-compose required.
+# Order matters: lint → format → types → build (catches Tailwind CSS generation) → test
 ci-check: lint format-check type-check build test
+
+# Quick quality gate — run after every task (no tests, faster than ci-check)
+check: lint format-check type-check build
