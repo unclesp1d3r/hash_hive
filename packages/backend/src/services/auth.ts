@@ -59,7 +59,7 @@ export async function validateToken(token: string): Promise<{
       userId: Number(sub),
       email,
       type,
-      ...(typeof projectId === 'number' ? { projectId } : {}),
+      ...(projectId != null ? { projectId: Number(projectId) } : {}),
     };
   } catch {
     return null;
