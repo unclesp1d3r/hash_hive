@@ -39,17 +39,19 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     try {
       // BetterAuth handles login at /api/auth/sign-in/email
-      await fetch(`${AUTH_BASE}/sign-in/email`, {
+      const signInRes = await fetch(`${AUTH_BASE}/sign-in/email`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
-      }).then(async (res) => {
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body?.message ?? 'Invalid email or password');
-        }
       });
+      if (!signInRes.ok) {
+        if (signInRes.status >= 500) {
+          throw new Error('Authentication service is temporarily unavailable');
+        }
+        const body = await signInRes.json().catch(() => null);
+        throw new Error(body?.message ?? 'Invalid email or password');
+      }
 
       // Fetch user profile from our custom /me endpoint
       const data = await api.get<MeResponse>('/dashboard/auth/me');
@@ -110,6 +112,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       };
       set({ user, isAuthenticated: true, isLoading: false });
     } catch {
+      // 401 is expected (no session); other errors are handled by the API client's
+      // global 401 interceptor which redirects to login. In all cases, clear state.
       set({ user: null, isAuthenticated: false, isLoading: false });
     }
   },

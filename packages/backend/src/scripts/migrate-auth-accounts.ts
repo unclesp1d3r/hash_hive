@@ -64,12 +64,13 @@ async function migrateAuthAccounts() {
   const [userCount] = await db.select({ count: sql<number>`count(*)::int` }).from(users);
 
   if (accountCount?.count !== userCount?.count) {
-    console.warn(
-      `WARNING: Account count (${accountCount?.count}) does not match user count (${userCount?.count})`
+    console.error(
+      `FATAL: Account count (${accountCount?.count}) does not match user count (${userCount?.count}). ` +
+        'Some users may not be able to authenticate. Investigate before deploying.'
     );
-  } else {
-    console.log(`Verified: ${accountCount?.count} accounts match ${userCount?.count} users`);
+    process.exit(2);
   }
+  console.log(`Verified: ${accountCount?.count} accounts match ${userCount?.count} users`);
 }
 
 migrateAuthAccounts().catch((err) => {

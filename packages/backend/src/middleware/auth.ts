@@ -43,12 +43,18 @@ export const requireSession = createMiddleware<AppEnv>(async (c, next) => {
 
   // Read project context from X-Project-Id header (client-side project selection)
   const projectIdHeader = c.req.header('x-project-id');
-  const projectId = projectIdHeader ? Number(projectIdHeader) : null;
+  let projectId: number | null = null;
+  if (projectIdHeader) {
+    const parsed = Number(projectIdHeader);
+    if (Number.isInteger(parsed) && parsed > 0) {
+      projectId = parsed;
+    }
+  }
 
   c.set('currentUser', {
     userId: Number(session.user.id),
     email: session.user.email,
-    projectId: Number.isNaN(projectId) ? null : projectId,
+    projectId,
   });
   await next();
 });

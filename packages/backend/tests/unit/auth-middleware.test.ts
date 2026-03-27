@@ -166,6 +166,53 @@ describe('requireSession middleware (BetterAuth)', () => {
     const body = await res.json();
     expect(body['projectId']).toBeNull();
   });
+  it('should set projectId to null for malformed X-Project-Id values', async () => {
+    mockSession = {
+      user: {
+        id: '1',
+        email: 'test@example.com',
+        name: 'Test User',
+        emailVerified: true,
+        image: null,
+      },
+      session: {
+        id: 'sess-1',
+        userId: '1',
+        token: 'tok-1',
+        expiresAt: new Date(Date.now() + 3600000),
+      },
+    };
+
+    // Non-numeric
+    let res = await app.request('/protected', {
+      headers: { cookie: 'hh.session_token=valid-session', 'x-project-id': 'abc' },
+    });
+    expect((await res.json())['projectId']).toBeNull();
+
+    // Zero
+    res = await app.request('/protected', {
+      headers: { cookie: 'hh.session_token=valid-session', 'x-project-id': '0' },
+    });
+    expect((await res.json())['projectId']).toBeNull();
+
+    // Negative
+    res = await app.request('/protected', {
+      headers: { cookie: 'hh.session_token=valid-session', 'x-project-id': '-1' },
+    });
+    expect((await res.json())['projectId']).toBeNull();
+
+    // Float
+    res = await app.request('/protected', {
+      headers: { cookie: 'hh.session_token=valid-session', 'x-project-id': '1.5' },
+    });
+    expect((await res.json())['projectId']).toBeNull();
+
+    // Empty string
+    res = await app.request('/protected', {
+      headers: { cookie: 'hh.session_token=valid-session', 'x-project-id': '' },
+    });
+    expect((await res.json())['projectId']).toBeNull();
+  });
 });
 
 describe('requireAgentToken middleware', () => {

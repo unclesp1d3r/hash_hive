@@ -83,7 +83,17 @@ app.get('/health', async (c) => {
 
 // ─── BetterAuth Handler ──────────────────────────────────────────────
 
-app.on(['POST', 'GET'], '/api/auth/**', (c) => auth.handler(c.req.raw));
+app.on(['POST', 'GET'], '/api/auth/**', async (c) => {
+  try {
+    return await auth.handler(c.req.raw);
+  } catch (err) {
+    logger.error({ err, path: c.req.path }, 'BetterAuth handler error');
+    return c.json(
+      { error: { code: 'AUTH_SERVICE_ERROR', message: 'Authentication service error' } },
+      500
+    );
+  }
+});
 
 // ─── Route Mounts ────────────────────────────────────────────────────
 
