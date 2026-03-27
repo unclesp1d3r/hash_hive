@@ -14,7 +14,6 @@
  */
 import { projects, projectUsers, users } from '@hashhive/shared';
 import { client, db } from '../db/index.js';
-import { hashPassword } from '../services/auth.js';
 
 const ADMIN_EMAIL = process.env['SEED_ADMIN_EMAIL'] ?? 'admin@hashhive.local';
 const ADMIN_PASSWORD = process.env['SEED_ADMIN_PASSWORD'] ?? 'changeme123';
@@ -23,7 +22,7 @@ const PROJECT_NAME = 'Default Project';
 const PROJECT_SLUG = 'default';
 
 async function seed() {
-  const passwordHash = await hashPassword(ADMIN_PASSWORD);
+  const passwordHash = await Bun.password.hash(ADMIN_PASSWORD, { algorithm: 'bcrypt', cost: 12 });
 
   await db.transaction(async (tx) => {
     // Find-or-create admin user (email has a unique constraint)

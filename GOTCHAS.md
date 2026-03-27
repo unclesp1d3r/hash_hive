@@ -41,9 +41,12 @@ Referenced from [AGENTS.md](AGENTS.md) — read the relevant section before work
 - **Atomic status guards**: Never read-then-write agent/task status in separate queries -- fold the guard into the `UPDATE WHERE` clause (e.g., `` sql`${agents.status} != 'busy'` ``) to prevent race conditions.
 - **Campaign progress uses SQL aggregation**: Use `COUNT(*) FILTER (WHERE status IN (...))` and `SUM(...) FILTER (WHERE status = 'running')` instead of loading all tasks into memory. Clamp keyspace progress with `GREATEST(0, LEAST(..., 1))`.
 
-## Authentication (jose / JWT)
+## Authentication (BetterAuth)
 
-- **JWT custom claims may return as strings**: The `jose` library's `jwtVerify` can return custom numeric claims (e.g., `projectId`) as strings depending on bun version and module evaluation order. Never use `typeof x === 'number'` to check JWT claims -- use `Number(x)` coercion with null check: `x != null ? { projectId: Number(x) } : {}`.
+- **~~JWT custom claims may return as strings~~**: RESOLVED -- migrated from jose JWTs to BetterAuth database-backed sessions (#126). The JWT claim type coercion bug no longer applies.
+- **BetterAuth returns `user.id` as string**: Even when the `users` table uses `serial` (integer) IDs, BetterAuth's `getSession()` returns `user.id` as a string. Always use `Number(session.user.id)` when bridging to the `currentUser` context.
+- **Project selection is client-side**: `projectId` is sent via `X-Project-Id` header on each request, not embedded in the session. RBAC middleware reads from this header. The frontend Zustand `useUiStore.selectedProjectId` is the source of truth.
+- **Cookie name is `hh.session_token`**: BetterAuth uses `cookiePrefix: 'hh'` which produces `hh.session_token` as the cookie name. Old `session` cookies from the JWT era are cleaned up by the `requireSession` middleware.
 
 ## Bun Runtime
 

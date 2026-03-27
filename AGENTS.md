@@ -121,7 +121,7 @@ The backend is a Bun + Hono + TypeScript service:
 - **Services (`src/services/`)** — optional, only when route handlers become complex
   - **Circular import note:** `campaigns.ts` and `tasks.ts` have a circular dependency. Resolved via dynamic `await import('./tasks.js')` in campaigns.ts. Maintain this pattern when adding cross-service calls.
   - **Circular import note:** `agents.ts` and `tasks.ts` also have a circular dependency (agents imports `handleTaskFailure`, tasks imports `getAgentBenchmarkForMode`). Works because both are function exports resolved after module initialization. If adding top-level evaluated imports between these files, use dynamic `await import()` instead.
-  - `AuthService`: login/logout, JWT/session management
+  - `AuthService`: project membership queries (login/logout handled by BetterAuth)
   - `AgentService`: registration, capability detection, heartbeat handling
   - `CampaignService`: campaign lifecycle, DAG validation, attack configuration
   - `TaskDistributionService`: keyspace partitioning, task generation, assignment
@@ -137,7 +137,7 @@ The backend is a Bun + Hono + TypeScript service:
 
 Two RBAC middleware variants in `src/middleware/rbac.ts`:
 
-- `requireProjectAccess()` / `requireRole()` — reads projectId from JWT context (`currentUser.projectId`); used by most dashboard routes
+- `requireProjectAccess()` / `requireRole()` -- reads projectId from `X-Project-Id` header via `currentUser.projectId`; used by most dashboard routes
 - `requireParamProjectAccess()` / `requireParamProjectRole()` — reads projectId from URL param (`c.req.param('projectId')`); used by project management routes like `GET /projects/:projectId`
 
 ### Chunked upload protocol
@@ -156,8 +156,8 @@ Two API surfaces on the same Hono instance, backed by the same service and data 
   - Supports batch operations: bulk inserts for hash submissions via Drizzle or raw `Bun.SQL`
   - Core endpoints: `POST /agent/heartbeat`, `POST /agent/tasks/next`, `POST /agent/tasks/:id/report`
 - **Dashboard API (`/api/v1/dashboard/*`)**
-  - JWT + HttpOnly session cookie authenticated REST API for the React frontend
-  - Project scoping is JWT-bound: `projectId` is embedded in the session token and read from `c.get('currentUser').projectId` — frontend never sends projectId as a query param
+  - BetterAuth database-backed session + HttpOnly cookie authenticated REST API for the React frontend
+  - Project scoping is client-side: `projectId` is sent via `X-Project-Id` header on each request and read from `c.get('currentUser').projectId`
   - Standard CRUD operations with Zod validation
   - Low traffic (1-3 concurrent users)
 
