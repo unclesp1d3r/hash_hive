@@ -304,12 +304,10 @@ export async function updateTaskProgress(
   }
 
   // Emit events and update campaign progress (no duplicate campaign fetch)
-  if (updated) {
-    emitTaskUpdate(taskRow.projectId, taskId, data.status, data.progress);
-    await updateCampaignProgress(taskRow.campaignId);
-  }
+  emitTaskUpdate(taskRow.projectId, taskId, data.status, data.progress);
+  await updateCampaignProgress(taskRow.campaignId);
 
-  return { task: updated ?? null };
+  return { task: updated };
 }
 
 // ─── Task Retry & Failure Handling ──────────────────────────────────

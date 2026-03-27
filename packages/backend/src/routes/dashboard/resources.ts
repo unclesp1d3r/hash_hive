@@ -89,10 +89,16 @@ resourceRoutes.get('/hash-lists/:id', requireProjectAccess(), async (c) => {
     return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Hash list not found' } }, 404);
   }
 
-  const statistics = await getHashListStats(hashListId);
+  const liveStats = await getHashListStats(hashListId);
 
   return c.json({
-    hashList: { ...hl, statistics },
+    hashList: {
+      ...hl,
+      statistics: {
+        ...((hl.statistics as Record<string, unknown> | null) ?? {}),
+        ...liveStats,
+      },
+    },
   });
 });
 
