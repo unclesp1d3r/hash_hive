@@ -7,6 +7,7 @@ import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { checkMinioHealth } from './config/storage.js';
 import { db } from './db/index.js';
+import { auth } from './lib/auth.js';
 import { requestId } from './middleware/request-id.js';
 import { requestLogger } from './middleware/request-logger.js';
 import { securityHeaders } from './middleware/security-headers.js';
@@ -79,6 +80,10 @@ app.get('/health', async (c) => {
     },
   });
 });
+
+// ─── BetterAuth Handler ──────────────────────────────────────────────
+
+app.on(['POST', 'GET'], '/api/auth/**', (c) => auth.handler(c.req.raw));
 
 // ─── Route Mounts ────────────────────────────────────────────────────
 

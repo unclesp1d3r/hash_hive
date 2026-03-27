@@ -12,3 +12,4 @@ process.env['S3_BUCKET'] = 'hashhive-test';
 process.env['S3_REGION'] = 'us-east-1';
 process.env['JWT_SECRET'] = 'test-secret-at-least-16-chars-long';
 process.env['JWT_EXPIRY'] = '1h';
+process.env['BETTER_AUTH_SECRET'] = 'test-betterauth-secret-must-be-at-least-32-characters';
