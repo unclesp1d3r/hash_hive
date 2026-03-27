@@ -44,7 +44,9 @@ async function migrateAuthAccounts() {
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         })
-        .onConflictDoNothing()
+        .onConflictDoNothing({
+          target: [baAccounts.userId, baAccounts.providerId],
+        })
         .returning({ id: baAccounts.id });
 
       if (result.length > 0) {

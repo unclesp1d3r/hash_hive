@@ -31,10 +31,15 @@ let mockSession: {
   session: { id: string; userId: string; token: string; expiresAt: Date };
 } | null = null;
 
+let mockGetSessionError: Error | null = null;
+
 mock.module('../../src/lib/auth.js', () => ({
   auth: {
     api: {
-      getSession: async () => mockSession,
+      getSession: async () => {
+        if (mockGetSessionError) throw mockGetSessionError;
+        return mockSession;
+      },
     },
     handler: async () => new Response('ok'),
   },
@@ -67,10 +72,19 @@ describe('requireSession middleware (BetterAuth)', () => {
 
   beforeEach(() => {
     mockSession = null;
+    mockGetSessionError = null;
   });
 
   it('should reject requests without a valid session', async () => {
     mockSession = null;
+    const res = await app.request('/protected');
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body['error']['code']).toBe('AUTH_TOKEN_INVALID');
+  });
+
+  it('should return 401 when getSession throws an error', async () => {
+    mockGetSessionError = new Error('Database connection failed');
     const res = await app.request('/protected');
     expect(res.status).toBe(401);
     const body = await res.json();

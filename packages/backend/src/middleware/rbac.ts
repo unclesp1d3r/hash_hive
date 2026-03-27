@@ -27,7 +27,7 @@ async function checkMembership(c: {
     throw httpError(
       400,
       'PROJECT_NOT_SELECTED',
-      'No project selected -- call POST /projects/select first'
+      'No project selected -- include X-Project-Id header'
     );
   }
 

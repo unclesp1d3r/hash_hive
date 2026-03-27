@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { deleteCookie, getCookie } from 'hono/cookie';
 import { createMiddleware } from 'hono/factory';
 import { HTTPException } from 'hono/http-exception';
+import { logger } from '../config/logger.js';
 import { db } from '../db/index.js';
 import { auth } from '../lib/auth.js';
 import type { AppEnv } from '../types.js';
@@ -32,7 +33,8 @@ export const requireSession = createMiddleware<AppEnv>(async (c, next) => {
   let session: Awaited<ReturnType<typeof auth.api.getSession>>;
   try {
     session = await auth.api.getSession({ headers: c.req.raw.headers });
-  } catch {
+  } catch (err) {
+    logger.warn({ err }, 'BetterAuth getSession failed');
     throw authError('Authentication required');
   }
   if (!session) {

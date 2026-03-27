@@ -92,7 +92,10 @@ export const baAccounts = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index('ba_accounts_user_id_idx').on(table.userId)]
+  (table) => [
+    index('ba_accounts_user_id_idx').on(table.userId),
+    uniqueIndex('ba_accounts_user_id_provider_id_idx').on(table.userId, table.providerId),
+  ]
 );
 
 export const baVerifications = pgTable(
