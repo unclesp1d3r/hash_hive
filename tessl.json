@@ -4,6 +4,18 @@
   "dependencies": {
     "pantheon-ai/github-actions-validator": {
       "version": "0.1.1"
+    },
+    "pantheon-ai/github-actions-generator": {
+      "version": "0.1.1"
+    },
+    "pantheon-ai/software-design-principles": {
+      "version": "0.1.4"
+    },
+    "pantheon-ai/acceptance-criteria": {
+      "version": "0.1.1"
+    },
+    "pantheon-ai/agents-md": {
+      "version": "0.1.3"
     }
   }
 }
