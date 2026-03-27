@@ -211,7 +211,7 @@ if (isIsolated) {
     });
 
     test('returns null for non-eligible agent statuses', async () => {
-      for (const status of ['idle', 'error', 'pending']) {
+      for (const status of ['offline', 'busy', 'error']) {
         mockLimit.mockResolvedValueOnce([{ id: 3, projectId: 1, status, capabilities: {} }]);
         const result = await assignNextTask(3);
         expect(result).toBeNull();

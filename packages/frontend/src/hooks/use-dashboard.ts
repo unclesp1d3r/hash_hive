@@ -98,15 +98,12 @@ export function useAgentErrors(agentId: number) {
   });
 }
 
-interface AgentBenchmark {
-  id: number;
-  agentId: number;
-  hashcatMode: number;
-  hashType: string;
-  speedHs: number;
-  deviceName: string;
-  benchmarkedAt: string;
-}
+// SelectAgentBenchmark from @hashhive/shared has Date fields; over JSON they arrive as strings.
+// Keep a mapped type for the API response shape.
+type AgentBenchmarkResponse = Omit<
+  import('@hashhive/shared').SelectAgentBenchmark,
+  'benchmarkedAt'
+> & { benchmarkedAt: string };
 
 export function useAgentBenchmarks(agentId: number) {
   const { selectedProjectId } = useUiStore();
@@ -114,7 +111,7 @@ export function useAgentBenchmarks(agentId: number) {
   return useQuery({
     queryKey: ['agent-benchmarks', agentId, selectedProjectId],
     queryFn: () =>
-      api.get<{ benchmarks: AgentBenchmark[] }>(`/dashboard/agents/${agentId}/benchmarks`),
+      api.get<{ benchmarks: AgentBenchmarkResponse[] }>(`/dashboard/agents/${agentId}/benchmarks`),
     enabled: agentId > 0 && !!selectedProjectId,
   });
 }

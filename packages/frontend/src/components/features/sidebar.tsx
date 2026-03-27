@@ -44,12 +44,17 @@ function SidebarContent({ onNavigate }: { readonly onNavigate?: () => void }) {
 
   const handleProjectChange = async (value: string) => {
     const projectId = value ? Number(value) : null;
+    const previousProjectId = selectedProjectId;
     setSelectedProject(projectId);
     if (projectId) {
       try {
         await selectProject(projectId);
-      } catch {
-        // Cookie update failed - local state is still set, next request will work
+      } catch (err: unknown) {
+        // Revert local state - server rejected the switch
+        setSelectedProject(previousProjectId);
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        // biome-ignore lint/suspicious/noConsole: no frontend logger available; console.error is the only option
+        console.error('Failed to switch project:', message);
       }
     }
   };

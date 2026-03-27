@@ -186,45 +186,58 @@ export async function submitBenchmarks(
 ) {
   const now = new Date();
 
-  // Deduplicate by hashcatMode — last entry wins (defense-in-depth; schema also rejects duplicates)
+  // Deduplicate by hashcatMode -- last entry wins (defense-in-depth; schema also rejects duplicates)
   const deduped = [...new Map(entries.map((e) => [e.hashcatMode, e] as const)).values()];
 
-  const rows = await db
-    .insert(agentBenchmarks)
-    .values(
-      deduped.map((e) => ({
-        agentId,
-        hashcatMode: e.hashcatMode,
-        hashType: e.hashType,
-        speedHs: e.speedHs,
-        deviceName: e.deviceName,
-        benchmarkedAt: now,
-      }))
-    )
-    .onConflictDoUpdate({
-      target: [agentBenchmarks.agentId, agentBenchmarks.hashcatMode],
-      set: {
-        speedHs: sql`excluded.speed_hs`,
-        hashType: sql`excluded.hash_type`,
-        deviceName: sql`excluded.device_name`,
-        benchmarkedAt: sql`excluded.benchmarked_at`,
-      },
-    })
-    .returning();
+  // Benchmark insert + agent status update must be atomic
+  const rows = await db.transaction(async (tx) => {
+    const inserted = await tx
+      .insert(agentBenchmarks)
+      .values(
+        deduped.map((e) => ({
+          agentId,
+          hashcatMode: e.hashcatMode,
+          hashType: e.hashType,
+          speedHs: e.speedHs,
+          deviceName: e.deviceName,
+          benchmarkedAt: now,
+        }))
+      )
+      .onConflictDoUpdate({
+        target: [agentBenchmarks.agentId, agentBenchmarks.hashcatMode],
+        set: {
+          speedHs: sql`excluded.speed_hs`,
+          hashType: sql`excluded.hash_type`,
+          deviceName: sql`excluded.device_name`,
+          benchmarkedAt: sql`excluded.benchmarked_at`,
+        },
+      })
+      .returning();
 
-  const agentUpdates: Record<string, unknown> = {
-    status: 'benchmarked',
-    updatedAt: now,
-  };
-  if (crackerVersion !== undefined) {
-    agentUpdates['crackerVersion'] = crackerVersion;
-  }
+    // Only transition to 'benchmarked' if agent is not actively working
+    const [current] = await tx
+      .select({ status: agents.status })
+      .from(agents)
+      .where(eq(agents.id, agentId))
+      .limit(1);
 
-  await db.update(agents).set(agentUpdates).where(eq(agents.id, agentId));
+    const shouldUpdateStatus = current && current.status !== 'busy';
 
+    const agentUpdates = {
+      updatedAt: now,
+      ...(shouldUpdateStatus ? { status: 'benchmarked' as const } : {}),
+      ...(crackerVersion !== undefined ? { crackerVersion } : {}),
+    };
+
+    await tx.update(agents).set(agentUpdates).where(eq(agents.id, agentId));
+
+    return inserted;
+  });
+
+  // Event emission is best-effort, outside the transaction
   const agent = await getAgentById(agentId);
   if (agent) {
-    emitAgentStatus(agent.projectId, agent.id, 'benchmarked');
+    emitAgentStatus(agent.projectId, agent.id, agent.status);
   }
 
   return rows;

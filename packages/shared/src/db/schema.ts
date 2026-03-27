@@ -81,6 +81,7 @@ export const agents = pgTable(
   (table) => [
     index('agents_project_id_idx').on(table.projectId),
     index('agents_status_idx').on(table.status),
+    index('agents_auth_token_idx').on(table.authToken),
   ]
 );
 
@@ -299,5 +300,6 @@ export const tasks = pgTable(
     index('tasks_agent_id_idx').on(table.agentId),
     index('tasks_status_idx').on(table.status),
     index('tasks_status_campaign_id_idx').on(table.status, table.campaignId),
+    index('tasks_campaign_id_status_idx').on(table.campaignId, table.status),
   ]
 );

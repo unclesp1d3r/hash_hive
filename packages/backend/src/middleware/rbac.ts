@@ -1,8 +1,6 @@
-import { projectUsers } from '@hashhive/shared';
-import { and, eq } from 'drizzle-orm';
 import { createMiddleware } from 'hono/factory';
 import { HTTPException } from 'hono/http-exception';
-import { db } from '../db/index.js';
+import { findProjectMembership } from '../services/auth.js';
 import type { AppEnv } from '../types.js';
 
 type Role = 'admin' | 'contributor' | 'viewer';
@@ -29,16 +27,11 @@ async function checkMembership(c: {
     throw httpError(
       400,
       'PROJECT_NOT_SELECTED',
-      'No project selected — call POST /projects/select first'
+      'No project selected -- call POST /projects/select first'
     );
   }
 
-  const [membership] = await db
-    .select()
-    .from(projectUsers)
-    .where(and(eq(projectUsers.userId, user.userId), eq(projectUsers.projectId, projectId)))
-    .limit(1);
-
+  const membership = await findProjectMembership(user.userId, projectId);
   if (!membership) {
     throw httpError(403, 'AUTHZ_PROJECT_ACCESS_DENIED', 'Not a member of this project');
   }
@@ -86,12 +79,7 @@ async function checkParamProjectMembership(c: {
     throw httpError(400, 'VALIDATION_FAILED', 'Project ID is required for this operation');
   }
 
-  const [membership] = await db
-    .select()
-    .from(projectUsers)
-    .where(and(eq(projectUsers.userId, user.userId), eq(projectUsers.projectId, projectId)))
-    .limit(1);
-
+  const membership = await findProjectMembership(user.userId, projectId);
   if (!membership) {
     throw httpError(403, 'AUTHZ_PROJECT_ACCESS_DENIED', 'Not a member of this project');
   }

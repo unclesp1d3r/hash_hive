@@ -2,6 +2,7 @@ import { agentHeartbeatSchema } from '@hashhive/shared';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { logger } from '../../config/logger.js';
 import { requireAgentToken } from '../../middleware/auth.js';
 import { logAgentError, processHeartbeat, submitBenchmarks } from '../../services/agents.js';
 import { getAgentDownloadUrl } from '../../services/resources.js';
@@ -162,7 +163,7 @@ const benchmarkSubmissionSchema = z.object({
       z.object({
         hashcatMode: z.number().int().nonnegative(),
         hashType: z.string().min(1),
-        speedHs: z.number().int().nonnegative(),
+        speedHs: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
         deviceName: z.string().min(1),
       })
     )
@@ -180,8 +181,16 @@ const benchmarkSubmissionSchema = z.object({
 agentRoutes.post('/benchmark', zValidator('json', benchmarkSubmissionSchema), async (c) => {
   const { agentId } = c.get('agent');
   const data = c.req.valid('json');
-  await submitBenchmarks(agentId, data.entries, data.crackerVersion);
-  return c.json({ acknowledged: true });
+  try {
+    await submitBenchmarks(agentId, data.entries, data.crackerVersion);
+    return c.json({ acknowledged: true });
+  } catch (err: unknown) {
+    logger.error({ err, agentId, entryCount: data.entries.length }, 'Benchmark submission failed');
+    return c.json(
+      { error: { code: 'BENCHMARK_ERROR', message: 'Failed to store benchmark results' } },
+      500
+    );
+  }
 });
 
 // ─── GET /resources/:type/:id/download-url — presigned download ─────

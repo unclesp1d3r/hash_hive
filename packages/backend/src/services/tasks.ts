@@ -1,3 +1,4 @@
+import type { AssignedTask } from '@hashhive/shared';
 import { agents, attacks, campaigns, hashItems, tasks } from '@hashhive/shared';
 import { and, desc, eq, gt, isNotNull, type SQL, sql } from 'drizzle-orm';
 import { logger } from '../config/logger.js';
@@ -134,7 +135,7 @@ const DEFAULT_AGENT_SPEED_HS = 1_000_000; // 1 MH/s fallback when no benchmark e
  * one claimant atomically selects and claims a task row, even under
  * concurrent access from multiple agents.
  */
-export async function assignNextTask(agentId: number) {
+export async function assignNextTask(agentId: number): Promise<AssignedTask | null> {
   // Verify agent exists and is online or benchmarked
   const [agent] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
   if (!agent || (agent.status !== 'online' && agent.status !== 'benchmarked')) {
@@ -189,28 +190,49 @@ export async function assignNextTask(agentId: number) {
   const taskHashcatMode =
     Number.isFinite(parsedMode) && Number.isInteger(parsedMode) ? parsedMode : null;
 
-  // Look up the agent's benchmark speed for this hash mode
-  const benchmark =
-    taskHashcatMode !== null ? await getAgentBenchmarkForMode(agentId, taskHashcatMode) : null;
-  const agentSpeedHs = benchmark?.speedHs ?? DEFAULT_AGENT_SPEED_HS;
+  // Look up the agent's benchmark speed for this hash mode.
+  // Wrapped in try-catch because the task is already claimed via FOR UPDATE SKIP LOCKED -
+  // a benchmark lookup failure must not orphan the assigned task.
+  let agentSpeedHs = DEFAULT_AGENT_SPEED_HS;
+  if (taskHashcatMode !== null) {
+    try {
+      const benchmark = await getAgentBenchmarkForMode(agentId, taskHashcatMode);
+      if (benchmark) {
+        agentSpeedHs = benchmark.speedHs;
+      }
+    } catch (err: unknown) {
+      logger.warn(
+        { err, agentId, hashcatMode: taskHashcatMode },
+        'Benchmark lookup failed after task assignment - using default speed'
+      );
+    }
+  }
 
   // Map snake_case DB columns back to camelCase to preserve the public API contract
   return {
-    id: row['id'],
-    attackId: row['attack_id'],
-    campaignId: row['campaign_id'],
-    agentId: row['agent_id'],
-    status: row['status'],
-    workRange: { ...((row['work_range'] as object | null) ?? {}), agentSpeedHs },
+    id: row['id'] as number,
+    attackId: row['attack_id'] as number,
+    campaignId: row['campaign_id'] as number,
+    agentId: row['agent_id'] as number,
+    status: row['status'] as string,
+    workRange: {
+      ...((row['work_range'] as { start: number; end: number; total: number } | null) ?? {
+        start: 0,
+        end: 0,
+        total: 0,
+      }),
+      agentSpeedHs,
+    },
     progress: row['progress'],
     resultStats: row['result_stats'],
-    requiredCapabilities: row['required_capabilities'],
-    assignedAt: row['assigned_at'],
-    startedAt: row['started_at'],
-    completedAt: row['completed_at'],
-    failureReason: row['failure_reason'],
-    createdAt: row['created_at'],
-    updatedAt: row['updated_at'],
+    requiredCapabilities:
+      (row['required_capabilities'] as AssignedTask['requiredCapabilities']) ?? null,
+    assignedAt: row['assigned_at'] as Date | null,
+    startedAt: row['started_at'] as Date | null,
+    completedAt: row['completed_at'] as Date | null,
+    failureReason: row['failure_reason'] as string | null,
+    createdAt: row['created_at'] as Date,
+    updatedAt: row['updated_at'] as Date,
   };
 }
 

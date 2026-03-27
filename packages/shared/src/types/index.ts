@@ -98,6 +98,38 @@ export type SelectAttack = z.infer<typeof selectAttackSchema>;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type SelectTask = z.infer<typeof selectTaskSchema>;
 
+// ─── Task Assignment Types ──────────────────────────────────────────
+
+export interface WorkRange {
+  start: number;
+  end: number;
+  total: number;
+  agentSpeedHs: number;
+}
+
+export interface RequiredCapabilities {
+  gpu?: boolean;
+  hashcatMode?: number;
+}
+
+export interface AssignedTask {
+  id: number;
+  attackId: number;
+  campaignId: number;
+  agentId: number;
+  status: string;
+  workRange: WorkRange;
+  progress: unknown;
+  resultStats: unknown;
+  requiredCapabilities: RequiredCapabilities | null;
+  assignedAt: Date | null;
+  startedAt: Date | null;
+  completedAt: Date | null;
+  failureReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ─── API Request Types ──────────────────────────────────────────────
 
 export type LoginRequest = z.infer<typeof loginRequestSchema>;

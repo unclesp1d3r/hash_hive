@@ -66,6 +66,16 @@ export async function validateToken(token: string): Promise<{
   }
 }
 
+/** Checks if a user is a member of a project. Returns the membership row or null. */
+export async function findProjectMembership(userId: number, projectId: number) {
+  const [membership] = await db
+    .select()
+    .from(projectUsers)
+    .where(and(eq(projectUsers.userId, userId), eq(projectUsers.projectId, projectId)))
+    .limit(1);
+  return membership ?? null;
+}
+
 // Dummy hash for constant-time comparison when user is not found
 const DUMMY_HASH = '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4aLQHkMAJnlCp4bu';
 
