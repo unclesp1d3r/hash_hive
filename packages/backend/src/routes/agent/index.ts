@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { requireAgentToken } from '../../middleware/auth.js';
-import { logAgentError, processHeartbeat } from '../../services/agents.js';
+import { logAgentError, processHeartbeat, submitBenchmarks } from '../../services/agents.js';
 import { getAgentDownloadUrl } from '../../services/resources.js';
 import {
   assignNextTask,
@@ -20,6 +20,7 @@ const agentRoutes = new Hono<AppEnv>();
 agentRoutes.use('/heartbeat', requireAgentToken);
 agentRoutes.use('/tasks/*', requireAgentToken);
 agentRoutes.use('/errors', requireAgentToken);
+agentRoutes.use('/benchmark', requireAgentToken);
 agentRoutes.use('/resources/*', requireAgentToken);
 
 // ─── POST /heartbeat — agent heartbeat ──────────────────────────────
@@ -150,6 +151,36 @@ agentRoutes.post('/errors', zValidator('json', agentErrorSchema), async (c) => {
   const { agentId } = c.get('agent');
   const data = c.req.valid('json');
   await logAgentError({ ...data, agentId });
+  return c.json({ acknowledged: true });
+});
+
+// ─── POST /benchmark — submit hashcat benchmark results ─────────────
+
+const benchmarkSubmissionSchema = z.object({
+  entries: z
+    .array(
+      z.object({
+        hashcatMode: z.number().int().nonnegative(),
+        hashType: z.string().min(1),
+        speedHs: z.number().int().nonnegative(),
+        deviceName: z.string().min(1),
+      })
+    )
+    .min(1)
+    .refine(
+      (entries) => {
+        const modes = entries.map((e) => e.hashcatMode);
+        return new Set(modes).size === modes.length;
+      },
+      { message: 'entries must not contain duplicate hashcatMode values' }
+    ),
+  crackerVersion: z.string().min(1).optional(),
+});
+
+agentRoutes.post('/benchmark', zValidator('json', benchmarkSubmissionSchema), async (c) => {
+  const { agentId } = c.get('agent');
+  const data = c.req.valid('json');
+  await submitBenchmarks(agentId, data.entries, data.crackerVersion);
   return c.json({ acknowledged: true });
 });
 

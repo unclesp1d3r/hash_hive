@@ -6,13 +6,43 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 // is skipped via the guard below.
 const isIsolated = process.env['TASKS_TEST_ISOLATED'] === '1';
 
+// Declared at module scope so mocks are accessible in describe/beforeEach blocks.
+// Assigned inside the `if (isIsolated)` guard where mock.module runs.
+let mockFrom: ReturnType<typeof mock>;
+let mockWhere: ReturnType<typeof mock>;
+let mockLimit: ReturnType<typeof mock>;
+let mockExecute: ReturnType<typeof mock>;
+let mockGetAgentBenchmarkForMode: ReturnType<typeof mock>;
+
 if (isIsolated) {
+  // ─── Config / logger mocks (prevent env validation during import) ──
+  mock.module('../../src/config/env.js', () => ({
+    env: {
+      DATABASE_URL: 'postgres://test:test@localhost:5432/test',
+      REDIS_URL: 'redis://localhost:6379',
+      S3_ENDPOINT: 'http://localhost:9000',
+      S3_ACCESS_KEY: 'test',
+      S3_SECRET_KEY: 'test',
+      JWT_SECRET: 'test-secret',
+      NODE_ENV: 'test',
+    },
+  }));
+
+  mock.module('../../src/config/logger.js', () => ({
+    logger: {
+      info: mock(),
+      warn: mock(),
+      error: mock(),
+      debug: mock(),
+    },
+  }));
+
   // ─── DB mock ────────────────────────────────────────────────────────
+  mockFrom = mock(() => ({ where: mockWhere, innerJoin: mock() }));
+  mockWhere = mock(() => ({ limit: mockLimit, innerJoin: mock() }));
+  mockLimit = mock(() => Promise.resolve([]));
+  mockExecute = mock(() => Promise.resolve([]));
   const mockSelect = mock(() => ({ from: mockFrom }));
-  var mockFrom = mock(() => ({ where: mockWhere, innerJoin: mock() }));
-  var mockWhere = mock(() => ({ limit: mockLimit, innerJoin: mock() }));
-  var mockLimit = mock(() => Promise.resolve([]));
-  var mockExecute = mock(() => Promise.resolve([]));
 
   mock.module('../../src/db/index.js', () => ({
     db: {
@@ -39,6 +69,11 @@ if (isIsolated) {
     updateCampaignProgress: mock(),
   }));
 
+  mockGetAgentBenchmarkForMode = mock(() => Promise.resolve(null));
+  mock.module('../../src/services/agents.js', () => ({
+    getAgentBenchmarkForMode: mockGetAgentBenchmarkForMode,
+  }));
+
   const { assignNextTask } = await import('../../src/services/tasks.js');
   const { db } = await import('../../src/db/index.js');
 
@@ -49,6 +84,7 @@ if (isIsolated) {
       mockWhere.mockReset().mockImplementation(() => ({ limit: mockLimit, innerJoin: mock() }));
       mockLimit.mockReset().mockImplementation(() => Promise.resolve([]));
       mockExecute.mockReset().mockImplementation(() => Promise.resolve([]));
+      mockGetAgentBenchmarkForMode.mockReset().mockImplementation(() => Promise.resolve(null));
     });
 
     test('returns null when agent does not exist', async () => {
@@ -110,7 +146,7 @@ if (isIsolated) {
         campaignId: 5,
         agentId: 1,
         status: 'assigned',
-        workRange: { start: 0, end: 10000000, total: 10000000 },
+        workRange: { start: 0, end: 10000000, total: 10000000, agentSpeedHs: 1_000_000 },
         progress: {},
         resultStats: {},
         requiredCapabilities: { hashcatMode: 1000 },
@@ -136,6 +172,123 @@ if (isIsolated) {
       expect(result).not.toBeNull();
       expect(result).toEqual(expectedCamelCase);
       expect(mockExecute).toHaveBeenCalled();
+    });
+
+    test('assigns task to agent with benchmarked status', async () => {
+      const now = new Date();
+      const rawDbRow = {
+        id: 50,
+        attack_id: 11,
+        campaign_id: 6,
+        agent_id: 2,
+        status: 'assigned',
+        work_range: { start: 0, end: 5000, total: 5000 },
+        progress: {},
+        result_stats: {},
+        required_capabilities: { hashcatMode: 0 },
+        assigned_at: now,
+        started_at: null,
+        completed_at: null,
+        failure_reason: null,
+        created_at: now,
+        updated_at: now,
+      };
+
+      mockLimit.mockResolvedValueOnce([
+        {
+          id: 2,
+          projectId: 1,
+          status: 'benchmarked',
+          capabilities: { gpu: true, hashModes: [0] },
+        },
+      ]);
+      mockExecute.mockResolvedValueOnce([rawDbRow]);
+
+      const result = await assignNextTask(2);
+      expect(result).not.toBeNull();
+      expect(result!.id).toBe(50);
+      expect(result!.workRange).toHaveProperty('agentSpeedHs');
+    });
+
+    test('returns null for non-eligible agent statuses', async () => {
+      for (const status of ['idle', 'error', 'pending']) {
+        mockLimit.mockResolvedValueOnce([{ id: 3, projectId: 1, status, capabilities: {} }]);
+        const result = await assignNextTask(3);
+        expect(result).toBeNull();
+      }
+    });
+
+    test('uses benchmark speed when available', async () => {
+      const now = new Date();
+      const rawDbRow = {
+        id: 60,
+        attack_id: 12,
+        campaign_id: 7,
+        agent_id: 1,
+        status: 'assigned',
+        work_range: { start: 0, end: 10000, total: 10000 },
+        progress: {},
+        result_stats: {},
+        required_capabilities: { hashcatMode: 1000 },
+        assigned_at: now,
+        started_at: null,
+        completed_at: null,
+        failure_reason: null,
+        created_at: now,
+        updated_at: now,
+      };
+
+      mockLimit.mockResolvedValueOnce([
+        {
+          id: 1,
+          projectId: 1,
+          status: 'online',
+          capabilities: { gpu: true, hashModes: [1000] },
+        },
+      ]);
+      mockExecute.mockResolvedValueOnce([rawDbRow]);
+      mockGetAgentBenchmarkForMode.mockResolvedValueOnce({ speedHs: 5_000_000 });
+
+      const result = await assignNextTask(1);
+      expect(result).not.toBeNull();
+      expect(result!.workRange.agentSpeedHs).toBe(5_000_000);
+      expect(mockGetAgentBenchmarkForMode).toHaveBeenCalledWith(1, 1000);
+    });
+
+    test('falls back to DEFAULT_AGENT_SPEED_HS when no benchmark exists', async () => {
+      const now = new Date();
+      const rawDbRow = {
+        id: 61,
+        attack_id: 13,
+        campaign_id: 8,
+        agent_id: 1,
+        status: 'assigned',
+        work_range: { start: 0, end: 10000, total: 10000 },
+        progress: {},
+        result_stats: {},
+        required_capabilities: { hashcatMode: 9999 },
+        assigned_at: now,
+        started_at: null,
+        completed_at: null,
+        failure_reason: null,
+        created_at: now,
+        updated_at: now,
+      };
+
+      mockLimit.mockResolvedValueOnce([
+        {
+          id: 1,
+          projectId: 1,
+          status: 'online',
+          capabilities: { gpu: true, hashModes: [9999] },
+        },
+      ]);
+      mockExecute.mockResolvedValueOnce([rawDbRow]);
+      mockGetAgentBenchmarkForMode.mockResolvedValueOnce(null);
+
+      const result = await assignNextTask(1);
+      expect(result).not.toBeNull();
+      expect(result!.workRange.agentSpeedHs).toBe(1_000_000);
     });
 
     test('uses SQL-level predicate, not app-layer filtering', async () => {

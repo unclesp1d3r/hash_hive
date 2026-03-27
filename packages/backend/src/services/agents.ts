@@ -1,4 +1,5 @@
-import { agentErrors, agents, tasks } from '@hashhive/shared';
+import type { SelectAgentBenchmark } from '@hashhive/shared';
+import { agentBenchmarks, agentErrors, agents, tasks } from '@hashhive/shared';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { emitAgentStatus } from './events.js';
@@ -171,4 +172,80 @@ export async function getAgentErrors(
     .orderBy(desc(agentErrors.createdAt))
     .limit(limit)
     .offset(offset);
+}
+
+export async function submitBenchmarks(
+  agentId: number,
+  entries: ReadonlyArray<{
+    readonly hashcatMode: number;
+    readonly hashType: string;
+    readonly speedHs: number;
+    readonly deviceName: string;
+  }>,
+  crackerVersion?: string
+) {
+  const now = new Date();
+
+  // Deduplicate by hashcatMode — last entry wins (defense-in-depth; schema also rejects duplicates)
+  const deduped = [...new Map(entries.map((e) => [e.hashcatMode, e] as const)).values()];
+
+  const rows = await db
+    .insert(agentBenchmarks)
+    .values(
+      deduped.map((e) => ({
+        agentId,
+        hashcatMode: e.hashcatMode,
+        hashType: e.hashType,
+        speedHs: e.speedHs,
+        deviceName: e.deviceName,
+        benchmarkedAt: now,
+      }))
+    )
+    .onConflictDoUpdate({
+      target: [agentBenchmarks.agentId, agentBenchmarks.hashcatMode],
+      set: {
+        speedHs: sql`excluded.speed_hs`,
+        hashType: sql`excluded.hash_type`,
+        deviceName: sql`excluded.device_name`,
+        benchmarkedAt: sql`excluded.benchmarked_at`,
+      },
+    })
+    .returning();
+
+  const agentUpdates: Record<string, unknown> = {
+    status: 'benchmarked',
+    updatedAt: now,
+  };
+  if (crackerVersion !== undefined) {
+    agentUpdates['crackerVersion'] = crackerVersion;
+  }
+
+  await db.update(agents).set(agentUpdates).where(eq(agents.id, agentId));
+
+  const agent = await getAgentById(agentId);
+  if (agent) {
+    emitAgentStatus(agent.projectId, agent.id, 'benchmarked');
+  }
+
+  return rows;
+}
+
+export async function getBenchmarksForAgent(agentId: number): Promise<SelectAgentBenchmark[]> {
+  return db
+    .select()
+    .from(agentBenchmarks)
+    .where(eq(agentBenchmarks.agentId, agentId))
+    .orderBy(desc(agentBenchmarks.benchmarkedAt));
+}
+
+export async function getAgentBenchmarkForMode(
+  agentId: number,
+  hashcatMode: number
+): Promise<SelectAgentBenchmark | null> {
+  const [row] = await db
+    .select()
+    .from(agentBenchmarks)
+    .where(and(eq(agentBenchmarks.agentId, agentId), eq(agentBenchmarks.hashcatMode, hashcatMode)))
+    .limit(1);
+  return row ?? null;
 }

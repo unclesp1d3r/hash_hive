@@ -162,6 +162,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /benchmark:
+    post:
+      operationId: submitBenchmarks
+      summary: Submit hashcat benchmark results for this agent
+      tags: [Monitoring]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BenchmarkSubmission"
+      responses:
+        "200":
+          $ref: "#/components/responses/Acknowledged"
+        "401":
+          $ref: "#/components/responses/AuthError"
+
   /errors:
     post:
       operationId: reportAgentError
@@ -243,6 +262,10 @@ components:
               type: integer
             end:
               type: integer
+            agentSpeedHs:
+              type: integer
+              minimum: 0
+              description: Agent benchmark speed in hashes/second for the task's hash mode (fallback 1 MH/s if no benchmark)
         resources:
           type: object
           properties:
@@ -318,6 +341,33 @@ components:
         hasMore:
           type: boolean
           description: Whether more zaps are available beyond the requested limit
+
+    BenchmarkSubmission:
+      type: object
+      required: [entries]
+      properties:
+        entries:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [hashcatMode, hashType, speedHs, deviceName]
+            properties:
+              hashcatMode:
+                type: integer
+                minimum: 0
+              hashType:
+                type: string
+              speedHs:
+                type: integer
+                minimum: 0
+                description: Hashes per second
+              deviceName:
+                type: string
+        crackerVersion:
+          type: string
+          minLength: 1
+          description: Hashcat version string (e.g. "6.2.6")
 
     ErrorResponse:
       type: object

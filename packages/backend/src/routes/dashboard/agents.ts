@@ -3,7 +3,13 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { requireSession } from '../../middleware/auth.js';
 import { requireProjectAccess, requireRole } from '../../middleware/rbac.js';
-import { getAgentById, getAgentErrors, listAgents, updateAgent } from '../../services/agents.js';
+import {
+  getAgentById,
+  getAgentErrors,
+  getBenchmarksForAgent,
+  listAgents,
+  updateAgent,
+} from '../../services/agents.js';
 import type { AppEnv } from '../../types.js';
 
 const dashboardAgentRoutes = new Hono<AppEnv>();
@@ -64,6 +70,20 @@ dashboardAgentRoutes.get('/:id/errors', requireProjectAccess(), async (c) => {
 
   const errors = await getAgentErrors(agentId, { limit, offset });
   return c.json({ errors });
+});
+
+// GET /agents/:id/benchmarks — get agent benchmarks
+dashboardAgentRoutes.get('/:id/benchmarks', requireProjectAccess(), async (c) => {
+  const agentId = Number(c.req.param('id'));
+  const { projectId } = c.get('currentUser');
+
+  const agent = await getAgentById(agentId);
+  if (!agent || agent.projectId !== projectId) {
+    return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Agent not found' } }, 404);
+  }
+
+  const benchmarks = await getBenchmarksForAgent(agentId);
+  return c.json({ benchmarks });
 });
 
 export { dashboardAgentRoutes };

@@ -2,6 +2,7 @@ import { agents, attacks, campaigns, hashItems, tasks } from '@hashhive/shared';
 import { and, desc, eq, gt, isNotNull, type SQL, sql } from 'drizzle-orm';
 import { logger } from '../config/logger.js';
 import { db } from '../db/index.js';
+import { getAgentBenchmarkForMode } from './agents.js';
 import { updateCampaignProgress } from './campaigns.js';
 import { emitCrackResult, emitTaskUpdate } from './events.js';
 
@@ -123,6 +124,8 @@ function buildCapabilityPredicate(agentCaps: Record<string, unknown>): SQL {
   return sql`(${gpuCondition} AND ${hashModeCondition})`;
 }
 
+const DEFAULT_AGENT_SPEED_HS = 1_000_000; // 1 MH/s fallback when no benchmark exists
+
 /**
  * Assigns the next available pending task to an agent.
  *
@@ -132,9 +135,9 @@ function buildCapabilityPredicate(agentCaps: Record<string, unknown>): SQL {
  * concurrent access from multiple agents.
  */
 export async function assignNextTask(agentId: number) {
-  // Verify agent exists and is online
+  // Verify agent exists and is online or benchmarked
   const [agent] = await db.select().from(agents).where(eq(agents.id, agentId)).limit(1);
-  if (!agent || agent.status !== 'online') {
+  if (!agent || (agent.status !== 'online' && agent.status !== 'benchmarked')) {
     return null;
   }
 
@@ -173,6 +176,24 @@ export async function assignNextTask(agentId: number) {
   const row = result[0] as Record<string, unknown> | undefined;
   if (!row) return null;
 
+  // Extract hashcatMode from the task's required capabilities for benchmark lookup
+  // Accept both numeric and numeric-string values (legacy/external inserts may store as string)
+  const requiredCaps = row['required_capabilities'] as Record<string, unknown> | null;
+  const rawHashcatMode = requiredCaps?.['hashcatMode'];
+  const parsedMode =
+    typeof rawHashcatMode === 'number'
+      ? rawHashcatMode
+      : typeof rawHashcatMode === 'string'
+        ? Number(rawHashcatMode)
+        : Number.NaN;
+  const taskHashcatMode =
+    Number.isFinite(parsedMode) && Number.isInteger(parsedMode) ? parsedMode : null;
+
+  // Look up the agent's benchmark speed for this hash mode
+  const benchmark =
+    taskHashcatMode !== null ? await getAgentBenchmarkForMode(agentId, taskHashcatMode) : null;
+  const agentSpeedHs = benchmark?.speedHs ?? DEFAULT_AGENT_SPEED_HS;
+
   // Map snake_case DB columns back to camelCase to preserve the public API contract
   return {
     id: row['id'],
@@ -180,7 +201,7 @@ export async function assignNextTask(agentId: number) {
     campaignId: row['campaign_id'],
     agentId: row['agent_id'],
     status: row['status'],
-    workRange: row['work_range'],
+    workRange: { ...((row['work_range'] as object | null) ?? {}), agentSpeedHs },
     progress: row['progress'],
     resultStats: row['result_stats'],
     requiredCapabilities: row['required_capabilities'],

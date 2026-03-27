@@ -138,9 +138,69 @@ paths:
                   acknowledged:
                     type: boolean
 
+  /benchmark:
+    post:
+      operationId: submitBenchmarks
+      summary: Submit hashcat benchmark results for this agent
+      tags:
+        - Heartbeat
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BenchmarkSubmission'
+      responses:
+        '200':
+          description: Benchmarks acknowledged
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  acknowledged:
+                    type: boolean
+        '401':
+          description: Authentication failed
+
 components:
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
       description: Pre-shared agent authentication token
+
+  schemas:
+    BenchmarkSubmission:
+      type: object
+      required:
+        - entries
+      properties:
+        entries:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - hashcatMode
+              - hashType
+              - speedHs
+              - deviceName
+            properties:
+              hashcatMode:
+                type: integer
+                minimum: 0
+              hashType:
+                type: string
+              speedHs:
+                type: integer
+                minimum: 0
+                description: Hashes per second
+              deviceName:
+                type: string
+        crackerVersion:
+          type: string
+          minLength: 1
+          description: Hashcat version string (e.g. "6.2.6")
