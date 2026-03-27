@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type KeyboardEvent, useState } from 'react';
 import { Link } from 'react-router';
 import { PermissionGuard } from '../components/features/permission-guard';
 import { ResourceUploadModal } from '../components/features/resource-upload-modal';
@@ -22,6 +22,14 @@ type Tab = 'hash-lists' | 'wordlists' | 'rulelists' | 'masklists' | 'hash-detect
 
 type UploadableTab = 'hash-lists' | 'wordlists' | 'rulelists' | 'masklists';
 
+const TABS: readonly { id: Tab; label: string }[] = [
+  { id: 'hash-lists', label: 'Hash Lists' },
+  { id: 'wordlists', label: 'Wordlists' },
+  { id: 'rulelists', label: 'Rulelists' },
+  { id: 'masklists', label: 'Masklists' },
+  { id: 'hash-detect', label: 'Hash Detect' },
+] as const;
+
 export function ResourcesPage() {
   const { selectedProjectId } = useUiStore();
   const [activeTab, setActiveTab] = useState<Tab>('hash-lists');
@@ -35,24 +43,55 @@ export function ResourcesPage() {
     );
   }
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'hash-lists', label: 'Hash Lists' },
-    { id: 'wordlists', label: 'Wordlists' },
-    { id: 'rulelists', label: 'Rulelists' },
-    { id: 'masklists', label: 'Masklists' },
-    { id: 'hash-detect', label: 'Hash Detect' },
-  ];
+  const handleTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+    const currentIndex = TABS.findIndex((t) => t.id === activeTab);
+    let nextIndex: number | null = null;
+
+    switch (e.key) {
+      case 'ArrowRight':
+        nextIndex = (currentIndex + 1) % TABS.length;
+        break;
+      case 'ArrowLeft':
+        nextIndex = (currentIndex - 1 + TABS.length) % TABS.length;
+        break;
+      case 'Home':
+        nextIndex = 0;
+        break;
+      case 'End':
+        nextIndex = TABS.length - 1;
+        break;
+      default:
+        return;
+    }
+
+    e.preventDefault();
+    const nextTab = TABS[nextIndex];
+    if (nextTab) {
+      setActiveTab(nextTab.id);
+      document.getElementById(`tab-${nextTab.id}`)?.focus();
+    }
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader>Resources</PageHeader>
 
-      <div className="flex gap-1 border-b border-surface-0/50">
-        {tabs.map((tab) => (
+      <div
+        role="tablist"
+        aria-label="Resource types"
+        className="flex gap-1 border-b border-surface-0/50"
+      >
+        {TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`tabpanel-${tab.id}`}
+            id={`tab-${tab.id}`}
+            tabIndex={activeTab === tab.id ? 0 : -1}
             onClick={() => setActiveTab(tab.id)}
+            onKeyDown={handleTabKeyDown}
             className={cn(
               'border-b-2 px-3 py-2 text-xs font-medium transition-colors',
               activeTab === tab.id
@@ -65,11 +104,13 @@ export function ResourcesPage() {
         ))}
       </div>
 
-      {activeTab === 'hash-lists' && <HashListsTab />}
-      {activeTab === 'wordlists' && <ResourceListTab type="wordlists" />}
-      {activeTab === 'rulelists' && <ResourceListTab type="rulelists" />}
-      {activeTab === 'masklists' && <ResourceListTab type="masklists" />}
-      {activeTab === 'hash-detect' && <HashDetectTab />}
+      <div role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
+        {activeTab === 'hash-lists' && <HashListsTab />}
+        {activeTab === 'wordlists' && <ResourceListTab type="wordlists" />}
+        {activeTab === 'rulelists' && <ResourceListTab type="rulelists" />}
+        {activeTab === 'masklists' && <ResourceListTab type="masklists" />}
+        {activeTab === 'hash-detect' && <HashDetectTab />}
+      </div>
     </div>
   );
 }
@@ -102,7 +143,7 @@ function UploadButton({ type }: { type: UploadableTab }) {
 function HashListsTab() {
   const { data, isLoading } = useHashLists();
 
-  if (isLoading) return <EmptyState message="Loading\u2026" />;
+  if (isLoading) return <EmptyState message="Loading..." />;
 
   const hashLists = data?.hashLists ?? [];
 
@@ -150,7 +191,7 @@ function HashListsTab() {
                           style={{ width: `${Math.min(pct, 100)}%` }}
                         />
                       </div>
-                      <span className="font-mono text-[11px] text-muted-foreground">
+                      <span className="font-mono text-xs text-muted-foreground">
                         {pct.toFixed(0)}%
                       </span>
                     </div>
@@ -180,7 +221,7 @@ function useResourcesByType(type: 'wordlists' | 'rulelists' | 'masklists') {
 function ResourceListTab({ type }: { type: 'wordlists' | 'rulelists' | 'masklists' }) {
   const { data, isLoading } = useResourcesByType(type);
 
-  if (isLoading) return <EmptyState message="Loading\u2026" />;
+  if (isLoading) return <EmptyState message="Loading..." />;
 
   const resources = data?.resources ?? [];
 
@@ -232,7 +273,8 @@ function HashDetectTab() {
     <div className="space-y-4">
       <div className="flex gap-2">
         <Input
-          placeholder="Paste a hash value\u2026"
+          aria-label="Hash value for type detection"
+          placeholder="Paste a hash value..."
           className="font-mono text-xs"
           value={hashInput}
           onChange={(e) => setHashInput(e.target.value)}
@@ -245,7 +287,7 @@ function HashDetectTab() {
           disabled={guessType.isPending || !hashInput.trim()}
           className="shrink-0"
         >
-          {guessType.isPending ? 'Detecting\u2026' : 'Detect Type'}
+          {guessType.isPending ? 'Detecting...' : 'Detect Type'}
         </Button>
       </div>
 
@@ -283,7 +325,7 @@ function HashDetectTab() {
                             style={{ width: `${Math.round(c.confidence * 100)}%` }}
                           />
                         </div>
-                        <span className="font-mono text-[11px] text-muted-foreground">
+                        <span className="font-mono text-xs text-muted-foreground">
                           {Math.round(c.confidence * 100)}%
                         </span>
                       </div>

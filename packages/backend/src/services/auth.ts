@@ -59,11 +59,21 @@ export async function validateToken(token: string): Promise<{
       userId: Number(sub),
       email,
       type,
-      ...(typeof projectId === 'number' ? { projectId } : {}),
+      ...(projectId != null ? { projectId: Number(projectId) } : {}),
     };
   } catch {
     return null;
   }
+}
+
+/** Checks if a user is a member of a project. Returns the membership row or null. */
+export async function findProjectMembership(userId: number, projectId: number) {
+  const [membership] = await db
+    .select()
+    .from(projectUsers)
+    .where(and(eq(projectUsers.userId, userId), eq(projectUsers.projectId, projectId)))
+    .limit(1);
+  return membership ?? null;
 }
 
 // Dummy hash for constant-time comparison when user is not found

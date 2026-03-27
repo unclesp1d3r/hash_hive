@@ -3,7 +3,13 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { requireSession } from '../../middleware/auth.js';
 import { requireProjectAccess, requireRole } from '../../middleware/rbac.js';
-import { getAgentById, getAgentErrors, listAgents, updateAgent } from '../../services/agents.js';
+import {
+  getAgentById,
+  getAgentErrors,
+  getBenchmarksForAgent,
+  listAgents,
+  updateAgent,
+} from '../../services/agents.js';
 import type { AppEnv } from '../../types.js';
 
 const dashboardAgentRoutes = new Hono<AppEnv>();
@@ -21,12 +27,16 @@ dashboardAgentRoutes.get('/', requireProjectAccess(), async (c) => {
   return c.json(result);
 });
 
-// GET /agents/:id — get agent details
+// GET /agents/:id -- get agent details
 dashboardAgentRoutes.get('/:id', requireProjectAccess(), async (c) => {
   const agentId = Number(c.req.param('id'));
+  if (Number.isNaN(agentId) || agentId <= 0) {
+    return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid agent ID' } }, 400);
+  }
+  const { projectId } = c.get('currentUser');
   const agent = await getAgentById(agentId);
 
-  if (!agent) {
+  if (!agent || agent.projectId !== projectId) {
     return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Agent not found' } }, 404);
   }
 
@@ -56,14 +66,41 @@ dashboardAgentRoutes.patch(
   }
 );
 
-// GET /agents/:id/errors — get agent errors
+// GET /agents/:id/errors -- get agent errors
 dashboardAgentRoutes.get('/:id/errors', requireProjectAccess(), async (c) => {
   const agentId = Number(c.req.param('id'));
+  if (Number.isNaN(agentId) || agentId <= 0) {
+    return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid agent ID' } }, 400);
+  }
+  const { projectId } = c.get('currentUser');
+
+  const agent = await getAgentById(agentId);
+  if (!agent || agent.projectId !== projectId) {
+    return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Agent not found' } }, 404);
+  }
+
   const limit = c.req.query('limit') ? Number(c.req.query('limit')) : undefined;
   const offset = c.req.query('offset') ? Number(c.req.query('offset')) : undefined;
 
   const errors = await getAgentErrors(agentId, { limit, offset });
   return c.json({ errors });
+});
+
+// GET /agents/:id/benchmarks -- get agent benchmarks
+dashboardAgentRoutes.get('/:id/benchmarks', requireProjectAccess(), async (c) => {
+  const agentId = Number(c.req.param('id'));
+  if (Number.isNaN(agentId) || agentId <= 0) {
+    return c.json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid agent ID' } }, 400);
+  }
+  const { projectId } = c.get('currentUser');
+
+  const agent = await getAgentById(agentId);
+  if (!agent || agent.projectId !== projectId) {
+    return c.json({ error: { code: 'RESOURCE_NOT_FOUND', message: 'Agent not found' } }, 404);
+  }
+
+  const benchmarks = await getBenchmarksForAgent(agentId);
+  return c.json({ benchmarks });
 });
 
 export { dashboardAgentRoutes };

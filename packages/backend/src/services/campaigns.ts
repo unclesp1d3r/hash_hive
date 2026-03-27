@@ -369,31 +369,23 @@ export async function deleteAttack(id: number) {
 // ─── Campaign Progress ─────────────────────────────────────────────
 
 export async function updateCampaignProgress(campaignId: number) {
-  const campaignTasks = await db
+  // Single aggregation query: total tasks, completed count, and clamped running progress.
+  const [agg] = await db
     .select({
-      status: tasks.status,
-      progress: tasks.progress,
+      totalTasks: sql<number>`count(*)`,
+      completedCount: sql<number>`count(*) FILTER (WHERE ${tasks.status} IN ('completed', 'exhausted'))`,
+      runningProgress: sql<number>`COALESCE(SUM(GREATEST(0, LEAST(COALESCE((${tasks.progress}->>'keyspaceProgress')::float, 0), 1))) FILTER (WHERE ${tasks.status} = 'running'), 0)`,
     })
     .from(tasks)
     .where(eq(tasks.campaignId, campaignId));
 
-  if (campaignTasks.length === 0) return;
+  const totalTasks = agg?.totalTasks ?? 0;
+  if (totalTasks === 0) return;
 
-  let completedCount = 0;
-  let totalProgress = 0;
+  const completedCount = agg?.completedCount ?? 0;
+  const runningProgress = agg?.runningProgress ?? 0;
 
-  for (const t of campaignTasks) {
-    if (t.status === 'completed' || t.status === 'exhausted') {
-      completedCount++;
-      totalProgress += 1;
-    } else if (t.status === 'running') {
-      const prog = (t.progress as Record<string, unknown>) ?? {};
-      const kp = typeof prog['keyspaceProgress'] === 'number' ? prog['keyspaceProgress'] : 0;
-      totalProgress += Math.min(kp, 1);
-    }
-  }
-
-  const overallProgress = campaignTasks.length > 0 ? totalProgress / campaignTasks.length : 0;
+  const overallProgress = (completedCount + runningProgress) / totalTasks;
 
   // Hash-based progress: look up the campaign's hash list and count cracked vs total
   let hashProgress: {
@@ -424,7 +416,7 @@ export async function updateCampaignProgress(campaignId: number) {
     .update(campaigns)
     .set({
       progress: {
-        totalTasks: campaignTasks.length,
+        totalTasks,
         completedTasks: completedCount,
         overallProgress: Math.round(overallProgress * 10000) / 10000,
         updatedAt: new Date().toISOString(),

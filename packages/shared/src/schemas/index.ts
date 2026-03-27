@@ -1,6 +1,7 @@
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 import {
+  agentBenchmarks,
   agentErrors,
   agents,
   attacks,
@@ -47,6 +48,11 @@ export const selectAgentSchema = createSelectSchema(agents);
 
 export const insertAgentErrorSchema = createInsertSchema(agentErrors);
 export const selectAgentErrorSchema = createSelectSchema(agentErrors);
+
+// ─── Agent Benchmarks ────────────────────────────────────────────────
+
+export const insertAgentBenchmarkSchema = createInsertSchema(agentBenchmarks);
+export const selectAgentBenchmarkSchema = createSelectSchema(agentBenchmarks);
 
 // ─── Hash Types ─────────────────────────────────────────────────────
 
@@ -123,8 +129,40 @@ export const hashCandidateSchema = z.object({
   confidence: z.number().min(0).max(1),
 });
 
+/**
+ * Canonical agent status values matching the persisted `agents.status` column.
+ * Use this schema wherever the full agent status vocabulary is validated.
+ */
+export const agentStatusSchema = z.enum(['offline', 'online', 'busy', 'error', 'benchmarked']);
+
+/**
+ * Heartbeat status is intentionally a subset of `agentStatusSchema` — agents
+ * never self-report as `offline` (that state is set server-side by the
+ * heartbeat timeout monitor).
+ */
+export const benchmarkSubmissionSchema = z.object({
+  entries: z
+    .array(
+      z.object({
+        hashcatMode: z.number().int().nonnegative(),
+        hashType: z.string().min(1),
+        speedHs: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+        deviceName: z.string().min(1),
+      })
+    )
+    .min(1)
+    .refine(
+      (entries) => {
+        const modes = entries.map((e) => e.hashcatMode);
+        return new Set(modes).size === modes.length;
+      },
+      { message: 'entries must not contain duplicate hashcatMode values' }
+    ),
+  crackerVersion: z.string().min(1).optional(),
+});
+
 export const agentHeartbeatSchema = z.object({
-  status: z.enum(['online', 'busy', 'error']),
+  status: z.enum(['online', 'busy', 'error', 'benchmarked']),
   capabilities: z
     .object({
       hashcatVersion: z.string(),

@@ -43,12 +43,14 @@ export function HashListDetailPage() {
     offset,
   });
 
-  if (isLoading) return <EmptyState message="Loading hash list\u2026" />;
+  if (isLoading) return <EmptyState message="Loading hash list..." />;
 
   if (isError) {
     return (
       <div className="space-y-4">
-        <TextLink to="/resources">&larr; Back to resources</TextLink>
+        <TextLink to="/resources" back>
+          Back to resources
+        </TextLink>
         <ErrorBanner
           message={error instanceof Error ? error.message : 'Failed to load hash list'}
         />
@@ -59,7 +61,9 @@ export function HashListDetailPage() {
   if (!data?.hashList) {
     return (
       <div className="space-y-4">
-        <TextLink to="/resources">&larr; Back to resources</TextLink>
+        <TextLink to="/resources" back>
+          Back to resources
+        </TextLink>
         <EmptyState message="Hash list not found." />
       </div>
     );
@@ -75,11 +79,14 @@ export function HashListDetailPage() {
 
   return (
     <div className="space-y-6">
-      <TextLink to="/resources">&larr; Back to resources</TextLink>
-
-      <div className="flex items-center gap-3">
-        <PageHeader>{hashList.name}</PageHeader>
-        <StatusBadge status={hashList.status} />
+      <div className="space-y-3">
+        <TextLink to="/resources" back>
+          Back to resources
+        </TextLink>
+        <div className="flex items-center gap-3">
+          <PageHeader>{hashList.name}</PageHeader>
+          <StatusBadge status={hashList.status} />
+        </div>
       </div>
 
       {/* Statistics cards */}
@@ -101,93 +108,96 @@ export function HashListDetailPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-3">
-        <Select
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value as StatusFilter);
-            setOffset(0);
-          }}
-        >
-          <option value="all">All</option>
-          <option value="cracked">Cracked</option>
-          <option value="uncracked">Uncracked</option>
-        </Select>
-        <Input
-          placeholder="Search hashes\u2026"
-          className="max-w-xs font-mono text-xs"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setOffset(0);
-          }}
-        />
-      </div>
+      {/* Filters + Hash items table */}
+      <div className="space-y-3">
+        <div className="flex gap-3">
+          <Select
+            aria-label="Filter by crack status"
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value as StatusFilter);
+              setOffset(0);
+            }}
+          >
+            <option value="all">All</option>
+            <option value="cracked">Cracked</option>
+            <option value="uncracked">Uncracked</option>
+          </Select>
+          <Input
+            aria-label="Search hashes"
+            placeholder="Search hashes..."
+            className="max-w-xs font-mono text-xs"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setOffset(0);
+            }}
+          />
+        </div>
 
-      {/* Hash items table */}
-      {itemsLoading ? (
-        <EmptyState message="Loading hashes\u2026" />
-      ) : items.length === 0 ? (
-        <EmptyState message="No hashes match your filters." />
-      ) : (
-        <>
-          <Table>
-            <TableHead>
-              <tr>
-                <Th>Hash Value</Th>
-                <Th>Status</Th>
-                <Th>Plaintext</Th>
-                <Th>Cracked At</Th>
-                <Th>Agent</Th>
-              </tr>
-            </TableHead>
-            <TableBody>
-              {items.map((item) => (
-                <TableRow key={item.id}>
-                  <Td className="max-w-[300px] truncate font-mono text-xs">{item.hashValue}</Td>
-                  <Td>
-                    <StatusBadge status={item.crackedAt ? 'cracked' : 'uncracked'} />
-                  </Td>
-                  <Td className="font-mono text-xs text-success">{item.plaintext ?? '\u2014'}</Td>
-                  <Td className="text-xs text-muted-foreground">
-                    {item.crackedAt ? new Date(item.crackedAt).toLocaleString() : '\u2014'}
-                  </Td>
-                  <Td className="font-mono text-xs text-muted-foreground">
-                    {item.agentId ? `#${item.agentId}` : '\u2014'}
-                  </Td>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        {itemsLoading ? (
+          <EmptyState message="Loading hashes..." />
+        ) : items.length === 0 ? (
+          <EmptyState message="No hashes match your filters." />
+        ) : (
+          <>
+            <Table>
+              <TableHead>
+                <tr>
+                  <Th>Hash Value</Th>
+                  <Th>Status</Th>
+                  <Th>Plaintext</Th>
+                  <Th>Cracked At</Th>
+                  <Th>Agent</Th>
+                </tr>
+              </TableHead>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.id}>
+                    <Td className="max-w-[300px] truncate font-mono text-xs">{item.hashValue}</Td>
+                    <Td>
+                      <StatusBadge status={item.crackedAt ? 'cracked' : 'uncracked'} />
+                    </Td>
+                    <Td className="font-mono text-xs text-success">{item.plaintext ?? '-'}</Td>
+                    <Td className="text-xs text-muted-foreground">
+                      {item.crackedAt ? new Date(item.crackedAt).toLocaleString() : '-'}
+                    </Td>
+                    <Td className="font-mono text-xs text-muted-foreground">
+                      {item.agentId ? `#${item.agentId}` : '-'}
+                    </Td>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>
-              Showing {offset + 1}\u2013{Math.min(offset + PAGE_SIZE, total)} of{' '}
-              {total.toLocaleString()}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={!hasPrev}
-                onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
-              >
-                Previous
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={!hasNext}
-                onClick={() => setOffset(offset + PAGE_SIZE)}
-              >
-                Next
-              </Button>
+            {/* Pagination */}
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                Showing {offset + 1}-{Math.min(offset + PAGE_SIZE, total)} of{' '}
+                {total.toLocaleString()}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={!hasPrev}
+                  onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+                >
+                  Previous
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={!hasNext}
+                  onClick={() => setOffset(offset + PAGE_SIZE)}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

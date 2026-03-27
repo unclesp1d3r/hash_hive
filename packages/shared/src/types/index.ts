@@ -1,9 +1,12 @@
 import type { z } from 'zod';
 import type {
   agentHeartbeatSchema,
+  agentStatusSchema,
+  benchmarkSubmissionSchema,
   createAttackRequestSchema,
   createCampaignRequestSchema,
   hashCandidateSchema,
+  insertAgentBenchmarkSchema,
   insertAgentErrorSchema,
   insertAgentSchema,
   insertAttackSchema,
@@ -20,6 +23,7 @@ import type {
   insertUserSchema,
   insertWordListSchema,
   loginRequestSchema,
+  selectAgentBenchmarkSchema,
   selectAgentErrorSchema,
   selectAgentSchema,
   selectAttackSchema,
@@ -56,8 +60,13 @@ export type SelectOperatingSystem = z.infer<typeof selectOperatingSystemSchema>;
 export type InsertAgent = z.infer<typeof insertAgentSchema>;
 export type SelectAgent = z.infer<typeof selectAgentSchema>;
 
+export type AgentStatus = z.infer<typeof agentStatusSchema>;
+
 export type InsertAgentError = z.infer<typeof insertAgentErrorSchema>;
 export type SelectAgentError = z.infer<typeof selectAgentErrorSchema>;
+
+export type InsertAgentBenchmark = z.infer<typeof insertAgentBenchmarkSchema>;
+export type SelectAgentBenchmark = z.infer<typeof selectAgentBenchmarkSchema>;
 
 // ─── Resources ──────────────────────────────────────────────────────
 
@@ -90,6 +99,38 @@ export type SelectAttack = z.infer<typeof selectAttackSchema>;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type SelectTask = z.infer<typeof selectTaskSchema>;
 
+// ─── Task Assignment Types ──────────────────────────────────────────
+
+export interface WorkRange {
+  start: number;
+  end: number;
+  total: number;
+  agentSpeedHs: number;
+}
+
+export interface RequiredCapabilities {
+  gpu?: boolean;
+  hashcatMode?: number;
+}
+
+export interface AssignedTask {
+  id: number;
+  attackId: number;
+  campaignId: number;
+  agentId: number;
+  status: string;
+  workRange: WorkRange;
+  progress: unknown;
+  resultStats: unknown;
+  requiredCapabilities: RequiredCapabilities | null;
+  assignedAt: Date | null;
+  startedAt: Date | null;
+  completedAt: Date | null;
+  failureReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ─── API Request Types ──────────────────────────────────────────────
 
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
@@ -97,3 +138,4 @@ export type CreateCampaignRequest = z.infer<typeof createCampaignRequestSchema>;
 export type CreateAttackRequest = z.infer<typeof createAttackRequestSchema>;
 export type HashCandidate = z.infer<typeof hashCandidateSchema>;
 export type AgentHeartbeat = z.infer<typeof agentHeartbeatSchema>;
+export type BenchmarkSubmission = z.infer<typeof benchmarkSubmissionSchema>;

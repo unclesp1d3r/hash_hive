@@ -98,6 +98,24 @@ export function useAgentErrors(agentId: number) {
   });
 }
 
+// SelectAgentBenchmark from @hashhive/shared has Date fields; over JSON they arrive as strings.
+// Keep a mapped type for the API response shape.
+type AgentBenchmarkResponse = Omit<
+  import('@hashhive/shared').SelectAgentBenchmark,
+  'benchmarkedAt'
+> & { benchmarkedAt: string };
+
+export function useAgentBenchmarks(agentId: number) {
+  const { selectedProjectId } = useUiStore();
+
+  return useQuery({
+    queryKey: ['agent-benchmarks', agentId, selectedProjectId],
+    queryFn: () =>
+      api.get<{ benchmarks: AgentBenchmarkResponse[] }>(`/dashboard/agents/${agentId}/benchmarks`),
+    enabled: agentId > 0 && !!selectedProjectId,
+  });
+}
+
 export function useCampaigns(options?: { status?: string; limit?: number; offset?: number }) {
   const { selectedProjectId } = useUiStore();
 
