@@ -38,6 +38,12 @@ Referenced from [AGENTS.md](AGENTS.md) — read the relevant section before work
 - **`onConflictDoUpdate` + duplicate rows in VALUES**: PostgreSQL rejects a single INSERT when the VALUES list contains multiple rows targeting the same conflict key (e.g., two entries with the same `(agentId, hashcatMode)`). Deduplicate input arrays before calling `.insert().values().onConflictDoUpdate()`, or validate uniqueness at the schema level.
 - **Migration drift bundling**: `drizzle-kit generate` diffs current `schema.ts` against the last migration snapshot — if prior schema changes were never migrated, they silently bundle into the next migration. Review generated `.sql` files for unexpected ALTER statements before committing.
 - **Scoping a polluted migration**: To isolate only intended changes: (1) backup `schema.ts`, (2) temporarily revert unrelated schema changes, (3) delete the migration SQL + snapshot + journal entry, (4) run `drizzle-kit generate`, (5) restore `schema.ts` from backup.
+- **Atomic status guards**: Never read-then-write agent/task status in separate queries -- fold the guard into the `UPDATE WHERE` clause (e.g., `` sql`${agents.status} != 'busy'` ``) to prevent race conditions.
+- **Campaign progress uses SQL aggregation**: Use `COUNT(*) FILTER (WHERE status IN (...))` and `SUM(...) FILTER (WHERE status = 'running')` instead of loading all tasks into memory. Clamp keyspace progress with `GREATEST(0, LEAST(..., 1))`.
+
+## Authentication (jose / JWT)
+
+- **JWT custom claims may return as strings**: The `jose` library's `jwtVerify` can return custom numeric claims (e.g., `projectId`) as strings depending on bun version and module evaluation order. Never use `typeof x === 'number'` to check JWT claims -- use `Number(x)` coercion with null check: `x != null ? { projectId: Number(x) } : {}`.
 
 ## Bun Runtime
 
