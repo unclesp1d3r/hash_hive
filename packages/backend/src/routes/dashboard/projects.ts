@@ -1,11 +1,8 @@
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
-import { setCookie } from 'hono/cookie';
 import { z } from 'zod';
-import { env } from '../../config/env.js';
 import { requireSession } from '../../middleware/auth.js';
 import { requireParamProjectAccess, requireParamProjectRole } from '../../middleware/rbac.js';
-import { selectProject } from '../../services/auth.js';
 import {
   addUserToProject,
   createProject,
@@ -54,34 +51,6 @@ projectRoutes.get('/', async (c) => {
   const { userId } = c.get('currentUser');
   const result = await getUserProjects(userId);
   return c.json({ projects: result });
-});
-
-// POST /projects/select — select a project (re-issues JWT with projectId)
-const selectProjectSchema = z.object({
-  projectId: z.number().int().positive(),
-});
-
-projectRoutes.post('/select', zValidator('json', selectProjectSchema), async (c) => {
-  const { userId } = c.get('currentUser');
-  const { projectId } = c.req.valid('json');
-
-  const result = await selectProject(userId, projectId);
-  if (!result) {
-    return c.json(
-      { error: { code: 'AUTHZ_PROJECT_ACCESS_DENIED', message: 'Not a member of this project' } },
-      403
-    );
-  }
-
-  setCookie(c, 'session', result.token, {
-    httpOnly: true,
-    secure: env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 24,
-  });
-
-  return c.json({ success: true, projectId: result.projectId });
 });
 
 // POST /projects — create a new project

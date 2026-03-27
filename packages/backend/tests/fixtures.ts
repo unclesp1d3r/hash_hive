@@ -16,7 +16,6 @@ import type {
   InsertTask,
   InsertUser,
 } from '@hashhive/shared';
-import { createToken } from '../src/services/auth.js';
 
 let counter = 0;
 function nextId() {
@@ -140,11 +139,6 @@ export function buildTask(
 }
 
 // ─── Token Helpers ──────────────────────────────────────────────────
-
-/** Create a valid session JWT for dashboard API testing. */
-export async function sessionToken(userId = 1, email = 'test@example.com') {
-  return createToken({ userId, email, type: 'session' });
-}
 
 /**
  * Return a pre-shared agent token for agent API testing.
