@@ -46,6 +46,21 @@ function syncSelectedProject(projects: User['projects']) {
   }
 }
 
+/** Fetch /me and map the API response into the local User shape. */
+async function fetchAndMapUser(): Promise<User> {
+  const data = await api.get<MeResponse>('/dashboard/auth/me');
+  return {
+    id: data.user.id,
+    email: data.user.email,
+    name: data.user.name,
+    projects: data.projects.map((p) => ({
+      projectId: p.id,
+      projectName: p.name,
+      roles: p.roles,
+    })),
+  };
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isLoading: true,
@@ -69,18 +84,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         throw new Error(body?.message ?? 'Invalid email or password');
       }
 
-      // Fetch user profile from our custom /me endpoint
-      const data = await api.get<MeResponse>('/dashboard/auth/me');
-      const user: User = {
-        id: data.user.id,
-        email: data.user.email,
-        name: data.user.name,
-        projects: data.projects.map((p) => ({
-          projectId: p.id,
-          projectName: p.name,
-          roles: p.roles,
-        })),
-      };
+      const user = await fetchAndMapUser();
       set({ user, isAuthenticated: true, isLoading: false });
       syncSelectedProject(user.projects);
     } catch (err) {
@@ -113,17 +117,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   fetchUser: async () => {
     try {
-      const data = await api.get<MeResponse>('/dashboard/auth/me');
-      const user: User = {
-        id: data.user.id,
-        email: data.user.email,
-        name: data.user.name,
-        projects: data.projects.map((p) => ({
-          projectId: p.id,
-          projectName: p.name,
-          roles: p.roles,
-        })),
-      };
+      const user = await fetchAndMapUser();
       syncSelectedProject(user.projects);
       set({ user, isAuthenticated: true, isLoading: false });
     } catch {

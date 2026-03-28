@@ -47,6 +47,28 @@ mock.module('../../src/lib/auth.js', () => ({
 
 import { requireAgentToken, requireSession } from '../../src/middleware/auth.js';
 
+/** Build a valid mock session for the given user id and email. */
+function buildMockSession(
+  overrides: { id?: string; email?: string } = {}
+): NonNullable<typeof mockSession> {
+  const id = overrides.id ?? '1';
+  return {
+    user: {
+      id,
+      email: overrides.email ?? 'test@example.com',
+      name: 'Test User',
+      emailVerified: true,
+      image: null,
+    },
+    session: {
+      id: `sess-${id}`,
+      userId: id,
+      token: `tok-${id}`,
+      expiresAt: new Date(Date.now() + 3600000),
+    },
+  };
+}
+
 function createSessionApp() {
   const app = new Hono<AppEnv>();
   app.use('*', requireSession);
@@ -92,21 +114,7 @@ describe('requireSession middleware (BetterAuth)', () => {
   });
 
   it('should accept a valid BetterAuth session', async () => {
-    mockSession = {
-      user: {
-        id: '1',
-        email: 'test@example.com',
-        name: 'Test User',
-        emailVerified: true,
-        image: null,
-      },
-      session: {
-        id: 'sess-1',
-        userId: '1',
-        token: 'tok-1',
-        expiresAt: new Date(Date.now() + 3600000),
-      },
-    };
+    mockSession = buildMockSession();
     const res = await app.request('/protected', {
       headers: { cookie: 'hh.session_token=valid-session' },
     });
@@ -117,21 +125,7 @@ describe('requireSession middleware (BetterAuth)', () => {
   });
 
   it('should read projectId from X-Project-Id header', async () => {
-    mockSession = {
-      user: {
-        id: '1',
-        email: 'test@example.com',
-        name: 'Test User',
-        emailVerified: true,
-        image: null,
-      },
-      session: {
-        id: 'sess-1',
-        userId: '1',
-        token: 'tok-1',
-        expiresAt: new Date(Date.now() + 3600000),
-      },
-    };
+    mockSession = buildMockSession();
     const res = await app.request('/protected', {
       headers: {
         cookie: 'hh.session_token=valid-session',
@@ -144,21 +138,7 @@ describe('requireSession middleware (BetterAuth)', () => {
   });
 
   it('should set projectId to null when X-Project-Id header is missing', async () => {
-    mockSession = {
-      user: {
-        id: '1',
-        email: 'test@example.com',
-        name: 'Test User',
-        emailVerified: true,
-        image: null,
-      },
-      session: {
-        id: 'sess-1',
-        userId: '1',
-        token: 'tok-1',
-        expiresAt: new Date(Date.now() + 3600000),
-      },
-    };
+    mockSession = buildMockSession();
     const res = await app.request('/protected', {
       headers: { cookie: 'hh.session_token=valid-session' },
     });
@@ -167,21 +147,7 @@ describe('requireSession middleware (BetterAuth)', () => {
     expect(body['projectId']).toBeNull();
   });
   it('should set projectId to null for malformed X-Project-Id values', async () => {
-    mockSession = {
-      user: {
-        id: '1',
-        email: 'test@example.com',
-        name: 'Test User',
-        emailVerified: true,
-        image: null,
-      },
-      session: {
-        id: 'sess-1',
-        userId: '1',
-        token: 'tok-1',
-        expiresAt: new Date(Date.now() + 3600000),
-      },
-    };
+    mockSession = buildMockSession();
 
     // Non-numeric
     let res = await app.request('/protected', {

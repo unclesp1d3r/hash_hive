@@ -21,13 +21,9 @@ export function createEventRoutes(upgradeWebSocket: UpgradeWebSocket) {
       return {
         async onOpen(_event, ws) {
           // Authenticate via BetterAuth session cookie (sent on WS upgrade)
-          let session: Awaited<ReturnType<typeof auth.api.getSession>>;
-          try {
-            session = await auth.api.getSession({ headers: c.req.raw.headers });
-          } catch {
-            ws.close(4001, 'Authentication failed');
-            return;
-          }
+          const session = await auth.api
+            .getSession({ headers: c.req.raw.headers })
+            .catch(() => null);
 
           if (!session) {
             ws.close(4001, 'Missing authentication (valid session cookie required)');

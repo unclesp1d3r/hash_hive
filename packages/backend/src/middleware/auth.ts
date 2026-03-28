@@ -17,6 +17,13 @@ function authError(message: string): HTTPException {
   });
 }
 
+/** Parse X-Project-Id header into a valid positive integer or null. */
+function parseProjectIdHeader(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
 /**
  * Dashboard auth middleware -- validates BetterAuth session from cookie.
  * Sets currentUser on context with userId, email, and projectId from X-Project-Id header.
@@ -25,8 +32,7 @@ function authError(message: string): HTTPException {
  */
 export const requireSession = createMiddleware<AppEnv>(async (c, next) => {
   // TODO: remove legacy cookie cleanup after first production deploy cycle (2026-Q2)
-  const legacyCookie = getCookie(c, 'session');
-  if (legacyCookie) {
+  if (getCookie(c, 'session')) {
     deleteCookie(c, 'session', { path: '/' });
   }
 
@@ -41,20 +47,10 @@ export const requireSession = createMiddleware<AppEnv>(async (c, next) => {
     throw authError('Authentication required');
   }
 
-  // Read project context from X-Project-Id header (client-side project selection)
-  const projectIdHeader = c.req.header('x-project-id');
-  let projectId: number | null = null;
-  if (projectIdHeader) {
-    const parsed = Number(projectIdHeader);
-    if (Number.isInteger(parsed) && parsed > 0) {
-      projectId = parsed;
-    }
-  }
-
   c.set('currentUser', {
     userId: Number(session.user.id),
     email: session.user.email,
-    projectId,
+    projectId: parseProjectIdHeader(c.req.header('x-project-id')),
   });
   await next();
 });
