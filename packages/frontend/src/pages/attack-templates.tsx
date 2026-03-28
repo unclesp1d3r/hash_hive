@@ -88,7 +88,8 @@ export function AttackTemplatesPage() {
       wordlistId: template.wordlistId,
       rulelistId: template.rulelistId,
       masklistId: template.masklistId,
-      tags: template.tags,
+      // Tags input displays a comma-separated string; setValueAs converts back to array
+      tags: template.tags.join(', ') as unknown as string[],
     });
     setShowForm(true);
   };
