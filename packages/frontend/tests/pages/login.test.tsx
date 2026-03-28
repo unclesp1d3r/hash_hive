@@ -7,7 +7,13 @@ mock.module('../../src/lib/auth-client', () => ({
   authClient: {
     useSession: () => ({ data: mockSession, isPending: false, error: null }),
     signIn: {
-      email: mock(async (_params: { email: string; password: string }) => signInResult),
+      email: mock(async (_params: { email: string; password: string }) => {
+        // Simulate BetterAuth setting the session after successful sign-in
+        if (!signInResult.error) {
+          mockSession = { user: { id: 1 } };
+        }
+        return signInResult;
+      }),
     },
     signOut: mock(async () => ({ data: null, error: null })),
   },

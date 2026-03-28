@@ -3,7 +3,7 @@ import { loginRequestSchema } from '@hashhive/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Navigate, useNavigate } from 'react-router';
+import { Navigate } from 'react-router';
 import logoSvg from '../assets/logo.svg';
 import { Button } from '../components/ui/button';
 import { ErrorBanner } from '../components/ui/error-banner';
@@ -15,8 +15,7 @@ import { useUiStore } from '../stores/ui';
 export function LoginPage() {
   const { data: session } = authClient.useSession();
   const { selectedProjectId } = useUiStore();
-  const { fetchProjects } = useAuthStore();
-  const navigate = useNavigate();
+  const { fetchProjects, hasFetchedProjects } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -27,8 +26,14 @@ export function LoginPage() {
     resolver: zodResolver(loginRequestSchema),
   });
 
+  // Redirect when session is active + project selected (reactive, no race condition)
   if (session && selectedProjectId) {
     return <Navigate to="/" replace />;
+  }
+
+  // Redirect to project selection when authenticated but no project auto-selected
+  if (session && hasFetchedProjects && !selectedProjectId) {
+    return <Navigate to="/select-project" replace />;
   }
 
   const onSubmit = async (data: LoginRequest) => {
@@ -43,15 +48,10 @@ export function LoginPage() {
       return;
     }
 
-    // Fetch project memberships after successful login
+    // Fetch project memberships -- syncSelectedProject auto-selects if one project.
+    // Navigation is handled reactively by the <Navigate> guards above when
+    // useSession() picks up the new session and projects are fetched.
     await fetchProjects();
-
-    const currentProjectId = useUiStore.getState().selectedProjectId;
-    if (currentProjectId) {
-      navigate('/', { replace: true });
-    } else {
-      navigate('/select-project');
-    }
   };
 
   return (
