@@ -31,6 +31,10 @@ export function createEventRoutes(upgradeWebSocket: UpgradeWebSocket) {
           }
 
           const userId = Number(session.user.id);
+          if (!Number.isInteger(userId) || userId <= 0) {
+            ws.close(4001, 'Invalid session user ID');
+            return;
+          }
 
           // Parse requested project subscriptions from query
           const projectIdsParam = c.req.query('projectIds');
