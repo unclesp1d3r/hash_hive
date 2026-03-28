@@ -16,3 +16,7 @@ This file provides AI coding assistants with project context. All substantive do
 - `.kiro/steering/tech.md` contains explicit constraints on what NOT to introduce. Respect these constraints.
 - Prefer mermaid diagrams for architectural or sequence diagrams in documentation.
 - Agents (hashcat workers) are the primary API consumer. Never break the agent API to improve the dashboard experience.
+
+## Agent Rules <!-- tessl-managed -->
+
+@.tessl/RULES.md follow the [instructions](.tessl/RULES.md)
