@@ -1,5 +1,12 @@
 # Contributing to HashHive
 
+## Related Documentation
+
+- **[Architecture](./ARCHITECTURE.md)** -- system design, tech stack, API surfaces, data model
+- **[Development Setup](./docs/development.md)** -- environment, commands, infrastructure services
+- **[Testing](./docs/testing.md)** -- test strategy, patterns, bun:test specifics
+- **[Known Gotchas](./GOTCHAS.md)** -- hard-won lessons by domain (TypeScript, Hono, Drizzle, etc.)
+
 ## Development Setup
 
 ### Prerequisites
@@ -259,9 +266,18 @@ just clean       # Remove all node_modules and build artifacts
 bun install      # Fresh install
 ```
 
+## Issue Tracking
+
+- GitHub Issues on `EvilBit-Labs/hash_hive`
+- Labels: `priority:critical/high/medium/low`, `SP:N` (fibonacci), feature area labels, `gap-analysis`
+- Every issue body ends with a `## Dependencies` section listing blockers and blocked issues
+- Sprint execution order: see dependency graph in `docs/hash_hive_gap_analysis.md`
+
 ## Getting Help
 
 - Check documentation in `docs/`
+- Review [ARCHITECTURE.md](./ARCHITECTURE.md) for system design decisions
 - Review OpenAPI specifications in `packages/openapi/`
-- Review architecture in `.kiro/steering/`
+- Review authoritative specs in `.kiro/steering/`
+- Review [GOTCHAS.md](./GOTCHAS.md) before working in an unfamiliar area
 - Ask questions in pull requests

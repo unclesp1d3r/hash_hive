@@ -2,7 +2,7 @@
 
 Hard-won lessons, edge cases, and "watch out for" patterns. Organized by domain.
 
-Referenced from [AGENTS.md](AGENTS.md) — read the relevant section before working in that area.
+Read the relevant section before working in that area. See also [ARCHITECTURE.md](ARCHITECTURE.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## TypeScript Strict Mode
 
@@ -14,7 +14,7 @@ Referenced from [AGENTS.md](AGENTS.md) — read the relevant section before work
 
 ## Hono
 
-- **Dashboard sub-resource routes need ownership checks**: `requireProjectAccess()` only verifies the user has a valid project in their JWT — it does NOT verify the requested resource (e.g., agent) belongs to that project. Always fetch the parent resource and check `resource.projectId === currentUser.projectId` before returning sub-resource data (benchmarks, errors, etc.).
+- **Dashboard sub-resource routes need ownership checks**: `requireProjectAccess()` only verifies the user is a member of the project specified in the `X-Project-Id` header -- it does NOT verify the requested resource (e.g., agent) belongs to that project. Always fetch the parent resource and check `resource.projectId === currentUser.projectId` before returning sub-resource data (benchmarks, errors, etc.).
 
 - **`app.onError()` must check `instanceof HTTPException`** before returning a generic 500 — without this, auth middleware 401 responses get swallowed into 500s:
 
