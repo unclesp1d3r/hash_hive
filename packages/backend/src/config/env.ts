@@ -22,9 +22,8 @@ const envSchema = z.object({
   S3_BUCKET: z.string().min(1).default('hashhive'),
   S3_REGION: z.string().default('us-east-1'),
 
-  // JWT
-  JWT_SECRET: z.string().min(16),
-  JWT_EXPIRY: z.string().default('24h'),
+  // BetterAuth (generate with: openssl rand -base64 32)
+  BETTER_AUTH_SECRET: z.string().min(32),
 });
 
 export type Env = z.infer<typeof envSchema>;

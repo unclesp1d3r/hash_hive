@@ -19,14 +19,8 @@ function selectProject(projectId = 1) {
 
 function setAuthUser(roles: string[] = ['admin'], projectId = 1) {
   useAuthStore.setState({
-    user: {
-      id: 1,
-      email: 'test@test.com',
-      name: 'Test User',
-      projects: [{ projectId, projectName: 'Test Project', roles }],
-    },
-    isAuthenticated: true,
-    isLoading: false,
+    projects: [{ projectId, projectName: 'Test Project', roles }],
+    hasFetchedProjects: true,
   });
 }
 

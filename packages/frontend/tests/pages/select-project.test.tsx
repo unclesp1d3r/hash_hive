@@ -1,4 +1,16 @@
-import { afterEach, describe, expect, it } from 'bun:test';
+import { afterEach, describe, expect, it, mock } from 'bun:test';
+
+let mockSession: { user: { id: number } } | null = null;
+let mockIsPending = false;
+
+mock.module('../../src/lib/auth-client', () => ({
+  authClient: {
+    useSession: () => ({ data: mockSession, isPending: mockIsPending, error: null }),
+    signIn: { email: mock(async () => ({ error: null })) },
+    signOut: mock(async () => ({ data: null, error: null })),
+  },
+}));
+
 import { SelectProjectPage } from '../../src/pages/select-project';
 import { useAuthStore } from '../../src/stores/auth';
 import { useUiStore } from '../../src/stores/ui';
@@ -10,6 +22,8 @@ let fetchMock: ReturnType<typeof mockFetch>;
 afterEach(() => {
   cleanupAll();
   if (fetchMock) restoreFetch(fetchMock);
+  mockSession = null;
+  mockIsPending = false;
 });
 
 function setAuthenticatedUser(projectCount: number) {
@@ -19,23 +33,14 @@ function setAuthenticatedUser(projectCount: number) {
     roles: ['admin'],
   }));
 
-  useAuthStore.setState({
-    user: {
-      id: 1,
-      email: 'admin@hashhive.local',
-      name: 'Admin User',
-      projects,
-    },
-    isAuthenticated: true,
-    isLoading: false,
-  });
+  mockSession = { user: { id: 1 } };
+  useAuthStore.setState({ projects, hasFetchedProjects: true });
 }
 
 describe('SelectProjectPage', () => {
   it('redirects to /login when not authenticated', () => {
     fetchMock = mockFetch();
-    // Auth store defaults to isLoading: true, so set it to false + not authenticated
-    useAuthStore.setState({ isLoading: false, isAuthenticated: false, user: null });
+    // mockSession defaults to null (not authenticated), mockIsPending defaults to false
 
     renderWithRouter(
       [
@@ -98,26 +103,6 @@ describe('SelectProjectPage', () => {
 
     await waitFor(() => {
       expect(useUiStore.getState().selectedProjectId).toBe(1);
-    });
-  });
-
-  it('shows error on selection failure', async () => {
-    fetchMock = mockFetch({
-      '/dashboard/projects/select': {
-        status: 500,
-        body: { error: { code: 'INTERNAL_ERROR', message: 'Server error' } },
-      },
-    });
-    setAuthenticatedUser(2);
-
-    renderWithRouter([{ path: '/select-project', element: <SelectProjectPage /> }], {
-      initialRoute: '/select-project',
-    });
-
-    fireEvent.click(screen.getByText('Project 1'));
-
-    await waitFor(() => {
-      expect(screen.getByText('Failed to select project. Please try again.')).toBeDefined();
     });
   });
 

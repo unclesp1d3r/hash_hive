@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router';
 import logoSvg from '../../assets/logo.svg';
 import { useEvents } from '../../hooks/use-events';
+import { authClient } from '../../lib/auth-client';
 import { cn } from '../../lib/utils';
 import { useAuthStore } from '../../stores/auth';
 import { useUiStore } from '../../stores/ui';
@@ -38,27 +39,14 @@ const navItems = [
 /** Shared sidebar content used by both desktop and mobile variants. */
 function SidebarContent({ onNavigate }: { readonly onNavigate?: () => void }) {
   const { pathname } = useLocation();
-  const { user, logout, selectProject } = useAuthStore();
+  const { projects, clearAuth } = useAuthStore();
+  const { data: session } = authClient.useSession();
   const { selectedProjectId, setSelectedProject } = useUiStore();
   const { connected } = useEvents();
 
-  const handleProjectChange = async (value: string) => {
+  const handleProjectChange = (value: string) => {
     const projectId = value ? Number(value) : null;
-    const previousProjectId = selectedProjectId;
     setSelectedProject(projectId);
-    if (projectId) {
-      try {
-        await selectProject(projectId);
-      } catch (err: unknown) {
-        // Only rollback if user hasn't switched again while this request was in flight
-        if (useUiStore.getState().selectedProjectId === projectId) {
-          setSelectedProject(previousProjectId);
-        }
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        // biome-ignore lint/suspicious/noConsole: no frontend logger available; console.error is the only option
-        console.error('Failed to switch project:', message);
-      }
-    }
   };
 
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
@@ -72,7 +60,7 @@ function SidebarContent({ onNavigate }: { readonly onNavigate?: () => void }) {
       </div>
 
       {/* Project selector */}
-      {user && user.projects.length > 0 && (
+      {projects.length > 0 && (
         <div className="px-3 pb-3">
           <Select
             aria-label="Select project"
@@ -81,7 +69,7 @@ function SidebarContent({ onNavigate }: { readonly onNavigate?: () => void }) {
             onChange={(e) => handleProjectChange(e.target.value)}
           >
             <option value="">All Projects</option>
-            {user.projects.map((p) => (
+            {projects.map((p) => (
               <option key={p.projectId} value={p.projectId}>
                 {p.projectName}
               </option>
@@ -120,12 +108,15 @@ function SidebarContent({ onNavigate }: { readonly onNavigate?: () => void }) {
         <ConnectionIndicator connected={connected} />
         <div className="flex items-center justify-between">
           <span className="max-w-[130px] truncate text-xs text-muted-foreground">
-            {user?.email}
+            {session?.user.email}
           </span>
           <button
             type="button"
             className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-            onClick={() => logout()}
+            onClick={async () => {
+              await authClient.signOut();
+              clearAuth();
+            }}
           >
             Sign out
           </button>

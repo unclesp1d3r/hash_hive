@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { createBunWebSocket } from 'hono/bun';
-import { getCookie } from 'hono/cookie';
-import { getUserWithProjects, validateToken } from '../../services/auth.js';
+import { auth } from '../../lib/auth.js';
+import { getUserWithProjects } from '../../services/auth.js';
 import type { EventType } from '../../services/events.js';
 import { getClientCount, registerClient, unregisterClient } from '../../services/events.js';
 import type { AppEnv } from '../../types.js';
@@ -11,7 +11,7 @@ type UpgradeWebSocket = ReturnType<typeof createBunWebSocket>['upgradeWebSocket'
 export function createEventRoutes(upgradeWebSocket: UpgradeWebSocket) {
   const eventRoutes = new Hono<AppEnv>();
 
-  // ─── GET /stream — WebSocket upgrade for real-time events ───────────
+  // ─── GET /stream -- WebSocket upgrade for real-time events ───────────
 
   eventRoutes.get(
     '/stream',
@@ -20,23 +20,19 @@ export function createEventRoutes(upgradeWebSocket: UpgradeWebSocket) {
 
       return {
         async onOpen(_event, ws) {
-          // Hybrid auth: try cookie first, fall back to query token
-          let payload: Awaited<ReturnType<typeof validateToken>> = null;
+          // Authenticate via BetterAuth session cookie (sent on WS upgrade)
+          const session = await auth.api
+            .getSession({ headers: c.req.raw.headers })
+            .catch(() => null);
 
-          const cookieToken = getCookie(c, 'session');
-          if (cookieToken) {
-            payload = await validateToken(cookieToken);
+          if (!session) {
+            ws.close(4001, 'Missing authentication (valid session cookie required)');
+            return;
           }
 
-          if (!payload) {
-            const queryToken = c.req.query('token');
-            if (queryToken) {
-              payload = await validateToken(queryToken);
-            }
-          }
-
-          if (!payload || payload.type !== 'session') {
-            ws.close(4001, 'Missing authentication (cookie or token required)');
+          const userId = Number(session.user.id);
+          if (!Number.isInteger(userId) || userId <= 0) {
+            ws.close(4001, 'Invalid session user ID');
             return;
           }
 
@@ -52,7 +48,7 @@ export function createEventRoutes(upgradeWebSocket: UpgradeWebSocket) {
           }
 
           // Authorize: intersect requested projectIds with user's memberships
-          const userWithProjects = await getUserWithProjects(payload.userId);
+          const userWithProjects = await getUserWithProjects(userId);
           if (!userWithProjects) {
             ws.close(4001, 'User not found');
             return;
@@ -99,7 +95,7 @@ export function createEventRoutes(upgradeWebSocket: UpgradeWebSocket) {
     })
   );
 
-  // ─── GET /status — check event system health ────────────────────────
+  // ─── GET /status -- check event system health ────────────────────────
 
   eventRoutes.get('/status', (c) => {
     return c.json({

@@ -7,6 +7,7 @@ import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { checkMinioHealth } from './config/storage.js';
 import { db } from './db/index.js';
+import { auth } from './lib/auth.js';
 import { requestId } from './middleware/request-id.js';
 import { requestLogger } from './middleware/request-logger.js';
 import { securityHeaders } from './middleware/security-headers.js';
@@ -78,6 +79,20 @@ app.get('/health', async (c) => {
       minio: minioHealth,
     },
   });
+});
+
+// ─── BetterAuth Handler ──────────────────────────────────────────────
+
+app.on(['POST', 'GET'], '/api/auth/**', async (c) => {
+  try {
+    return await auth.handler(c.req.raw);
+  } catch (err) {
+    logger.error({ err, path: c.req.path }, 'BetterAuth handler error');
+    return c.json(
+      { error: { code: 'AUTH_SERVICE_ERROR', message: 'Authentication service error' } },
+      500
+    );
+  }
 });
 
 // ─── Route Mounts ────────────────────────────────────────────────────

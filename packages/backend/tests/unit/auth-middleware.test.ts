@@ -4,8 +4,6 @@ import type { AppEnv } from '../../src/types.js';
 
 // ─── Mock DB for agent token middleware ──────────────────────────────
 
-// Mutable result that each test sets before making a request.
-// The mock DB chain always resolves with this value.
 let mockAgentResult: Array<{
   id: number;
   projectId: number;
@@ -26,8 +24,50 @@ mock.module('../../src/db/index.js', () => ({
   client: {},
 }));
 
+// ─── Mock BetterAuth session lookup ──────────────────────────────────
+
+let mockSession: {
+  user: { id: string; email: string; name: string; emailVerified: boolean; image: string | null };
+  session: { id: string; userId: string; token: string; expiresAt: Date };
+} | null = null;
+
+let mockGetSessionError: Error | null = null;
+
+mock.module('../../src/lib/auth.js', () => ({
+  auth: {
+    api: {
+      getSession: async () => {
+        if (mockGetSessionError) throw mockGetSessionError;
+        return mockSession;
+      },
+    },
+    handler: async () => new Response('ok'),
+  },
+}));
+
 import { requireAgentToken, requireSession } from '../../src/middleware/auth.js';
-import { createToken } from '../../src/services/auth.js';
+
+/** Build a valid mock session for the given user id and email. */
+function buildMockSession(
+  overrides: { id?: string; email?: string } = {}
+): NonNullable<typeof mockSession> {
+  const id = overrides.id ?? '1';
+  return {
+    user: {
+      id,
+      email: overrides.email ?? 'test@example.com',
+      name: 'Test User',
+      emailVerified: true,
+      image: null,
+    },
+    session: {
+      id: `sess-${id}`,
+      userId: id,
+      token: `tok-${id}`,
+      expiresAt: new Date(Date.now() + 3600000),
+    },
+  };
+}
 
 function createSessionApp() {
   const app = new Hono<AppEnv>();
@@ -49,20 +89,34 @@ function createAgentApp() {
   return app;
 }
 
-describe('requireSession middleware', () => {
+describe('requireSession middleware (BetterAuth)', () => {
   const app = createSessionApp();
 
-  it('should reject requests without a session cookie', async () => {
+  beforeEach(() => {
+    mockSession = null;
+    mockGetSessionError = null;
+  });
+
+  it('should reject requests without a valid session', async () => {
+    mockSession = null;
     const res = await app.request('/protected');
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body['error']['code']).toBe('AUTH_TOKEN_INVALID');
   });
 
-  it('should accept a valid session cookie', async () => {
-    const token = await createToken({ userId: 1, email: 'test@example.com', type: 'session' });
+  it('should return 401 when getSession throws an error', async () => {
+    mockGetSessionError = new Error('Database connection failed');
+    const res = await app.request('/protected');
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body['error']['code']).toBe('AUTH_TOKEN_INVALID');
+  });
+
+  it('should accept a valid BetterAuth session', async () => {
+    mockSession = buildMockSession();
     const res = await app.request('/protected', {
-      headers: { cookie: `session=${token}` },
+      headers: { cookie: 'hh.session_token=valid-session' },
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -70,12 +124,60 @@ describe('requireSession middleware', () => {
     expect(body['email']).toBe('test@example.com');
   });
 
-  it('should reject an agent token in session cookie', async () => {
-    const token = await createToken({ userId: 1, email: 'agent@example.com', type: 'agent' });
+  it('should read projectId from X-Project-Id header', async () => {
+    mockSession = buildMockSession();
     const res = await app.request('/protected', {
-      headers: { cookie: `session=${token}` },
+      headers: {
+        cookie: 'hh.session_token=valid-session',
+        'x-project-id': '42',
+      },
     });
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body['projectId']).toBe(42);
+  });
+
+  it('should set projectId to null when X-Project-Id header is missing', async () => {
+    mockSession = buildMockSession();
+    const res = await app.request('/protected', {
+      headers: { cookie: 'hh.session_token=valid-session' },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body['projectId']).toBeNull();
+  });
+  it('should set projectId to null for malformed X-Project-Id values', async () => {
+    mockSession = buildMockSession();
+
+    // Non-numeric
+    let res = await app.request('/protected', {
+      headers: { cookie: 'hh.session_token=valid-session', 'x-project-id': 'abc' },
+    });
+    expect((await res.json())['projectId']).toBeNull();
+
+    // Zero
+    res = await app.request('/protected', {
+      headers: { cookie: 'hh.session_token=valid-session', 'x-project-id': '0' },
+    });
+    expect((await res.json())['projectId']).toBeNull();
+
+    // Negative
+    res = await app.request('/protected', {
+      headers: { cookie: 'hh.session_token=valid-session', 'x-project-id': '-1' },
+    });
+    expect((await res.json())['projectId']).toBeNull();
+
+    // Float
+    res = await app.request('/protected', {
+      headers: { cookie: 'hh.session_token=valid-session', 'x-project-id': '1.5' },
+    });
+    expect((await res.json())['projectId']).toBeNull();
+
+    // Empty string
+    res = await app.request('/protected', {
+      headers: { cookie: 'hh.session_token=valid-session', 'x-project-id': '' },
+    });
+    expect((await res.json())['projectId']).toBeNull();
   });
 });
 

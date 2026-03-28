@@ -3,19 +3,19 @@ import { loginRequestSchema } from '@hashhive/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Navigate, useNavigate } from 'react-router';
+import { Navigate } from 'react-router';
 import logoSvg from '../assets/logo.svg';
 import { Button } from '../components/ui/button';
 import { ErrorBanner } from '../components/ui/error-banner';
 import { Input } from '../components/ui/input';
-import { ApiError } from '../lib/api';
+import { authClient } from '../lib/auth-client';
 import { useAuthStore } from '../stores/auth';
 import { useUiStore } from '../stores/ui';
 
 export function LoginPage() {
-  const { login, isAuthenticated } = useAuthStore();
-  const { selectedProjectId, setSelectedProject } = useUiStore();
-  const navigate = useNavigate();
+  const { data: session } = authClient.useSession();
+  const { selectedProjectId } = useUiStore();
+  const { fetchProjects, hasFetchedProjects } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -26,26 +26,32 @@ export function LoginPage() {
     resolver: zodResolver(loginRequestSchema),
   });
 
-  if (isAuthenticated && selectedProjectId) {
+  // Redirect when session is active + project selected (reactive, no race condition)
+  if (session && selectedProjectId) {
     return <Navigate to="/" replace />;
+  }
+
+  // Redirect to project selection when authenticated but no project auto-selected
+  if (session && hasFetchedProjects && !selectedProjectId) {
+    return <Navigate to="/select-project" replace />;
   }
 
   const onSubmit = async (data: LoginRequest) => {
     setError(null);
-    try {
-      const result = await login(data.email, data.password);
-      if (result.selectedProjectId) {
-        setSelectedProject(result.selectedProjectId);
-      } else {
-        navigate('/select-project');
-      }
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError('An unexpected error occurred');
-      }
+    const { error: signInError } = await authClient.signIn.email({
+      email: data.email,
+      password: data.password,
+    });
+
+    if (signInError) {
+      setError(signInError.message ?? 'Invalid email or password');
+      return;
     }
+
+    // Fetch project memberships -- syncSelectedProject auto-selects if one project.
+    // Navigation is handled reactively by the <Navigate> guards above when
+    // useSession() picks up the new session and projects are fetched.
+    await fetchProjects();
   };
 
   return (

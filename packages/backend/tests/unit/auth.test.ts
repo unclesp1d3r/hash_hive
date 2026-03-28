@@ -1,58 +1,24 @@
 import { describe, expect, it } from 'bun:test';
-import {
-  createToken,
-  hashPassword,
-  validateToken,
-  verifyPassword,
-} from '../../src/services/auth.js';
 
-describe('password hashing', () => {
+describe('password hashing (Bun.password)', () => {
   it('should hash and verify a password', async () => {
     const password = 'my-secret-password';
-    const hash = await hashPassword(password);
+    const hash = await Bun.password.hash(password, { algorithm: 'bcrypt', cost: 12 });
 
     expect(hash).not.toBe(password);
-    expect(await verifyPassword(password, hash)).toBe(true);
+    expect(hash.startsWith('$2b$12$')).toBe(true);
+    expect(await Bun.password.verify(password, hash)).toBe(true);
   });
 
   it('should reject an incorrect password', async () => {
-    const hash = await hashPassword('correct-password');
-    expect(await verifyPassword('wrong-password', hash)).toBe(false);
-  });
-});
-
-describe('JWT tokens', () => {
-  it('should create and validate a session token', async () => {
-    const token = await createToken({ userId: 1, email: 'test@example.com', type: 'session' });
-    expect(typeof token).toBe('string');
-
-    const payload = await validateToken(token);
-    expect(payload).not.toBeNull();
-    expect(payload!.userId).toBe(1);
-    expect(payload!.email).toBe('test@example.com');
-    expect(payload!.type).toBe('session');
+    const hash = await Bun.password.hash('correct-password', { algorithm: 'bcrypt', cost: 12 });
+    expect(await Bun.password.verify('wrong-password', hash)).toBe(false);
   });
 
-  it('should create and validate an agent token', async () => {
-    const token = await createToken({ userId: 42, email: 'agent@example.com', type: 'agent' });
-    const payload = await validateToken(token);
-    expect(payload).not.toBeNull();
-    expect(payload!.userId).toBe(42);
-    expect(payload!.type).toBe('agent');
-  });
-
-  it('should reject an invalid token', async () => {
-    const payload = await validateToken('garbage.token.value');
-    expect(payload).toBeNull();
-  });
-
-  it('should reject a tampered token', async () => {
-    const token = await createToken({ userId: 1, email: 'test@example.com', type: 'session' });
-    // Replace the entire signature with garbage
-    const parts = token.split('.');
-    parts[2] = 'invalidSignatureData1234567890abcdef';
-    const tampered = parts.join('.');
-    const payload = await validateToken(tampered);
-    expect(payload).toBeNull();
+  it('should produce bcrypt $2b$ hashes compatible with BetterAuth', async () => {
+    const hash = await Bun.password.hash('test-password', { algorithm: 'bcrypt', cost: 12 });
+    // BetterAuth stores passwords in ba_accounts.password using the same hash function.
+    // Verify the hash format is standard bcrypt ($2b$ prefix, 60 chars).
+    expect(hash).toMatch(/^\$2b\$12\$.{53}$/);
   });
 });

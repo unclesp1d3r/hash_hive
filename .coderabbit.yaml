@@ -1,0 +1,483 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+tone_instructions: "Technical, professional, concise. Focus on actionable feedback. Match project culture: decisive, production-focused, pattern-driven. Reference ARCHITECTURE.md and GOTCHAS.md. Be direct, avoid editorializing."
+early_access: true
+enable_free_tier: true
+reviews:
+  profile: chill
+  request_changes_workflow: true
+  high_level_summary: true
+  high_level_summary_instructions: |
+    Provide a concise summary (3-5 bullets) covering:
+    1. What changed (components, features, fixes)
+    2. Technical approach (Hono routes, Drizzle queries, BetterAuth, Zustand stores, etc.)
+    3. Testing coverage (bun:test unit, Testing Library components, Playwright E2E)
+    4. Breaking changes or migration notes (if any)
+    5. Follow-up items or known limitations
+
+    Reference project patterns: Bun runtime, Hono on Bun.serve(), Drizzle ORM + PostgreSQL,
+    BetterAuth sessions, React 19 + Vite SPA, TanStack Query v5, Zustand, Biome linting,
+    bun:test, Turborepo monorepo. Keep it technical and focused on implementation details.
+  high_level_summary_placeholder: "@coderabbitai summary"
+  high_level_summary_in_walkthrough: true
+  auto_title_placeholder: "@coderabbitai"
+  auto_title_instructions: |
+    Generate PR titles following conventional commit format:
+    - Type: feat, fix, refactor, docs, test, chore, style, perf, ci
+    - Scope: component name, feature area, or module (optional)
+    - Description: concise, imperative mood
+
+    Examples:
+    - "feat(campaigns): add DAG-based attack dependencies"
+    - "fix(auth): handle BetterAuth session refresh errors"
+    - "refactor(agents): extract heartbeat service from route handler"
+    - "test(tasks): add keyspace distribution unit tests"
+
+    Prefer specific scopes over generic ones. Use kebab-case for multi-word scopes.
+  review_status: false
+  commit_status: true
+  fail_commit_status: false
+  collapse_walkthrough: false
+  changed_files_summary: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: true
+  labeling_instructions:
+    - label: "bug"
+      instructions: "Apply when PR fixes broken functionality, error handling, or incorrect behavior."
+    - label: "enhancement"
+      instructions: "Apply when PR improves existing features or adds new functionality."
+    - label: "backend"
+      instructions: "Apply when PR modifies packages/backend/ (Hono routes, services, middleware, Drizzle queries)."
+    - label: "frontend"
+      instructions: "Apply when PR modifies packages/frontend/ (React components, pages, stores, hooks)."
+    - label: "shared"
+      instructions: "Apply when PR modifies packages/shared/ (Drizzle schema, Zod schemas, shared types)."
+    - label: "documentation"
+      instructions: "Apply when PR changes docs/, ARCHITECTURE.md, CONTRIBUTING.md, GOTCHAS.md, or AGENTS.md."
+    - label: "security"
+      instructions: "Apply when PR addresses security: auth, RBAC, input validation, secrets, XSS/injection prevention."
+    - label: "testing"
+      instructions: "Apply when PR adds or modifies test files in packages/backend/tests/ or packages/frontend/tests/ or e2e/."
+    - label: "dependencies"
+      instructions: "Apply when PR updates package.json files or bun.lock."
+    - label: "infrastructure"
+      instructions: "Apply when PR modifies docker-compose.yml, Dockerfile, CI workflows, or deployment configs."
+    - label: "agent-api"
+      instructions: "Apply when PR modifies packages/backend/src/routes/agent/ or packages/openapi/ (Agent API surface)."
+    - label: "priority:critical"
+      instructions: "Apply for security vulnerabilities, data loss risks, or production outages. Requires immediate attention."
+    - label: "priority:high"
+      instructions: "Apply for bugs blocking other work, broken core workflows, or urgent features on the sprint path."
+    - label: "priority:medium"
+      instructions: "Apply for standard feature work, non-blocking bugs, and improvements that should be addressed soon."
+    - label: "priority:low"
+      instructions: "Apply for nice-to-have improvements, minor polish, tech debt cleanup, or issues with easy workarounds."
+  auto_apply_labels: true
+  suggested_reviewers: true
+  auto_assign_reviewers: true
+  in_progress_fortune: true
+  poem: true
+  path_filters:
+    # Dependencies and vendor files
+    - "!node_modules/**"
+    # Shadcn/ui base components (downloaded from registry, not custom code)
+    - "!packages/frontend/src/components/ui/**"
+    # Lock files
+    - "!bun.lock"
+    # Build and generated files
+    - "!dist/**"
+    - "!build/**"
+    - "!*.tsbuildinfo"
+    # Test artifacts
+    - "!coverage/**"
+    - "!**/test-results/**"
+    - "!**/playwright-report/**"
+    # Environment files
+    - "!.env*"
+    # System files
+    - "!.DS_Store"
+    - "!Thumbs.db"
+    # Log files
+    - "!*.log"
+    # Security and certificate files
+    - "!*.pem"
+    - "!*.key"
+    - "!*.crt"
+    # IDE and editor files
+    - "!.idea/**"
+    - "!.vscode/**"
+    - "!*.swp"
+    - "!*.swo"
+    - "!*~"
+    # AI/LLM agent config (local workflow files)
+    - "!.claude/**"
+    - "!.cursor/**"
+    - "!.codex/**"
+    - "!.impeccable.md"
+    - "!CLAUDE.md"
+    # Kiro hook configs (tool-specific, not project docs)
+    - "!.kiro/hooks/**"
+    # Minified and bundled files
+    - "!**/*.min.js"
+    - "!**/*.bundle.js"
+    - "!**/*.map"
+    # Temporary files
+    - "!*.tmp"
+    - "!*.temp"
+    - "!*.bak"
+  path_instructions:
+    - path: "packages/frontend/src/components/ui/**"
+      instructions: |
+        These are shadcn/ui components downloaded from the registry.
+        DO NOT suggest modifications -- they are third-party components.
+        Only flag critical security vulnerabilities or breaking changes.
+    - path: "packages/backend/src/routes/**/*.ts"
+      instructions: |
+        Review Hono route handler patterns:
+        - Thin handlers: validate input with zValidator + Zod, call Drizzle or service, return response
+        - Dashboard routes require `requireSession` middleware (BetterAuth session)
+        - Agent routes require `requireAgentToken` middleware (pre-shared bearer token)
+        - RBAC: `requireProjectAccess()` / `requireRole()` for project-scoped routes
+        - Use `requireParamProjectAccess()` when projectId comes from URL params
+        - Error responses: `{ error: { code, message } }` envelope format
+        - Never leak internal errors (SQL, stack traces) -- return generic message, log server-side
+        - Check GOTCHAS.md Hono section: HTTPException in onError, streaming routes skip body parsing
+    - path: "packages/backend/src/middleware/**/*.ts"
+      instructions: |
+        Review Hono middleware patterns:
+        - `requireSession`: validates BetterAuth session via `auth.api.getSession()`, reads X-Project-Id header (positive integer only)
+        - `requireAgentToken`: validates pre-shared bearer token against agents table -- completely separate from BetterAuth
+        - RBAC: `checkMembership` calls `findProjectMembership()` for every protected request
+        - Auth errors must use `HTTPException(401)` with `AUTH_TOKEN_INVALID` code
+        - See GOTCHAS.md: BetterAuth returns user.id as string, project selection is client-side via X-Project-Id header
+    - path: "packages/backend/src/services/**/*.ts"
+      instructions: |
+        Review service layer patterns:
+        - Services are optional -- only when route handlers become complex
+        - Circular import note: campaigns.ts and tasks.ts use dynamic `await import()` pattern
+        - The `_deps` injection pattern in campaigns.ts allows test spying without module cache issues
+        - Use Drizzle query builder, not raw SQL, unless FOR UPDATE SKIP LOCKED or similar is needed
+        - See GOTCHAS.md Drizzle section: onConflictDoUpdate uses excluded with snake_case, atomic status guards
+    - path: "packages/backend/src/lib/auth.ts"
+      instructions: |
+        Review BetterAuth configuration:
+        - disableSignUp must be true (air-gapped lab, no self-registration)
+        - requireEmailVerification must be false (no email service)
+        - Custom password hash/verify must use Bun.password with bcrypt cost 12
+        - generateId returns false for user model (PostgreSQL serial), UUID for others
+        - No cookieCache (immediate session revocation > DB savings for 1-3 users)
+        - trustedOrigins: empty in production (same-origin behind reverse proxy)
+        - cookiePrefix: 'hh' produces hh.session_token cookie name
+    - path: "packages/shared/src/db/schema.ts"
+      instructions: |
+        Review Drizzle schema patterns:
+        - This is the single source of truth for all database tables
+        - BetterAuth tables use `ba_` prefix (ba_sessions, ba_accounts, ba_verifications)
+        - All timestamps use `{ withTimezone: true }`
+        - Foreign keys should have appropriate onDelete behavior (cascade for auth tables)
+        - Index naming convention: `table_name_column_name_idx`
+        - See GOTCHAS.md Drizzle section for migration drift, onConflictDoUpdate patterns
+    - path: "packages/shared/src/schemas/**/*.ts"
+      instructions: |
+        Review Zod schema patterns:
+        - Schemas derived from Drizzle tables via drizzle-zod where possible
+        - Custom schemas for API validation (loginRequestSchema, etc.)
+        - Status enums: define canonical *StatusSchema, then API-facing subsets
+        - Export both schemas and inferred types (z.infer)
+        - Frontend imports via @hashhive/shared
+    - path: "packages/frontend/src/pages/**/*.tsx"
+      instructions: |
+        Review React page patterns (Vite SPA, NOT Next.js):
+        - No Server Components, no "use client" directives -- this is a plain React SPA
+        - Pages are route-level components rendered by react-router
+        - Auth guard via ProtectedRoute component, not middleware
+        - Data fetching via TanStack Query hooks, not async page functions
+        - Project selection via useUiStore.selectedProjectId (Zustand)
+        - See GOTCHAS.md Frontend (JSX) section: no fancy punctuation, no arbitrary pixel font sizes
+    - path: "packages/frontend/src/components/**/*.tsx"
+      instructions: |
+        Review React component patterns (React 19, functional only):
+        - Prefer shadcn/ui base components from components/ui/
+        - Feature components in components/features/ compose base components
+        - Tailwind CSS with Catppuccin Macchiato dark theme
+        - cn() utility for conditional classes
+        - RBAC: PermissionGuard component checks Permission constants, never role strings
+        - TanStack Query mutations use onSuccess(_data, variables) for cache invalidation
+    - path: "packages/frontend/src/stores/**/*.ts"
+      instructions: |
+        Review Zustand store patterns:
+        - Auth store: login/logout via BetterAuth endpoints, syncSelectedProject helper for project reconciliation
+        - UI store: selectedProjectId is the source of truth for project context
+        - API client reads selectedProjectId and injects X-Project-Id header on every request
+        - clearAuth must clear both auth state and project selection
+        - Immutable updates only (Zustand set() with new objects)
+    - path: "packages/frontend/src/lib/api.ts"
+      instructions: |
+        Review API client patterns:
+        - All requests include credentials: 'include' for BetterAuth session cookies
+        - X-Project-Id header injected from useUiStore.selectedProjectId on every request
+        - Global 401 interceptor clears auth state and redirects to /login
+        - Error responses parsed into ApiError(status, code, message)
+    - path: "packages/backend/tests/**/*.test.ts"
+      instructions: |
+        Review bun:test patterns:
+        - mock.module() for dependency mocking (hoisted above imports by bun)
+        - BetterAuth mocked via mock.module('../../src/lib/auth.js') returning getSession/handler stubs
+        - Use mockReset() not mockClear() in beforeEach (mockClear leaks queued values)
+        - Drizzle mock chains must match production code shape
+        - Separate test files for conflicting mocks (bun module cache shared across files in same run)
+        - See GOTCHAS.md Backend Testing section for full mock patterns
+    - path: "packages/frontend/tests/**/*.test.{ts,tsx}"
+      instructions: |
+        Review frontend test patterns:
+        - happy-dom environment (not jsdom) with manual global injection
+        - Always call afterEach(cleanup) -- DOM persists in happy-dom
+        - fireEvent from @testing-library/react (NOT userEvent -- not installed)
+        - mockFetch() from tests/mocks/fetch.ts for route-to-response mapping
+        - resetAllStores() for Zustand cleanup in afterEach
+        - 401 interceptor: login tests must use 400 for invalid credentials
+        - PermissionGuard: seed auth store with roles via useAuthStore.setState()
+    - path: "packages/frontend/e2e/**/*.spec.ts"
+      instructions: |
+        Review Playwright E2E patterns:
+        - E2E setup seeds DB and runs BetterAuth account migration
+        - Login via UI form (not API calls) -- BetterAuth handles auth at /api/auth/*
+        - Test credentials: test@hashhive.local / TestPassword123!
+        - Single-project users auto-redirect to dashboard after login
+    - path: "packages/openapi/**/*.yaml"
+      instructions: |
+        Review OpenAPI spec patterns:
+        - Two spec files must stay in sync: openapi/agent-api.yaml (simplified) and packages/openapi/agent-api.yaml (detailed)
+        - Agent API contract tests should validate responses against these specs
+        - Never break the agent API to improve the dashboard experience
+    - path: "packages/backend/src/config/env.ts"
+      instructions: |
+        Review environment configuration:
+        - All env vars validated with Zod at startup (fail-fast)
+        - BETTER_AUTH_SECRET: min 32 chars
+        - No JWT_SECRET or JWT_EXPIRY (removed in BetterAuth migration)
+        - S3/MinIO, PostgreSQL, Redis connection strings required
+  abort_on_close: true
+  disable_cache: false
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    ignore_title_keywords: []
+    labels: []
+    drafts: false
+    base_branches: []
+    ignore_usernames: []
+  finishing_touches:
+    docstrings:
+      enabled: true
+    unit_tests:
+      enabled: true
+  pre_merge_checks:
+    docstrings:
+      mode: warning
+      threshold: 80
+    title:
+      mode: warning
+      requirements: |
+        PR titles must follow conventional commit format: "type(scope): description"
+        - Type: feat, fix, refactor, docs, test, chore, style, perf, ci (required)
+        - Scope: component/feature/module name in kebab-case (optional)
+        - Description: concise, imperative mood, lowercase (required)
+        Examples: "feat(campaigns): add DAG attack dependencies", "fix(auth): handle session refresh"
+        Invalid: "Added search", "FIX: bug", "update stuff"
+    description:
+      mode: warning
+    issue_assessment:
+      mode: warning
+    custom_checks:
+      - name: "TypeScript strict mode compliance"
+        instructions: "Verify no 'any' types, explicit return types on exported functions. Check exactOptionalPropertyTypes and noUncheckedIndexedAccess compliance (see GOTCHAS.md TypeScript section)."
+      - name: "BetterAuth and auth patterns"
+        instructions: "Verify BetterAuth session validation via auth.api.getSession(), X-Project-Id header for project context (positive integer only), RBAC middleware applied on all project-scoped routes. No hand-rolled JWT code."
+      - name: "Error handling patterns"
+        instructions: "Verify errors are handled explicitly, logged server-side via pino logger, never leaked to clients. Check that Hono onError checks instanceof HTTPException. No empty catch blocks."
+      - name: "Drizzle ORM patterns"
+        instructions: "Verify parameterized queries (no sql.raw for user input), proper onConflictDoUpdate with snake_case excluded references, atomic status guards in UPDATE WHERE clauses."
+      - name: "Agent API stability"
+        instructions: "Verify agent API endpoints (/api/v1/agent/*) and OpenAPI specs are not broken by dashboard changes. Agent API is the primary consumer -- never break it for dashboard improvements."
+  tools:
+    ast-grep:
+      rule_dirs: []
+      util_dirs: []
+      essential_rules: true
+      packages: []
+    biome:
+      enabled: true
+    eslint:
+      enabled: false
+    oxc:
+      enabled: false
+    shellcheck:
+      enabled: true
+    markdownlint:
+      enabled: true
+    yamllint:
+      enabled: true
+    actionlint:
+      enabled: true
+    github-checks:
+      enabled: true
+      timeout_ms: 90000
+    languagetool:
+      enabled: true
+      enabled_rules: []
+      disabled_rules: []
+      enabled_categories: []
+      disabled_categories: []
+      enabled_only: false
+      level: default
+    sqlfluff:
+      enabled: true
+    gitleaks:
+      enabled: true
+    checkov:
+      enabled: true
+    semgrep:
+      enabled: true
+    osvScanner:
+      enabled: true
+    # Disabled: not used in this project
+    ruff:
+      enabled: false
+    flake8:
+      enabled: false
+    pylint:
+      enabled: false
+    phpstan:
+      enabled: false
+    phpmd:
+      enabled: false
+    phpcs:
+      enabled: false
+    golangci-lint:
+      enabled: false
+    rubocop:
+      enabled: false
+    brakeman:
+      enabled: false
+    swiftlint:
+      enabled: false
+    clippy:
+      enabled: false
+    clang:
+      enabled: false
+    cppcheck:
+      enabled: false
+    pmd:
+      enabled: false
+    detekt:
+      enabled: false
+    hadolint:
+      enabled: false
+    buf:
+      enabled: false
+    regal:
+      enabled: false
+    circleci:
+      enabled: false
+    prismaLint:
+      enabled: false
+    shopifyThemeCheck:
+      enabled: false
+    luacheck:
+      enabled: false
+    checkmake:
+      enabled: false
+    htmlhint:
+      enabled: false
+    dotenvLint:
+      enabled: false
+chat:
+  art: true
+  auto_reply: true
+  integrations:
+    jira:
+      usage: disabled
+    linear:
+      usage: disabled
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      # Project documentation (AGENTS.md included by default)
+      - "ARCHITECTURE.md"
+      - "CONTRIBUTING.md"
+      - "GOTCHAS.md"
+      - "docs/development.md"
+      - "docs/testing.md"
+      # Authoritative steering docs
+      - ".kiro/steering/**/*.md"
+      - ".kiro/specs/**/*.md"
+  learnings:
+    scope: auto
+  issues:
+    scope: auto
+  jira:
+    usage: disabled
+    project_keys: []
+  linear:
+    usage: disabled
+    team_keys: []
+  pull_requests:
+    scope: auto
+  mcp:
+    usage: enabled
+    disabled_servers: []
+code_generation:
+  docstrings:
+    language: en-US
+    path_instructions:
+      - path: "packages/backend/src/**/*.ts"
+        instructions: |
+          Use JSDoc for exported functions. Keep concise -- focus on "why" not "what".
+          Include @param, @returns, @throws where non-obvious.
+          Hono route handlers: document auth requirements and error responses.
+          Services: document business rules and side effects.
+      - path: "packages/frontend/src/**/*.{ts,tsx}"
+        instructions: |
+          Use JSDoc for exported components and hooks.
+          Document props interfaces, state management patterns, and accessibility.
+          Zustand stores: document side effects and cross-store interactions.
+      - path: "packages/shared/src/**/*.ts"
+        instructions: |
+          Document Drizzle table definitions with domain context.
+          Document Zod schemas with validation rules and usage context.
+          Document exported types with field descriptions for non-obvious fields.
+  unit_tests:
+    path_instructions:
+      - path: "packages/backend/src/**/*.ts"
+        instructions: |
+          Generate tests using bun:test (NOT Vitest, NOT Jest).
+          - Import from 'bun:test': describe, it, expect, mock, beforeEach
+          - Use mock.module() for dependency mocking (hoisted by bun)
+          - Mock BetterAuth: mock.module('../../src/lib/auth.js', ...) with getSession stub
+          - Mock Drizzle: chainable select/from/where/limit pattern
+          - Use mockReset() not mockClear() in beforeEach
+          - Test fixtures in packages/backend/tests/fixtures.ts
+          - See GOTCHAS.md Backend Testing section for patterns
+      - path: "packages/frontend/src/**/*.{ts,tsx}"
+        instructions: |
+          Generate tests using bun:test with happy-dom (NOT Vitest, NOT jsdom).
+          - Import from 'bun:test': describe, it, expect, mock, afterEach
+          - Use @testing-library/react: render, screen, fireEvent (NOT userEvent)
+          - Always call afterEach(cleanup)
+          - Mock fetch with tests/mocks/fetch.ts mockFetch()
+          - Reset stores with tests/utils/store-reset.ts resetAllStores()
+          - Test utilities in tests/test-utils.tsx
+issue_enrichment:
+  auto_enrich:
+    enabled: true
+  planning:
+    enabled: true

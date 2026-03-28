@@ -14,7 +14,15 @@ test.describe('E2E Smoke Suite', () => {
     await page.fill('#password', TEST_PASSWORD);
     await page.click('button[type="submit"]');
 
-    // 3. Wait for redirect — single-project user auto-selects, goes to dashboard
+    // 3. Wait for redirect -- BetterAuth's useSession() reactively updates after
+    //    signIn.email() sets the cookie. Single-project user auto-selects project.
+    //    Wait for URL to leave /login (could briefly hit /select-project first).
+    await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 15_000 });
+
+    // If we landed on /select-project, click the project to proceed
+    if (page.url().includes('/select-project')) {
+      await page.click('button:has-text("Test Project")');
+    }
     await page.waitForURL('/', { timeout: 10_000 });
 
     // 4. Verify dashboard loads (root path is the dashboard)

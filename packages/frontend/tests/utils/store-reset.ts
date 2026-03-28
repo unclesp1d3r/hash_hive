@@ -7,9 +7,8 @@ import { useUiStore } from '../../src/stores/ui';
  */
 export function resetAuthStore() {
   useAuthStore.setState({
-    user: null,
-    isLoading: false,
-    isAuthenticated: false,
+    projects: [],
+    hasFetchedProjects: false,
   });
 }
 

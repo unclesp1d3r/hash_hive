@@ -5,16 +5,22 @@
  * Hono app without requiring a running database. They verify that
  * routing, middleware, and validation work end-to-end.
  *
- * Agent auth now validates pre-shared tokens against the database,
- * so tests requiring authenticated agent requests need a running DB
- * (or mocked DB in unit tests).
- *
- * For full integration tests with a real database, use the
- * docker-compose dev environment and run with --integration flag.
+ * Authenticated tests requiring BetterAuth sessions need a running DB
+ * and are covered by dashboard-api-contract tests with mocked auth.
  */
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, mock } from 'bun:test';
+
+// Mock BetterAuth to avoid DB dependency in smoke tests
+mock.module('../../src/lib/auth.js', () => ({
+  auth: {
+    api: {
+      getSession: async () => null,
+    },
+    handler: async () => new Response('ok'),
+  },
+}));
+
 import { app } from '../../src/index.js';
-import { sessionToken } from '../fixtures.js';
 
 describe('Integration: Health check', () => {
   it('should return health status with all expected fields', async () => {
@@ -71,34 +77,6 @@ describe('Integration: Dashboard workflow validation', () => {
       const res = await app.request(path, { method });
       expect(res.status).toBe(401);
     }
-  });
-
-  it('should allow hash type detection with valid session', async () => {
-    const token = await sessionToken();
-    const res = await app.request('/api/v1/dashboard/hashes/guess-type', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        cookie: `session=${token}`,
-      },
-      body: JSON.stringify({
-        hashValue: '$2b$12$WApznUPhDubN0oeveSXHp.Ux5KijMo/Hkb3Gf/.GfCVyhPMHO2G.6',
-      }),
-    });
-
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body['identified']).toBe(true);
-    expect(body['candidates'][0]['name']).toBe('bcrypt');
-  });
-
-  it('should enforce login validation', async () => {
-    const res = await app.request('/api/v1/dashboard/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'bad', password: '1' }),
-    });
-    expect(res.status).toBe(400);
   });
 });
 

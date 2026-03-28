@@ -1,10 +1,11 @@
 import { agents } from '@hashhive/shared';
 import { eq } from 'drizzle-orm';
-import { getCookie } from 'hono/cookie';
+import { deleteCookie, getCookie } from 'hono/cookie';
 import { createMiddleware } from 'hono/factory';
 import { HTTPException } from 'hono/http-exception';
+import { logger } from '../config/logger.js';
 import { db } from '../db/index.js';
-import { validateToken } from '../services/auth.js';
+import { auth } from '../lib/auth.js';
 import type { AppEnv } from '../types.js';
 
 function authError(message: string): HTTPException {
@@ -16,25 +17,40 @@ function authError(message: string): HTTPException {
   });
 }
 
+/** Parse X-Project-Id header into a valid positive integer or null. */
+function parseProjectIdHeader(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
 /**
- * Dashboard auth middleware — reads JWT from HttpOnly cookie "session".
- * Sets currentUser on context if valid.
+ * Dashboard auth middleware -- validates BetterAuth session from cookie.
+ * Sets currentUser on context with userId, email, and projectId from X-Project-Id header.
+ *
+ * Also cleans up legacy "session" cookies from the old JWT-based auth.
  */
 export const requireSession = createMiddleware<AppEnv>(async (c, next) => {
-  const token = getCookie(c, 'session');
-  if (!token) {
+  // TODO: remove legacy cookie cleanup after first production deploy cycle (2026-Q2)
+  if (getCookie(c, 'session')) {
+    deleteCookie(c, 'session', { path: '/' });
+  }
+
+  let session: Awaited<ReturnType<typeof auth.api.getSession>>;
+  try {
+    session = await auth.api.getSession({ headers: c.req.raw.headers });
+  } catch (err) {
+    logger.warn({ err }, 'BetterAuth getSession failed');
+    throw authError('Authentication required');
+  }
+  if (!session) {
     throw authError('Authentication required');
   }
 
-  const payload = await validateToken(token);
-  if (!payload || payload.type !== 'session') {
-    throw authError('Invalid or expired session');
-  }
-
   c.set('currentUser', {
-    userId: payload.userId,
-    email: payload.email,
-    projectId: payload.projectId ?? null,
+    userId: Number(session.user.id),
+    email: session.user.email,
+    projectId: parseProjectIdHeader(c.req.header('x-project-id')),
   });
   await next();
 });

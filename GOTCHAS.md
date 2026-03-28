@@ -2,7 +2,7 @@
 
 Hard-won lessons, edge cases, and "watch out for" patterns. Organized by domain.
 
-Referenced from [AGENTS.md](AGENTS.md) — read the relevant section before working in that area.
+Read the relevant section before working in that area. See also [ARCHITECTURE.md](ARCHITECTURE.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## TypeScript Strict Mode
 
@@ -14,7 +14,7 @@ Referenced from [AGENTS.md](AGENTS.md) — read the relevant section before work
 
 ## Hono
 
-- **Dashboard sub-resource routes need ownership checks**: `requireProjectAccess()` only verifies the user has a valid project in their JWT — it does NOT verify the requested resource (e.g., agent) belongs to that project. Always fetch the parent resource and check `resource.projectId === currentUser.projectId` before returning sub-resource data (benchmarks, errors, etc.).
+- **Dashboard sub-resource routes need ownership checks**: `requireProjectAccess()` only verifies the user is a member of the project specified in the `X-Project-Id` header -- it does NOT verify the requested resource (e.g., agent) belongs to that project. Always fetch the parent resource and check `resource.projectId === currentUser.projectId` before returning sub-resource data (benchmarks, errors, etc.).
 
 - **`app.onError()` must check `instanceof HTTPException`** before returning a generic 500 — without this, auth middleware 401 responses get swallowed into 500s:
 
@@ -38,6 +38,15 @@ Referenced from [AGENTS.md](AGENTS.md) — read the relevant section before work
 - **`onConflictDoUpdate` + duplicate rows in VALUES**: PostgreSQL rejects a single INSERT when the VALUES list contains multiple rows targeting the same conflict key (e.g., two entries with the same `(agentId, hashcatMode)`). Deduplicate input arrays before calling `.insert().values().onConflictDoUpdate()`, or validate uniqueness at the schema level.
 - **Migration drift bundling**: `drizzle-kit generate` diffs current `schema.ts` against the last migration snapshot — if prior schema changes were never migrated, they silently bundle into the next migration. Review generated `.sql` files for unexpected ALTER statements before committing.
 - **Scoping a polluted migration**: To isolate only intended changes: (1) backup `schema.ts`, (2) temporarily revert unrelated schema changes, (3) delete the migration SQL + snapshot + journal entry, (4) run `drizzle-kit generate`, (5) restore `schema.ts` from backup.
+- **Atomic status guards**: Never read-then-write agent/task status in separate queries -- fold the guard into the `UPDATE WHERE` clause (e.g., `` sql`${agents.status} != 'busy'` ``) to prevent race conditions.
+- **Campaign progress uses SQL aggregation**: Use `COUNT(*) FILTER (WHERE status IN (...))` and `SUM(...) FILTER (WHERE status = 'running')` instead of loading all tasks into memory. Clamp keyspace progress with `GREATEST(0, LEAST(..., 1))`.
+
+## Authentication (BetterAuth)
+
+- **~~JWT custom claims may return as strings~~**: RESOLVED -- migrated from jose JWTs to BetterAuth database-backed sessions (#126). The JWT claim type coercion bug no longer applies.
+- **BetterAuth returns `user.id` as string**: Even when the `users` table uses `serial` (integer) IDs, BetterAuth's `getSession()` returns `user.id` as a string. Always use `Number(session.user.id)` when bridging to the `currentUser` context.
+- **Project selection is client-side**: `projectId` is sent via `X-Project-Id` header on each request, not embedded in the session. RBAC middleware reads from this header. The frontend Zustand `useUiStore.selectedProjectId` is the source of truth.
+- **Cookie name is `hh.session_token`**: BetterAuth uses `cookiePrefix: 'hh'` which produces `hh.session_token` as the cookie name. Old `session` cookies from the JWT era are cleaned up by the `requireSession` middleware.
 
 ## Bun Runtime
 
@@ -93,7 +102,7 @@ Referenced from [AGENTS.md](AGENTS.md) — read the relevant section before work
 
 **Gotchas:**
 
-- **401 intercept**: `api.ts` globally intercepts all 401 responses as "Session expired" — login tests must use 400 for invalid credentials
+- **401 intercept**: `api.ts` globally intercepts all 401 responses as "Session expired" -- tests for endpoints using the `api` wrapper must use 400 for invalid credentials to avoid triggering the interceptor. Login is exempt: it calls BetterAuth via raw `fetch` (not the `api` wrapper), so 401 from BetterAuth is correct and does not trigger the interceptor.
 - **PermissionGuard hides elements**: Tests asserting on guarded elements (New Campaign link, lifecycle buttons, Upload buttons) must seed the auth store with `roles: ['admin']` or `roles: ['contributor']` via `useAuthStore.setState()` — without this, PermissionGuard renders nothing
 
 ## Frontend (JSX)
