@@ -27,7 +27,7 @@ describe('LoginPage', () => {
   it('shows error on invalid credentials', async () => {
     fetchMock = mockFetch({
       '/api/auth/sign-in/email': {
-        status: 400,
+        status: 401,
         body: { message: 'Invalid email or password' },
       },
     });

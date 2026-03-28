@@ -102,7 +102,7 @@ Read the relevant section before working in that area. See also [ARCHITECTURE.md
 
 **Gotchas:**
 
-- **401 intercept**: `api.ts` globally intercepts all 401 responses as "Session expired" — login tests must use 400 for invalid credentials
+- **401 intercept**: `api.ts` globally intercepts all 401 responses as "Session expired" -- tests for endpoints using the `api` wrapper must use 400 for invalid credentials to avoid triggering the interceptor. Login is exempt: it calls BetterAuth via raw `fetch` (not the `api` wrapper), so 401 from BetterAuth is correct and does not trigger the interceptor.
 - **PermissionGuard hides elements**: Tests asserting on guarded elements (New Campaign link, lifecycle buttons, Upload buttons) must seed the auth store with `roles: ['admin']` or `roles: ['contributor']` via `useAuthStore.setState()` — without this, PermissionGuard renders nothing
 
 ## Frontend (JSX)
