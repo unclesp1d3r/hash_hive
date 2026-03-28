@@ -1,0 +1,728 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+tone_instructions: "Technical, professional, concise. Focus on actionable feedback. Match project culture: decisive, production-focused, pattern-driven. Reference AGENTS.md and referenced documents. Be direct, avoid editorializing."
+early_access: true
+enable_free_tier: true
+reviews:
+  profile: chill
+  request_changes_workflow: true
+  high_level_summary: true
+  high_level_summary_instructions: |
+    Provide a concise summary (3-5 bullets) covering:
+    1. What changed (components, features, fixes)
+    2. Technical approach (patterns used: Server Components, Shadcn/ui, Supabase, etc.)
+    3. Testing coverage (unit tests, property tests, e2e)
+    4. Breaking changes or migration notes (if any)
+    5. Follow-up items or known limitations
+
+    Reference project patterns: Next.js App Router, TypeScript strict mode, Bun tooling,
+    Shadcn/ui components, Supabase client patterns, Zod validation, Vitest testing.
+    Keep it technical and focused on implementation details.
+  high_level_summary_placeholder: "@coderabbitai summary"
+  high_level_summary_in_walkthrough: true
+  auto_title_placeholder: "@coderabbitai"
+  auto_title_instructions: |
+    Generate PR titles following conventional commit format:
+    - Type: feat, fix, refactor, docs, test, chore, style
+    - Scope: component name, feature area, or module (optional)
+    - Description: concise, imperative mood
+
+    Examples:
+    - "feat(articles): add search and filter functionality"
+    - "fix(auth): handle Supabase session refresh errors"
+    - "refactor(ui): migrate to Shadcn Card component"
+    - "test(validation): add property-based tests for Zod schemas"
+
+    Prefer specific scopes over generic ones. Use kebab-case for multi-word scopes.
+  review_status: false
+  commit_status: true
+  fail_commit_status: false
+  collapse_walkthrough: false
+  changed_files_summary: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: true
+  labeling_instructions:
+    - label: "bug"
+      instructions: "Apply when PR/issue fixes broken functionality, error handling, or incorrect behavior. Use for bug fixes, error corrections, or resolving issues."
+    - label: "feature"
+      instructions: "Apply when PR/issue introduces new functionality or major enhancements. Use for new user-facing features or significant new capabilities."
+    - label: "enhancement"
+      instructions: "Apply when PR/issue improves existing features without adding new functionality. Use for refinements, optimizations, or improvements to current behavior."
+    - label: "documentation"
+      instructions: "Apply when PR/issue changes files in docs/ directory, README files, or adds significant code comments. Use for documentation updates, guides, or API documentation."
+    - label: "security"
+      instructions: "Apply when PR/issue addresses security vulnerabilities, implements security features, or makes security-related changes. Use for security fixes, RLS policies, or security enhancements."
+    - label: "testing"
+      instructions: "Apply when PR/issue adds, modifies, or improves test files (tests/ or e2e/), test infrastructure, or testing-related changes. Use for unit tests, integration tests, or test utilities."
+    - label: "dependencies"
+      instructions: "Apply when PR/issue updates package.json, bun.lock, or other dependency files. Use for dependency updates, version bumps, or package management changes."
+    - label: "javascript"
+      instructions: "Apply when PR/issue modifies TypeScript (.ts) or React (.tsx) files. Use for JavaScript/TypeScript code changes, React components, or frontend code modifications."
+    - label: "supabase"
+      instructions: "Apply when PR/issue touches supabase/ directory (migrations, RLS policies), Supabase client code (lib/supabase/ or utils/supabase/), or database-related changes. Use for database migrations, RLS policies, or Supabase integration changes."
+    - label: "realtime"
+      instructions: "Apply when PR/issue implements or modifies realtime functionality, broadcast channels, subscriptions, or realtime features. Use for Supabase Realtime integration or WebSocket-related changes."
+    - label: "github_actions"
+      instructions: "Apply when PR/issue modifies .github/workflows/ files or GitHub Actions configuration. Use for CI/CD workflow changes, GitHub Actions updates, or workflow automation."
+    - label: "ci/cd"
+      instructions: "Apply when PR/issue modifies CI/CD pipelines, deployment scripts, or continuous integration/deployment configuration. Use for build pipeline changes, deployment automation, or CI/CD improvements."
+    - label: "automation"
+      instructions: "Apply when PR/issue adds or modifies automation scripts, tooling improvements, or automated processes. Use for scripts that automate development tasks or workflows."
+    - label: "infrastructure"
+      instructions: "Apply when PR/issue modifies DevOps, infrastructure, deployment, or infrastructure-as-code. Use for infrastructure changes, deployment configurations, or DevOps tooling."
+    - label: "tooling"
+      instructions: "Apply when PR/issue modifies development tools, build scripts, developer experience improvements, or development tooling. Use for tooling improvements, build system changes, or DX enhancements."
+    - label: "user-workflow"
+      instructions: "Apply when PR/issue modifies user-facing features, UX changes, user workflows, or user experience improvements. Use for UI/UX changes, user-facing features, or workflow enhancements."
+    - label: "accessibility"
+      instructions: "Apply when PR/issue improves accessibility, adds ARIA attributes, enhances keyboard navigation, or makes A11y improvements. Use for accessibility enhancements, screen reader support, or WCAG compliance."
+    - label: "admin"
+      instructions: "Apply when PR/issue adds or modifies administrative features, settings, admin functionality, or admin interfaces. Use for admin panel changes, settings pages, or administrative tools."
+    - label: "qa"
+      instructions: "Apply when PR/issue is related to quality assurance, QA processes, or QA-related changes. Use for QA improvements, test coverage from QA, or quality assurance enhancements."
+    - label: "priority:high"
+      instructions: "Apply only for critical bugs, security issues, or urgent features that require immediate attention. Use sparingly for high-priority items that block other work or pose security risks."
+    - label: "help wanted"
+      instructions: "Apply when PR/issue needs community contribution, assistance, or would benefit from external help. Use for issues open to community contribution or that need additional expertise."
+    - label: "good first issue"
+      instructions: "Apply when PR/issue is suitable for first-time contributors or newcomers to the project. Use for well-scoped, beginner-friendly tasks that help onboard new contributors."
+    - label: "question"
+      instructions: "Apply when PR/issue needs clarification, discussion, or more information before it can be addressed. Use for questions, clarification requests, or items needing discussion."
+    - label: "invalid"
+      instructions: "Apply when PR/issue is incorrect, invalid, or not applicable to the project. Use for issues that don't apply, are based on misunderstandings, or are invalid."
+    - label: "duplicate"
+      instructions: "Apply when PR/issue duplicates an existing issue or pull request. Use when the same issue or feature request has already been reported or is being worked on."
+    - label: "wontfix"
+      instructions: "Apply when PR/issue will not be addressed, is out of scope, or is intentionally not being fixed. Use for issues that are by design, out of scope, or intentionally not being resolved."
+  auto_apply_labels: true
+  suggested_reviewers: true
+  auto_assign_reviewers: true
+  in_progress_fortune: true
+  poem: true
+  path_filters:
+    # Dependencies and vendor files
+    - "!node_modules/**"
+    - "!.pnp"
+    - "!.pnp.*"
+    - "!.yarn/**"
+    # Shadcn/ui components (downloaded from registry, not custom code)
+    - "!components/ui/**"
+    # Lock files (generated dependency manifests)
+    - "!bun.lock"
+    - "!yarn.lock"
+    - "!pnpm-lock.yaml"
+    - "!package-lock.json"
+    # Build and generated files
+    - "!.next/**"
+    - "!out/**"
+    - "!build/**"
+    - "!dist/**"
+    - "!*.tsbuildinfo"
+    - "!next-env.d.ts"
+    # Test artifacts and reports
+    - "!coverage/**"
+    - "!test-results/**"
+    - "!playwright-report/**"
+    - "!blob-report/**"
+    - "!playwright/.cache/**"
+    # Environment and deployment files
+    - "!.env*"
+    - "!.vercel/**"
+    # System files
+    - "!.DS_Store"
+    - "!Thumbs.db"
+    # Debug and log files
+    - "!*.log"
+    - "!npm-debug.log*"
+    - "!yarn-debug.log*"
+    - "!yarn-error.log*"
+    - "!.pnpm-debug.log*"
+    - "!bun-debug.log*"
+    # Security and certificate files
+    - "!*.pem"
+    - "!*.key"
+    - "!*.crt"
+    - "!*.cert"
+    # Reference data and snapshots (not source code)
+    - "!reference_data/**"
+    # Documentation for AI assistants (not code to review)
+    - "!llms.txt"
+    # Git hooks (auto-generated)
+    - "!.husky/**"
+    # IDE and editor files
+    - "!.idea/**"
+    - "!.vscode/**"
+    - "!*.swp"
+    - "!*.swo"
+    - "!*~"
+    - "!.vs/**"
+    # Minified and bundled files
+    - "!**/*.min.js"
+    - "!**/*.bundle.js"
+    - "!**/*.map"
+    # Temporary files
+    - "!*.tmp"
+    - "!*.temp"
+    - "!*.bak"
+    - "!*.backup"
+  path_instructions:
+    - path: "components/ui/**"
+      instructions: |
+        These are Shadcn/ui components downloaded from the registry (components.json).
+        DO NOT suggest modifications to these files - they are third-party components.
+        If customization is needed, create wrapper components or extend them in parent components.
+        Only flag critical issues like security vulnerabilities or breaking changes.
+    - path: "app/**/*.tsx"
+      instructions: |
+        Review Next.js App Router patterns (Next.js 16+):
+        - Default to Server Components (no "use client" unless needed for hooks/events/browser APIs)
+        - searchParams is a Promise in Next.js 16: await searchParams before use
+        - Use async/await for data fetching, not promise chains
+        - Supabase client from @/lib/supabase/server (await createClient())
+        - Explicit return types: Promise<JSX.Element> for async pages, JSX.Element for sync
+        - Error handling: typed guards, user-safe messages, never swallow errors, log once server-side
+        - Validate searchParams with Zod schemas from lib/validation.ts using safeValidateInput
+        - Use Shadcn/ui components (Card, Skeleton for loading, Alert for errors) - prefer over custom implementations
+        - Follow three-tier RBAC: anonymous (published_articles), authenticated (raw/filtered), admin (articles_to_publish)
+        - Ensure proper redirects for unauthorized access using Next.js redirect() or middleware
+        - Export metadata object for SEO (title, description)
+        - Use Promise.all() for parallel data fetching when independent
+    - path: "components/**/*.tsx"
+      instructions: |
+        Review React component patterns (React 19, functional components only):
+        - Explicit return types: JSX.Element for all exported components
+        - Prefer Shadcn/ui components (Card, Badge, Button, Input, Label, Select, Skeleton) over custom implementations
+        - Radix UI only when Shadcn equivalent doesn't exist - check components/ui/ first
+        - Recharts for charts: wrap in ResponsiveContainer, use hsl(var(--chart-N)) for theme colors
+        - Tailwind class order: layout → spacing → color, use cn() utility for conditional classes
+        - Accessibility: ARIA labels, keyboard nav, semantic HTML, proper form labels (htmlFor/id), role="alert" for errors
+        - Client components: add "use client" directive only when needed (hooks, events, browser APIs, third-party client libs)
+        - Supabase client from @/lib/supabase/client (createBrowserClient) for client components
+        - Error states: use Alert component with variant="destructive" or Shadcn equivalent
+        - Loading states: use Skeleton component from Shadcn/ui
+        - Props: TypeScript interfaces, use React.ComponentPropsWithoutRef<'element'> for extending HTML elements
+        - Event handlers: prefix with "handle" (handleClick, handleSubmit)
+        - State: use useState with proper types, functional updates when state depends on previous state
+    - path: "lib/supabase/**/*.ts"
+      instructions: |
+        Review Supabase client patterns (CRITICAL - Next.js 16 + @supabase/ssr):
+        - MUST use @supabase/ssr package (never @supabase/auth-helpers-nextjs - deprecated)
+        - Cookie methods: ONLY getAll() and setAll() (never individual get/set/remove - causes session desync)
+        - Server client (server.ts): await cookies() in Next.js 16+, createServerClient with getAll/setAll pattern
+        - Client client (client.ts): createBrowserClient (no cookies needed)
+        - Middleware (middleware.ts): export updateSession function, call getUser() immediately after createClient(), return supabaseResponse
+        - Environment variables: validate NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, throw descriptive errors if missing
+        - Never instantiate clients ad hoc - always use centralized utilities from lib/supabase/ or utils/supabase/
+        - Error handling: always check error property in responses, log once server-side, return user-safe messages
+        - RLS enforcement: verify policies are enforced at database level, not just application level
+        - Fluid compute: don't put clients in global variables, create new client per function call
+    - path: "utils/supabase/**/*.ts"
+      instructions: |
+        Review Supabase utility patterns (same as lib/supabase):
+        - MUST use @supabase/ssr with getAll()/setAll() cookie methods only
+        - Server: await cookies(), createServerClient pattern
+        - Client: createBrowserClient pattern
+        - Never use deprecated auth-helpers patterns
+        - Centralized access only, no ad-hoc client creation
+    - path: "lib/queries/**/*.ts"
+      instructions: |
+        Review data fetching patterns:
+        - Type Supabase queries with Database types from @/types/database
+        - Always check error property in responses, throw user-safe errors or return null
+        - Prefer .select() with specific columns for type safety, but '*' acceptable when needed
+        - Handle RLS: queries should work with current user context (RLS handles access control)
+        - Return typed results: Promise<Type[]> or Promise<Type | null>, use type guards for error handling
+        - Explicit return types for all exported functions
+        - Error handling: log errors once (console.error), throw user-safe Error messages
+        - Input validation: validate parameters (e.g., slug format) before querying
+        - Use .single() for expected single results, handle PostgrestError appropriately (return null on not found)
+        - Use .order() for consistent sorting (e.g., pubDate descending for articles)
+        - Consider Promise.all() for independent parallel queries
+        - Follow three-tier access: queries should respect RLS policies (anon/authenticated/admin)
+    - path: "lib/validation.ts"
+      instructions: |
+        Review Zod validation patterns:
+        - All schemas defined in this file, never duplicate schema logic elsewhere
+        - Descriptive error messages for each field (min/max length, format requirements)
+        - Export both schemas (for reuse) and validation functions (validateInput, safeValidateInput)
+        - validateInput: throws on error (use in server actions where errors should propagate)
+        - safeValidateInput: returns { success: true, data } | { success: false, error } (use for user input)
+        - Use for all user input: forms, searchParams, API routes, any external data
+        - Type inference from schemas (z.infer<typeof schema>), explicit return types for exported functions
+        - Avoid ad-hoc runtime checks - use schemas instead for consistency
+        - Optional fields: use .optional() or .nullable() appropriately
+        - Array validation: use z.array() with element schema
+        - String validation: use .min(), .max(), .email(), .url() as appropriate
+    # Database migrations are managed in the evilbit-db repo, not here.
+    - path: "tests/**/*.test.{ts,tsx}"
+      instructions: |
+        Review test patterns (Vitest + Testing Library):
+        - Use Vitest with jsdom for React components (bunx vitest --run, never bun test)
+        - Property-based testing with fast-check (fc.assert, fc.property) for validation logic
+        - Test user interactions, not implementation details (userEvent, screen queries)
+        - Mock Supabase clients: create mock implementations, don't call real Supabase
+        - Test accessibility: screen reader queries (getByRole, getByLabelText), keyboard navigation
+        - Test coverage: happy paths, error cases, edge cases, boundary conditions
+        - Use Testing Library queries: prefer getByRole, getByLabelText over getByTestId
+        - Test structure: describe blocks for grouping, it blocks for individual tests
+        - Setup file: tests/setup.ts for global test configuration
+        - Type safety: use proper types from @/types/database for mock data
+        - Async testing: use async/await or .then() for async operations
+    - path: "e2e/**/*.spec.ts"
+      instructions: |
+        Review E2E test patterns (Playwright):
+        - Use Playwright for E2E tests (playwright.config.ts)
+        - Test user workflows end-to-end, not individual components
+        - Use fixtures for authentication (e2e/fixtures/auth.ts) - reusable auth setup
+        - Test three-tier access: anonymous (published articles), authenticated (raw/filtered), admin (articles_to_publish)
+        - Verify RLS enforcement: test that unauthorized users cannot access protected data
+        - Test error states: network errors, invalid inputs, unauthorized access
+        - Use helpers from e2e/helpers/ for common operations (navigation, forms, assertions, wait utilities)
+        - Test structure: describe blocks for feature areas, test() for individual scenarios
+        - Page Object Model: consider using page objects for complex pages
+        - Assertions: use Playwright's expect API, custom helpers from e2e/helpers/assertions.ts
+    - path: "lib/utils.ts"
+      instructions: |
+        Review utility functions:
+        - cn() utility: combines clsx and tailwind-merge for conditional Tailwind classes
+        - Keep utilities pure (no side effects) and focused (single responsibility)
+        - Explicit return types for all exported functions
+        - TypeScript strict mode: no any types, use unknown and type guards if needed
+        - Reusable across components: place shared utilities here
+        - Type safety: use ClassValue type from clsx for cn() inputs
+        - Import organization: external packages first (clsx, tailwind-merge), then project imports
+    - path: "**/*.config.{ts,js,json}"
+      instructions: |
+        Review configuration files:
+        - next.config.ts: Next.js 16 configuration, ensure proper Supabase env vars referenced
+        - tsconfig.json: strict mode enabled, @/ path alias configured, target ES2017+, module bundler
+        - biome.json: linting rules (replaces ESLint), formatting config (Biome plugin)
+        - dprint.json: formatting config with Biome plugin (no custom deviations from project standards)
+        - playwright.config.ts: E2E test configuration, testDir, use fixtures
+        - vitest.config.ts: test configuration with jsdom environment, setupFiles
+        - postcss.config.mjs: PostCSS configuration for Tailwind CSS
+        - components.json: Shadcn/ui configuration (style: "new-york" variant)
+    - path: "**/middleware.ts"
+      instructions: |
+        Review Next.js middleware patterns (CRITICAL for Supabase auth):
+        - Location: lib/supabase/middleware.ts exports updateSession function, or root middleware.ts
+        - MUST use @supabase/ssr createServerClient (never auth-helpers)
+        - Cookie methods: ONLY getAll() and setAll() (never individual get/set/remove)
+        - Call supabase.auth.getUser() immediately after createClient() (no code between these calls)
+        - Always return supabaseResponse to preserve cookie state (critical for session management)
+        - If creating new response: copy cookies with newResponse.cookies.setAll(supabaseResponse.cookies.getAll())
+        - Route protection: check authenticatedRoutes and adminRoutes arrays, redirect to /auth/login with redirectTo param
+        - Admin check: query user_types table to verify admin role for admin routes
+        - Matcher config (if root middleware.ts): exclude static assets, favicon, images, _next paths
+        - Error handling: validate environment variables, throw descriptive errors if missing
+        - Fluid compute: create new client per request, don't use global variables
+  abort_on_close: true
+  disable_cache: false
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    ignore_title_keywords: []
+    labels: []
+    drafts: false
+    base_branches: []
+    ignore_usernames: []
+  finishing_touches:
+    docstrings:
+      enabled: true
+    unit_tests:
+      enabled: true
+  pre_merge_checks:
+    docstrings:
+      mode: warning
+      threshold: 80
+    title:
+      mode: warning
+      requirements: |
+        PR titles must follow conventional commit format: "type(scope): description"
+        - Type: feat, fix, refactor, docs, test, chore, style (required)
+        - Scope: component/feature/module name in kebab-case (optional)
+        - Description: concise, imperative mood, lowercase (required)
+        Examples: "feat(articles): add search functionality", "fix(auth): handle session errors"
+        Invalid: "Added search", "FIX: bug", "update stuff"
+    description:
+      mode: warning
+    issue_assessment:
+      mode: warning
+    custom_checks:
+      - name: "TypeScript strict mode compliance"
+        instructions: "Verify no 'any' types are used, all exported functions/components have explicit return types (Promise<T> for async, JSX.Element for components). Check for TypeScript strict mode compliance."
+      - name: "Supabase client patterns"
+        instructions: "Verify Supabase clients use @supabase/ssr package with getAll()/setAll() cookie methods only. Reject any use of deprecated @supabase/auth-helpers-nextjs or individual get/set/remove cookie methods. Check that clients are created from lib/supabase/ or utils/supabase/ utilities, not ad-hoc."
+      - name: "Error handling patterns"
+        instructions: "Verify errors use typed guards (isError, isSupabaseError), are logged once server-side, return user-safe messages, and are never swallowed (no empty catch blocks). Check that Supabase error property is always checked."
+      - name: "Zod validation and import order"
+        instructions: "Verify user input validation uses Zod schemas from lib/validation.ts (no duplicate schemas). Verify imports follow order: Node builtins → npm packages → @/ aliases → relative (avoid ../ parent traversals)."
+      - name: "React and UI component patterns"
+        instructions: "Verify functional components only (no class components), explicit JSX.Element return types, 'use client' directive only when needed (hooks/events/browser APIs). Verify Shadcn/ui components used first, Radix UI only when Shadcn equivalent doesn't exist. Check Tailwind class order: layout → spacing → color."
+  tools:
+    # AST-based code analysis (TypeScript/JavaScript)
+    ast-grep:
+      rule_dirs: []
+      util_dirs: []
+      essential_rules: true
+      packages: []
+    # Primary linter (replaces ESLint per AGENTS.md)
+    biome:
+      enabled: true
+    # Disabled: ESLint replaced by Biome
+    eslint:
+      enabled: false
+    # Fast JavaScript/TypeScript linter (optional, Biome is primary)
+    oxc:
+      enabled: false
+    # Shell script linting
+    shellcheck:
+      enabled: true
+    markdownlint:
+      enabled: true
+    # YAML configuration linting
+    yamllint:
+      enabled: true
+    # GitHub Actions workflow linting
+    actionlint:
+      enabled: true
+    # GitHub CI/CD checks
+    github-checks:
+      enabled: true
+      timeout_ms: 90000
+    # Language and grammar checking for documentation
+    languagetool:
+      enabled: true
+      enabled_rules: []
+      disabled_rules: []
+      enabled_categories: []
+      disabled_categories: []
+      enabled_only: false
+      level: default
+    # SQL migration linting (Supabase migrations)
+    sqlfluff:
+      enabled: true
+    # Security scanning
+    gitleaks:
+      enabled: true
+    checkov:
+      enabled: true
+    semgrep:
+      enabled: true
+    osvScanner:
+      enabled: true
+    # Disabled: Python tools (not a Python project)
+    ruff:
+      enabled: false
+    flake8:
+      enabled: false
+    pylint:
+      enabled: false
+    # Disabled: PHP tools (not a PHP project)
+    phpstan:
+      enabled: false
+    phpmd:
+      enabled: false
+    phpcs:
+      enabled: false
+    # Disabled: Go tools (not a Go project)
+    golangci-lint:
+      enabled: false
+    # Disabled: Ruby tools (not a Ruby project)
+    rubocop:
+      enabled: false
+    brakeman:
+      enabled: false
+    # Disabled: Swift tools (not a Swift project)
+    swiftlint:
+      enabled: false
+    # Disabled: Rust tools (not a Rust project)
+    clippy:
+      enabled: false
+    # Disabled: C/C++ tools (not a C/C++ project)
+    clang:
+      enabled: false
+    cppcheck:
+      enabled: false
+    # Disabled: Java/Kotlin tools (not a Java/Kotlin project)
+    pmd:
+      enabled: false
+    detekt:
+      enabled: false
+    # Disabled: Docker tools (no Dockerfile found)
+    hadolint:
+      enabled: false
+    # Disabled: Protocol buffers (not used)
+    buf:
+      enabled: false
+    # Disabled: Rego/OPA (not used)
+    regal:
+      enabled: false
+    # Disabled: CircleCI (not using CircleCI)
+    circleci:
+      enabled: false
+    # Disabled: Prisma (not using Prisma)
+    prismaLint:
+      enabled: false
+    # Disabled: Shopify (not a Shopify project)
+    shopifyThemeCheck:
+      enabled: false
+    # Disabled: Lua (not a Lua project)
+    luacheck:
+      enabled: false
+    # Disabled: Makefiles (using justfile instead)
+    checkmake:
+      enabled: false
+    # Disabled: HTML (Next.js handles HTML)
+    htmlhint:
+      enabled: false
+    # Disabled: Environment files (optional, not critical)
+    dotenvLint:
+      enabled: false
+chat:
+  art: true
+  auto_reply: true
+  integrations:
+    jira:
+      usage: auto
+    linear:
+      usage: auto
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      # Note: AGENTS.md and .cursor/rules/**/*.mdc are included by default
+      # Documentation standards
+      - "docs/STANDARDS.md"
+      # Architectural and technical steering (Kiro AI source of truth)
+      - ".kiro/steering/**/*.md"
+      # UI framework and component guidelines
+      - "docs/ui-framework.md"
+      - "docs/component-examples.md"
+      - "docs/charts.md"
+      # CopilotKit integration guidelines
+      - "docs/copilotkit-readiness.md"
+  learnings:
+    scope: auto
+  issues:
+    scope: auto
+  jira:
+    usage: disabled
+    project_keys: []
+  linear:
+    usage: disabled
+    team_keys: []
+  pull_requests:
+    scope: auto
+  mcp:
+    usage: enabled
+    disabled_servers: []
+code_generation:
+  docstrings:
+    language: en-US
+    path_instructions:
+      - path: "**/*.{ts,tsx}"
+        instructions: |
+          Use JSDoc format for exported functions and components. Include:
+          - Brief description of purpose
+          - @param for parameters with types and descriptions
+          - @returns for return types and descriptions
+          - @throws for potential errors
+          - @example for complex functions
+
+          All exported functions must have explicit return types (Promise<T> for async, JSX.Element for components).
+          Keep docstrings concise and focused on "why" not "what".
+
+          Example:
+          /**
+           * Validates user input against Zod schema and returns typed result.
+           * @param schema - Zod schema to validate against
+           * @param data - Input data to validate
+           * @returns Validation result with success flag and data or errors
+           * @throws {Error} If validation fails and strict mode is enabled
+           */
+          export function validateInput<T>(schema: z.ZodSchema<T>, data: unknown): Result<T>
+      - path: "app/**/*.tsx"
+        instructions: |
+          For Next.js App Router components:
+          - Document Server Components (default) vs Client Components ("use client")
+          - Note data fetching patterns (Supabase queries)
+          - Document props with TypeScript interfaces
+          - Include accessibility considerations when relevant
+
+          Example:
+          /**
+           * Server Component that fetches and displays article list.
+           * Uses Supabase client from @/lib/supabase/server.
+           * @param searchParams - URL search parameters for filtering
+           * @returns Server-rendered article list page
+           */
+          export default async function ArticlesPage({ searchParams }: { searchParams: SearchParams }): Promise<JSX.Element>
+      - path: "components/**/*.tsx"
+        instructions: |
+          For React components:
+          - Document component purpose and usage
+          - Document props interface
+          - Note if using Shadcn/ui, Radix UI, or Recharts
+          - Include accessibility features (ARIA, keyboard nav)
+          - Document any Supabase data dependencies
+
+          Example:
+          /**
+           * Displays article card with title, tags, and metadata.
+           * Uses Shadcn Card and Badge components.
+           * @param article - Article data from Supabase
+           * @param onTagClick - Callback when tag is clicked
+           * @returns Accessible article card component
+           */
+          export function ArticleCard({ article, onTagClick }: ArticleCardProps): JSX.Element
+      - path: "lib/**/*.ts"
+        instructions: |
+          For utility functions and helpers:
+          - Document validation functions (Zod schemas)
+          - Document Supabase query helpers
+          - Document error handling utilities
+          - Include usage examples for complex functions
+
+          Example:
+          /**
+           * Creates Supabase client for server-side usage.
+           * Handles Next.js 16 cookie management with getAll()/setAll().
+           * @returns Configured Supabase client instance
+           */
+          export async function createClient(): Promise<SupabaseClient>
+      - path: "supabase/**/*.sql"
+        instructions: |
+          For SQL migrations and functions:
+          - Document RLS policies and their purpose
+          - Document database functions with parameters
+          - Note security considerations (SECURITY INVOKER, search_path)
+          - Include migration dependencies if any
+
+          Example:
+          -- Creates comments table with RLS enabled.
+          -- Requires articles table to exist.
+          -- Policies: public read, authenticated insert/update/delete.
+  unit_tests:
+    path_instructions:
+      - path: "**/*.{ts,tsx}"
+        instructions: |
+          Generate tests using Vitest with Testing Library for React components.
+          Follow project patterns:
+
+          - Test files: `tests/**/*.test.ts` or `tests/**/*.test.tsx`
+          - Use property-based testing with fast-check for validation logic
+          - Test user interactions, not implementation details
+          - Mock Supabase clients appropriately
+          - Use jsdom for React component testing
+
+          Test structure:
+          ```typescript
+          import { describe, it, expect } from 'vitest'
+          import { render, screen } from '@testing-library/react'
+          import userEvent from '@testing-library/user-event'
+
+          describe('ComponentName', () => {
+            it('renders correctly', () => {
+              // Test implementation
+            })
+
+            it('handles user interaction', async () => {
+              const user = userEvent.setup()
+              // Test user interactions
+            })
+          })
+          ```
+
+          For validation functions, use property-based testing:
+          ```typescript
+          import { fc } from 'fast-check'
+
+          describe('validation', () => {
+            it('validates email format', () => {
+              fc.assert(fc.property(fc.emailAddress(), (email) => {
+                const result = validateEmail(email)
+                expect(result.success).toBe(true)
+              }))
+            })
+          })
+          ```
+
+          Always test:
+          - Happy paths
+          - Error cases
+          - Edge cases
+          - Accessibility (ARIA, keyboard nav) for components
+      - path: "components/**/*.tsx"
+        instructions: |
+          For React component tests:
+          - Test rendering with different props
+          - Test user interactions (clicks, form submissions)
+          - Test accessibility (screen reader, keyboard navigation)
+          - Test loading and error states
+          - Mock Supabase data fetching
+          - Test Shadcn/ui component integration
+
+          Example:
+          ```typescript
+          describe('ArticleCard', () => {
+            it('renders article title and tags', () => {
+              const article = { id: '1', title: 'Test', tags: ['security'] }
+              render(<ArticleCard article={article} />)
+              expect(screen.getByText('Test')).toBeInTheDocument()
+              expect(screen.getByText('security')).toBeInTheDocument()
+            })
+
+            it('calls onTagClick when tag is clicked', async () => {
+              const user = userEvent.setup()
+              const onTagClick = vi.fn()
+              render(<ArticleCard article={article} onTagClick={onTagClick} />)
+              await user.click(screen.getByText('security'))
+              expect(onTagClick).toHaveBeenCalledWith('security')
+            })
+          })
+          ```
+      - path: "lib/**/*.ts"
+        instructions: |
+          For utility function tests:
+          - Test validation functions with valid and invalid inputs
+          - Test Supabase query helpers with mocked clients
+          - Test error handling and edge cases
+          - Use property-based testing for validation logic
+
+          Example:
+          ```typescript
+          describe('validateInput', () => {
+            it('validates correct input', () => {
+              const result = validateInput(loginSchema, { email: 'test@example.com', password: 'password123' })
+              expect(result.success).toBe(true)
+            })
+
+            it('rejects invalid input', () => {
+              const result = validateInput(loginSchema, { email: 'invalid' })
+              expect(result.success).toBe(false)
+            })
+          })
+          ```
+      - path: "app/**/*.tsx"
+        instructions: |
+          For Next.js App Router page tests:
+          - Test server component data fetching (mock Supabase)
+          - Test search params handling
+          - Test error boundaries
+          - Test loading states
+
+          Note: Server Components require special mocking of async functions.
+          Use Vitest's async testing capabilities.
+issue_enrichment:
+  auto_enrich:
+    enabled: true
+  planning:
+    enabled: true
