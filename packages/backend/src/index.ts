@@ -84,7 +84,7 @@ app.get('/health', async (c) => {
 
 // ─── BetterAuth Handler ──────────────────────────────────────────────
 
-app.on(['POST', 'GET'], '/api/auth/**', async (c) => {
+app.on(['POST', 'GET'], '/api/auth/*', async (c) => {
   try {
     return await auth.handler(c.req.raw);
   } catch (err) {
