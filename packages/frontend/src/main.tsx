@@ -6,6 +6,7 @@ import { ErrorBoundary } from './components/features/error-boundary';
 import { AppLayout } from './components/features/layout';
 import { ProtectedRoute } from './components/features/protected-route';
 import './index.css';
+import { authClient } from './lib/auth-client';
 import { useAuthStore } from './stores/auth';
 
 // Route-level code splitting - each page is loaded on demand
@@ -52,11 +53,15 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  const { fetchUser } = useAuthStore();
+  const { data: session } = authClient.useSession();
+  const { fetchProjects, hasFetchedProjects } = useAuthStore();
 
+  // Fetch project memberships when session is available
   useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
+    if (session && !hasFetchedProjects) {
+      fetchProjects();
+    }
+  }, [session, hasFetchedProjects, fetchProjects]);
 
   return (
     <ErrorBoundary>

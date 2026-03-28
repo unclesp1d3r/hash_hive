@@ -1,8 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, jest, mock } from 'bun:test';
+
+let mockSession: { user: { id: number } } | null = null;
+
+mock.module('../../src/lib/auth-client', () => ({
+  authClient: {
+    useSession: () => ({ data: mockSession, isPending: false, error: null }),
+    signIn: { email: mock(async () => ({ error: null })) },
+    signOut: mock(async () => ({ data: null, error: null })),
+  },
+}));
+
 import { type QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import { type EventType, useEvents } from '../../src/hooks/use-events';
-import { useAuthStore } from '../../src/stores/auth';
 import { useUiStore } from '../../src/stores/ui';
 import { installMockWebSocket } from '../mocks/websocket';
 import { act, cleanupAll, createTestQueryClient, screen, waitFor } from '../test-utils';
@@ -10,16 +20,7 @@ import { act, cleanupAll, createTestQueryClient, screen, waitFor } from '../test
 let wsMock: ReturnType<typeof installMockWebSocket>;
 
 function setAuthenticatedWithProject(projectId = 1) {
-  useAuthStore.setState({
-    isAuthenticated: true,
-    isLoading: false,
-    user: {
-      id: 1,
-      email: 'admin@hashhive.local',
-      name: 'Admin',
-      projects: [{ projectId, projectName: 'Project 1', roles: ['admin'] }],
-    },
-  });
+  mockSession = { user: { id: 1 } };
   useUiStore.setState({ selectedProjectId: projectId });
 }
 
@@ -67,6 +68,7 @@ afterEach(() => {
   jest.useRealTimers();
   cleanupAll();
   wsMock.restore();
+  mockSession = null;
 });
 
 describe('useEvents', () => {

@@ -8,12 +8,14 @@ import logoSvg from '../assets/logo.svg';
 import { Button } from '../components/ui/button';
 import { ErrorBanner } from '../components/ui/error-banner';
 import { Input } from '../components/ui/input';
+import { authClient } from '../lib/auth-client';
 import { useAuthStore } from '../stores/auth';
 import { useUiStore } from '../stores/ui';
 
 export function LoginPage() {
-  const { login, isAuthenticated } = useAuthStore();
+  const { data: session } = authClient.useSession();
   const { selectedProjectId } = useUiStore();
+  const { fetchProjects } = useAuthStore();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
@@ -25,28 +27,30 @@ export function LoginPage() {
     resolver: zodResolver(loginRequestSchema),
   });
 
-  if (isAuthenticated && selectedProjectId) {
+  if (session && selectedProjectId) {
     return <Navigate to="/" replace />;
   }
 
   const onSubmit = async (data: LoginRequest) => {
     setError(null);
-    try {
-      await login(data.email, data.password);
-      // Auto-select happens in the store if user has exactly one project.
-      // If user has multiple projects, navigate to project selection.
-      const currentProjectId = useUiStore.getState().selectedProjectId;
-      if (currentProjectId) {
-        navigate('/', { replace: true });
-      } else {
-        navigate('/select-project');
-      }
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unexpected error occurred');
-      }
+    const { error: signInError } = await authClient.signIn.email({
+      email: data.email,
+      password: data.password,
+    });
+
+    if (signInError) {
+      setError(signInError.message ?? 'Invalid email or password');
+      return;
+    }
+
+    // Fetch project memberships after successful login
+    await fetchProjects();
+
+    const currentProjectId = useUiStore.getState().selectedProjectId;
+    if (currentProjectId) {
+      navigate('/', { replace: true });
+    } else {
+      navigate('/select-project');
     }
   };
 

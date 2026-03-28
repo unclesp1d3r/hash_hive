@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useAuthStore } from '../stores/auth';
+import { authClient } from '../lib/auth-client';
 import { useUiStore } from '../stores/ui';
 
 export type EventType =
@@ -35,7 +35,7 @@ export function useEvents(options: UseEventsOptions = {}) {
   const { types, onEvent } = options;
   // Stabilize types array to prevent unnecessary WS reconnections
   const stableTypes = useMemo(() => types?.join(','), [types]);
-  const { user } = useAuthStore();
+  const { data: session } = authClient.useSession();
   const { selectedProjectId } = useUiStore();
   const queryClient = useQueryClient();
   const [connected, setConnected] = useState(false);
@@ -47,7 +47,7 @@ export function useEvents(options: UseEventsOptions = {}) {
   onEventRef.current = onEvent;
 
   useEffect(() => {
-    if (!user || !selectedProjectId) {
+    if (!session || !selectedProjectId) {
       return;
     }
 
@@ -125,7 +125,7 @@ export function useEvents(options: UseEventsOptions = {}) {
       setConnected(false);
       setPolling(false);
     };
-  }, [user, selectedProjectId, stableTypes, queryClient]);
+  }, [session, selectedProjectId, stableTypes, queryClient]);
 
   // Polling fallback: invalidate queries every 30s when disconnected
   useEffect(() => {

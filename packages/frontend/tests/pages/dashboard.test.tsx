@@ -29,14 +29,8 @@ afterEach(() => {
 
 function setAuthenticatedWithProject(projectId = 1) {
   useAuthStore.setState({
-    isAuthenticated: true,
-    isLoading: false,
-    user: {
-      id: 1,
-      email: 'admin@hashhive.local',
-      name: 'Admin',
-      projects: [{ projectId, projectName: 'Project 1', roles: ['admin'] }],
-    },
+    projects: [{ projectId, projectName: 'Project 1', roles: ['admin'] }],
+    hasFetchedProjects: true,
   });
   useUiStore.setState({ selectedProjectId: projectId });
 }
@@ -44,7 +38,7 @@ function setAuthenticatedWithProject(projectId = 1) {
 describe('DashboardPage', () => {
   it('shows empty state when no project selected', () => {
     fetchMock = mockFetch();
-    useAuthStore.setState({ isLoading: false, isAuthenticated: true, user: null });
+    useAuthStore.setState({ projects: [], hasFetchedProjects: true });
 
     renderWithProviders(<DashboardPage />);
 

@@ -1,4 +1,18 @@
-import { afterEach, describe, expect, it } from 'bun:test';
+import { afterEach, describe, expect, it, mock } from 'bun:test';
+
+let mockSession: { user: { id: number } } | null = null;
+let signInResult: { error: { message: string } | null } = { error: null };
+
+mock.module('../../src/lib/auth-client', () => ({
+  authClient: {
+    useSession: () => ({ data: mockSession, isPending: false, error: null }),
+    signIn: {
+      email: mock(async (_params: { email: string; password: string }) => signInResult),
+    },
+    signOut: mock(async () => ({ data: null, error: null })),
+  },
+}));
+
 import { LoginPage } from '../../src/pages/login';
 import { useAuthStore } from '../../src/stores/auth';
 import { useUiStore } from '../../src/stores/ui';
@@ -11,6 +25,8 @@ let fetchMock: ReturnType<typeof mockFetch>;
 afterEach(() => {
   cleanupAll();
   if (fetchMock) restoreFetch(fetchMock);
+  mockSession = null;
+  signInResult = { error: null };
 });
 
 describe('LoginPage', () => {
@@ -25,12 +41,8 @@ describe('LoginPage', () => {
   });
 
   it('shows error on invalid credentials', async () => {
-    fetchMock = mockFetch({
-      '/api/auth/sign-in/email': {
-        status: 401,
-        body: { message: 'Invalid email or password' },
-      },
-    });
+    fetchMock = mockFetch();
+    signInResult = { error: { message: 'Invalid email or password' } };
 
     renderWithRouter([{ path: '/login', element: <LoginPage /> }], { initialRoute: '/login' });
 
@@ -49,8 +61,8 @@ describe('LoginPage', () => {
 
   it('redirects to /select-project when multiple projects', async () => {
     const meResponse = mockMeResponse({ projectCount: 2 });
+    signInResult = { error: null };
     fetchMock = mockFetch({
-      '/api/auth/sign-in/email': { status: 200, body: { user: { id: 1 } } },
       '/dashboard/auth/me': { status: 200, body: meResponse },
     });
 
@@ -78,8 +90,8 @@ describe('LoginPage', () => {
 
   it('auto-selects project and redirects to / when single project', async () => {
     const meResponse = mockMeResponse({ projectCount: 1 });
+    signInResult = { error: null };
     fetchMock = mockFetch({
-      '/api/auth/sign-in/email': { status: 200, body: { user: { id: 1 } } },
       '/dashboard/auth/me': { status: 200, body: meResponse },
     });
 
@@ -109,15 +121,10 @@ describe('LoginPage', () => {
 
   it('already authenticated user redirects to /', () => {
     fetchMock = mockFetch();
+    mockSession = { user: { id: 1 } };
     useAuthStore.setState({
-      isAuthenticated: true,
-      isLoading: false,
-      user: {
-        id: 1,
-        email: 'admin@hashhive.local',
-        name: 'Admin',
-        projects: [{ projectId: 1, projectName: 'Project 1', roles: ['admin'] }],
-      },
+      projects: [{ projectId: 1, projectName: 'Project 1', roles: ['admin'] }],
+      hasFetchedProjects: true,
     });
     useUiStore.setState({ selectedProjectId: 1 });
 

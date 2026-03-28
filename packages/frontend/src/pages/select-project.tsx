@@ -1,14 +1,16 @@
 import { Navigate } from 'react-router';
 import logoSvg from '../assets/logo.svg';
 import { EmptyState } from '../components/ui/empty-state';
+import { authClient } from '../lib/auth-client';
 import { useAuthStore } from '../stores/auth';
 import { useUiStore } from '../stores/ui';
 
 export function SelectProjectPage() {
-  const { user, isAuthenticated, isLoading } = useAuthStore();
+  const { data: session, isPending } = authClient.useSession();
+  const { projects } = useAuthStore();
   const { selectedProjectId, setSelectedProject } = useUiStore();
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="flex h-screen items-center justify-center bg-crust">
         <EmptyState message="Loading..." />
@@ -16,15 +18,13 @@ export function SelectProjectPage() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!session) {
     return <Navigate to="/login" replace />;
   }
 
   if (selectedProjectId) {
     return <Navigate to="/" replace />;
   }
-
-  const projects = user?.projects ?? [];
 
   const handleSelect = (projectId: number) => {
     setSelectedProject(projectId);

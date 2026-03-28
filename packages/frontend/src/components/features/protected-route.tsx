@@ -1,12 +1,12 @@
 import { Navigate, Outlet } from 'react-router';
-import { useAuthStore } from '../../stores/auth';
+import { authClient } from '../../lib/auth-client';
 import { useUiStore } from '../../stores/ui';
 
 export function ProtectedRoute() {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { data: session, isPending } = authClient.useSession();
   const { selectedProjectId } = useUiStore();
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="flex h-screen items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
@@ -14,7 +14,7 @@ export function ProtectedRoute() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!session) {
     return <Navigate to="/login" replace />;
   }
 
