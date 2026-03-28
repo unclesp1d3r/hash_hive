@@ -92,6 +92,7 @@ function buildBackendEnv(databaseUrl: string, redisUrl: string, s3Endpoint: stri
     S3_SECRET_KEY: S3_SECRET_KEY,
     S3_BUCKET: S3_BUCKET,
     BETTER_AUTH_SECRET: BETTER_AUTH_SECRET,
+    BETTER_AUTH_URL: 'http://localhost:4000',
   };
 }
 
