@@ -38,8 +38,8 @@ export async function seedTestData(databaseUrl: string): Promise<{
 
     // Insert user
     const [user] = await sql`
-      INSERT INTO users (email, password_hash, name, status)
-      VALUES (${TEST_USER.email}, ${passwordHash}, ${TEST_USER.name}, 'active')
+      INSERT INTO users (email, password_hash, name, status, email_verified)
+      VALUES (${TEST_USER.email}, ${passwordHash}, ${TEST_USER.name}, 'active', true)
       RETURNING id
     `;
     if (!user) {

@@ -110,6 +110,21 @@ function runMigrations(databaseUrl: string, redisUrl: string, s3Endpoint: string
   }
 }
 
+function runAuthMigration(databaseUrl: string, redisUrl: string, s3Endpoint: string): void {
+  console.log('[E2E] Running BetterAuth account migration...');
+  try {
+    execFileSync('bun', ['run', 'src/scripts/migrate-auth-accounts.ts'], {
+      cwd: BACKEND_CWD,
+      env: buildBackendEnv(databaseUrl, redisUrl, s3Endpoint),
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    console.log('[E2E] Auth migration complete');
+  } catch (err) {
+    const stderr = err instanceof Error && 'stderr' in err ? String(err.stderr) : String(err);
+    throw new Error(`Auth migration failed: ${stderr}`);
+  }
+}
+
 function startBackend(databaseUrl: string, redisUrl: string, s3Endpoint: string): ChildProcess {
   return spawn('bun', ['run', 'src/index.ts'], {
     cwd: BACKEND_CWD,
@@ -192,6 +207,9 @@ async function setupWithDockerCompose(composeFile: string): Promise<DockerCompos
   const { userId, projectId } = await seedTestData(databaseUrl);
   console.log(`[E2E] Seeded user=${userId}, project=${projectId}`);
 
+  // Migrate user credentials to BetterAuth ba_accounts table
+  runAuthMigration(databaseUrl, redisUrl, s3Endpoint);
+
   // Start backend
   console.log('[E2E] Starting backend server...');
   const backendProcess = startBackend(databaseUrl, redisUrl, s3Endpoint);
@@ -248,6 +266,9 @@ async function setupWithTestcontainers(): Promise<TestContainersState> {
   console.log('[E2E] Seeding test data...');
   const { userId, projectId } = await seedTestData(databaseUrl);
   console.log(`[E2E] Seeded user=${userId}, project=${projectId}`);
+
+  // Migrate user credentials to BetterAuth ba_accounts table
+  runAuthMigration(databaseUrl, redisUrl, s3Endpoint);
 
   // Start backend
   console.log('[E2E] Starting backend server...');
