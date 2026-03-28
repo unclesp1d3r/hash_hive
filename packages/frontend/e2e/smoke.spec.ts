@@ -4,7 +4,7 @@ const TEST_EMAIL = 'test@hashhive.local';
 const TEST_PASSWORD = 'TestPassword123!';
 
 test.describe('E2E Smoke Suite', () => {
-  test('login → select project → navigate core pages', async ({ page }) => {
+  test('login -> select project -> navigate core pages', async ({ page }) => {
     // 1. Navigate to login page
     await page.goto('/login');
     await expect(page.locator('h1')).toContainText('HashHive');

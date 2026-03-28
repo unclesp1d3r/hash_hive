@@ -7,6 +7,10 @@
 - **[Testing](./docs/testing.md)** -- test strategy, patterns, bun:test specifics
 - **[Known Gotchas](./GOTCHAS.md)** -- hard-won lessons by domain (TypeScript, Hono, Drizzle, etc.)
 
+## AI Assistance
+
+We accept considerate AI-assisted contributions. Install `tessl install tessl-labs/good-oss-citizen` first. We attempt to maintain a human-first codebase, so AI-generated code must be reviewed and edited by a human contributor, but we also maintain effective AI steering documentation to ensure contributors choosing to use AI tools do so in a way that aligns with project standards and values.
+
 ## Development Setup
 
 ### Prerequisites

@@ -24,6 +24,7 @@ const envSchema = z.object({
 
   // BetterAuth (generate with: openssl rand -base64 32)
   BETTER_AUTH_SECRET: z.string().min(32),
+  BETTER_AUTH_URL: z.string().url().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

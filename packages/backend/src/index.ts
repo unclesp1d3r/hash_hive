@@ -15,6 +15,7 @@ import { getQueueManager, setQueueManager } from './queue/context.js';
 import { QueueManager } from './queue/manager.js';
 import { agentRoutes } from './routes/agent/index.js';
 import { dashboardAgentRoutes } from './routes/dashboard/agents.js';
+import { attackTemplateRoutes } from './routes/dashboard/attack-templates.js';
 import { authRoutes } from './routes/dashboard/auth.js';
 import { campaignRoutes } from './routes/dashboard/campaigns.js';
 import { createEventRoutes } from './routes/dashboard/events.js';
@@ -83,7 +84,7 @@ app.get('/health', async (c) => {
 
 // ─── BetterAuth Handler ──────────────────────────────────────────────
 
-app.on(['POST', 'GET'], '/api/auth/**', async (c) => {
+app.on(['POST', 'GET'], '/api/auth/*', async (c) => {
   try {
     return await auth.handler(c.req.raw);
   } catch (err) {
@@ -102,6 +103,7 @@ app.route('/api/v1/dashboard/projects', projectRoutes);
 app.route('/api/v1/dashboard/agents', dashboardAgentRoutes);
 app.route('/api/v1/dashboard/resources', resourceRoutes);
 app.route('/api/v1/dashboard/hashes', hashRoutes);
+app.route('/api/v1/dashboard/attack-templates', attackTemplateRoutes);
 app.route('/api/v1/dashboard/campaigns', campaignRoutes);
 app.route('/api/v1/dashboard/tasks', taskRoutes);
 app.route('/api/v1/dashboard/stats', statsRoutes);

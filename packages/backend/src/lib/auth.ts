@@ -6,14 +6,15 @@ import { db } from '../db/index.js';
 
 export const auth = betterAuth({
   basePath: '/api/auth',
+  ...(env.BETTER_AUTH_URL ? { baseURL: env.BETTER_AUTH_URL } : {}),
   secret: env.BETTER_AUTH_SECRET,
 
   database: drizzleAdapter(db, {
     provider: 'pg',
     schema: {
-      user: schema.users,
+      users: schema.users,
       session: schema.baSessions,
-      account: schema.baAccounts,
+      ba_accounts: schema.baAccounts,
       verification: schema.baVerifications,
     },
   }),
@@ -42,30 +43,10 @@ export const auth = betterAuth({
 
   user: {
     modelName: 'users',
-    fields: {
-      name: 'name',
-      email: 'email',
-      emailVerified: 'email_verified',
-      image: 'image',
-      createdAt: 'created_at',
-      updatedAt: 'updated_at',
-    },
   },
 
   account: {
     modelName: 'ba_accounts',
-    fields: {
-      userId: 'user_id',
-      accountId: 'account_id',
-      providerId: 'provider_id',
-      accessToken: 'access_token',
-      refreshToken: 'refresh_token',
-      accessTokenExpiresAt: 'access_token_expires_at',
-      refreshTokenExpiresAt: 'refresh_token_expires_at',
-      idToken: 'id_token',
-      createdAt: 'created_at',
-      updatedAt: 'updated_at',
-    },
   },
 
   advanced: {
