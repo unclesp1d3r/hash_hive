@@ -30,6 +30,22 @@ interface AuthState {
 
 const AUTH_BASE = '/api/auth';
 
+/** Reconcile the UI project selection against the user's actual memberships. */
+function syncSelectedProject(projects: User['projects']) {
+  const { selectedProjectId, setSelectedProject } = useUiStore.getState();
+
+  // Auto-select if exactly one project
+  if (projects.length === 1 && projects[0]) {
+    setSelectedProject(projects[0].projectId);
+    return;
+  }
+
+  // Clear stale selection if the user lost access to the previously selected project
+  if (selectedProjectId !== null && !projects.some((p) => p.projectId === selectedProjectId)) {
+    setSelectedProject(null);
+  }
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isLoading: true,
@@ -66,11 +82,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         })),
       };
       set({ user, isAuthenticated: true, isLoading: false });
-
-      // Auto-select project if user has exactly one
-      if (user.projects.length === 1 && user.projects[0]) {
-        useUiStore.getState().setSelectedProject(user.projects[0].projectId);
-      }
+      syncSelectedProject(user.projects);
     } catch (err) {
       set({ isLoading: false });
       throw err;
@@ -84,6 +96,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       await fetch(`${AUTH_BASE}/sign-out`, {
         method: 'POST',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       });
     } catch {
       // Server-side session cleanup failed; clear local state anyway
@@ -110,10 +124,12 @@ export const useAuthStore = create<AuthState>((set) => ({
           roles: p.roles,
         })),
       };
+      syncSelectedProject(user.projects);
       set({ user, isAuthenticated: true, isLoading: false });
     } catch {
       // 401 is expected (no session); other errors are handled by the API client's
       // global 401 interceptor which redirects to login. In all cases, clear state.
+      useUiStore.getState().setSelectedProject(null);
       set({ user: null, isAuthenticated: false, isLoading: false });
     }
   },

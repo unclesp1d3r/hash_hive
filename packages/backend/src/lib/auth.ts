@@ -20,6 +20,7 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
+    disableSignUp: true, // No self-registration; users created by admin/seed only
     requireEmailVerification: false, // Air-gapped: no email service available
     autoSignIn: true,
     minPasswordLength: 8,
@@ -35,10 +36,8 @@ export const auth = betterAuth({
   session: {
     expiresIn: 28800, // 8 hours
     updateAge: 3600, // Refresh every hour on activity
-    cookieCache: {
-      enabled: true,
-      maxAge: 300, // 5-minute cookie cache
-    },
+    // No cookieCache -- immediate session revocation is more important than
+    // saving a DB lookup per request for 1-3 concurrent dashboard users.
   },
 
   user: {
